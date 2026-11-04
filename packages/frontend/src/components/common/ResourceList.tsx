@@ -14,26 +14,26 @@
  * - useResourceListScroll.ts 滚动/分页/加载超时逻辑
  */
 
-import React, { useMemo, useRef, useEffect, useCallback } from 'react';
-import { SearchInput } from '@/components/search/SearchInput';
-import { FileImage, Loader2, AlertCircle, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { useFileSystemStore } from '@/stores/fileSystemStore';
-import { Pagination } from '@/components/ui/Pagination';
-import { ViewToggle } from '@/components/common/ViewToggle';
-import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
-import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
-import { t } from '@/languages';
-import { CascadeCategorySelector } from './CascadeCategorySelector';
-import { useResourceListScroll } from './useResourceListScroll';
-import type { ResourceListProps } from './ResourceListTypes';
-import { read } from '@/lib/browserStorage';
+import React, { useMemo, useRef, useEffect, useCallback } from "react";
+import { SearchInput } from "@/components/search/SearchInput";
+import { FileImage, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
+import { Button, Pagination } from "@/components/ui";
+import { useFileSystemStore } from "@/stores/fileSystemStore";
 
-export type { CategoryOption } from './CascadeCategorySelector';
-export type { ResourceItem, ViewMode } from './ResourceListTypes';
+import { ViewToggle } from "@/components/common/ViewToggle";
+import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
+import { useRubberBandSelection } from "@/hooks/common/useRubberBandSelection";
+import { t } from "@/languages";
+import { CascadeCategorySelector } from "./CascadeCategorySelector";
+import { useResourceListScroll } from "./useResourceListScroll";
+import type { ResourceListProps } from "./ResourceListTypes";
+import { read } from "@/lib/browserStorage";
+
+export type { CategoryOption } from "./CascadeCategorySelector";
+export type { ResourceItem, ViewMode } from "./ResourceListTypes";
 
 const PaginationMemo = React.memo(Pagination);
-import styles from './ResourceList.module.css';
+import styles from "./ResourceList.module.css";
 
 /** 资源列表组件 */
 export const ResourceList: React.FC<ResourceListProps> = ({
@@ -53,9 +53,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   thirdCategories,
   selectedThirdCategory,
   onThirdCategoryChange,
-  emptyText = t('暂无数据'),
+  emptyText = t("暂无数据"),
   showViewToggle = true,
-  defaultViewMode = 'list',
+  defaultViewMode = "list",
   showCategoryFilter = false,
   actions,
   toolbarExtra,
@@ -84,7 +84,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   // 初始化视图模式（使用 defaultViewMode）
   useEffect(() => {
     // 检查 localStorage 中是否有保存的视图模式
-    const savedMode = read('fileSystemStore');
+    const savedMode = read("fileSystemStore");
     if (!savedMode) {
       // 如果没有保存，使用默认模式
       setViewMode(defaultViewMode);
@@ -140,7 +140,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
         ).current = el;
       }
     },
-    [onRubberBandSelect, rubberBandContainerRef, contentRef]
+    [onRubberBandSelect, rubberBandContainerRef, contentRef],
   );
 
   // 是否显示分类筛选
@@ -158,7 +158,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       limit: pageSize ?? 30,
       totalPages: totalPages || 1,
     }),
-    [total, visiblePage, totalPages, pageSize]
+    [total, visiblePage, totalPages, pageSize],
   );
 
   // 用 ref + useCallback 稳定 Pagination 的 onPageChange 回调
@@ -168,9 +168,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     (page: number) => {
       // 通知统一控制器（数据到位后滚动条居中定位）并透传翻页
       jumpTo(page);
-      onPageJumpRef.current?.(page, 'jump');
+      onPageJumpRef.current?.(page, "jump");
     },
-    [jumpTo]
+    [jumpTo],
   );
 
   return (
@@ -186,7 +186,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       {/* 工具栏：搜索 + 视图切换 */}
       <div className={styles.toolbar}>
         <SearchInput
-          placeholder={t('搜索...')}
+          placeholder={t("搜索...")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -194,8 +194,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           {/* 总数显示 */}
           {total !== undefined && total > 0 && (
             <div className={styles.totalCount}>
-              {t('共')} <span className={styles.totalCountNumber}>{total}</span>{' '}
-              {t('项')}
+              {t("共")} <span className={styles.totalCountNumber}>{total}</span>{" "}
+              {t("项")}
             </div>
           )}
           {/* 工具栏额外内容（如刷新按钮） */}
@@ -235,17 +235,17 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           : {})}
         // relative：ScrollToTopButton 以滚动容器为 containing block
         style={{
-          position: 'relative',
+          position: "relative",
           ...(onRubberBandSelect
-            ? { userSelect: 'none', WebkitTouchCallout: 'none' }
+            ? { userSelect: "none", WebkitTouchCallout: "none" }
             : {}),
         }}
       >
         {/* 内容包装：有操作栏时 min-h-full flex-col 撑满滚动容器（mt-auto 才能把操作栏
             推到底部=分页栏上方；内容不足一屏时贴底，内容超出时 sticky 吸底） */}
-        <div className={bottomBar ? 'min-h-full flex flex-col' : undefined}>
+        <div className={bottomBar ? "min-h-full flex flex-col" : undefined}>
           <div
-            style={onRubberBandSelect ? { position: 'relative' } : undefined}
+            style={onRubberBandSelect ? { position: "relative" } : undefined}
           >
             {loading &&
             !loadingTimedOut &&
@@ -260,7 +260,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                     className="mt-3"
                     onClick={onRetry}
                   >
-                    {t('重试')}
+                    {t("重试")}
                   </Button>
                 )}
               </div>
@@ -275,14 +275,14 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                 {showTopLoader && (
                   <div className={styles.loadingMore}>
                     <Loader2 size={20} className={styles.loadingMoreIcon} />
-                    <span>{t('加载中...')}</span>
+                    <span>{t("加载中...")}</span>
                   </div>
                 )}
                 {/* 使用自定义渲染（必须提供 renderItem） */}
                 <div
                   ref={itemContainerRef}
                   className={
-                    viewMode === 'list'
+                    viewMode === "list"
                       ? galleryMode
                         ? styles.listViewGallery
                         : styles.listView
@@ -314,13 +314,13 @@ export const ResourceList: React.FC<ResourceListProps> = ({
               {showBottomLoader ? (
                 <div className={styles.loadingMore}>
                   <Loader2 size={20} className={styles.loadingMoreIcon} />
-                  <span>{t('加载中...')}</span>
+                  <span>{t("加载中...")}</span>
                 </div>
               ) : loadError ? (
                 <div
                   data-testid="load-more-error"
                   className={styles.loadingMore}
-                  style={{ color: 'var(--error)' }}
+                  style={{ color: "var(--error)" }}
                 >
                   <AlertTriangle size={20} className="shrink-0" />
                   <span className="max-w-[60%] truncate" title={loadError}>
@@ -332,14 +332,14 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                       size="xs"
                       onClick={onRetryLoadMore}
                     >
-                      {t('重试')}
+                      {t("重试")}
                     </Button>
                   )}
                 </div>
               ) : (
                 !loading &&
                 isLastPage && (
-                  <div className={styles.noMore}>{t('已经是最后一页')}</div>
+                  <div className={styles.noMore}>{t("已经是最后一页")}</div>
                 )
               )}
             </div>
@@ -358,7 +358,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
 
       {/* 底部分页操作栏 */}
       <div
-        className={`${styles.footer} ${items.length === 0 ? styles.footerHidden : ''}`}
+        className={`${styles.footer} ${items.length === 0 ? styles.footerHidden : ""}`}
       >
         {/* 分页控件（启用分页模式时显示） */}
         {paginationEnabled && totalPages && totalPages > 1 && onPageChange && (

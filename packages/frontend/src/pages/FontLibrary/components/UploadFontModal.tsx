@@ -1,45 +1,45 @@
-import { useState } from 'react';
-import { Upload, X, Palette } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Select } from '../../../components/ui/Select';
-import { useNotification } from '../../../contexts/NotificationContext';
-import { getErrorMessage } from '../../../utils/errorHandler';
-import { formatFileSize } from '../../../components/ui/FileSize';
-import { fontsControllerUploadFont } from '@/api-sdk';
-import { t } from '@/languages';
-import { Z_LAYERS } from '@/constants/layers';
+import { useState } from "react";
+import { Upload, X, Palette } from "lucide-react";
+import { Button, Select, formatFileSize } from "@/components/ui";
+
+import { useNotification } from "../../../contexts/NotificationContext";
+import { getErrorMessage } from "../../../utils/errorHandler";
+
+import { fontsControllerUploadFont } from "@/api-sdk";
+import { t } from "@/languages";
+import { Z_LAYERS } from "@/constants/layers";
 
 interface UploadFontModalProps {
   onClose: () => void;
   onSuccess: () => void;
-  defaultTarget?: 'backend' | 'frontend' | 'both';
+  defaultTarget?: "backend" | "frontend" | "both";
 }
 
 const validExtensions = [
-  '.ttf',
-  '.otf',
-  '.woff',
-  '.woff2',
-  '.eot',
-  '.ttc',
-  '.shx',
+  ".ttf",
+  ".otf",
+  ".woff",
+  ".woff2",
+  ".eot",
+  ".ttc",
+  ".shx",
 ];
 
 export function UploadFontModal({
   onClose,
   onSuccess,
-  defaultTarget = 'both',
+  defaultTarget = "both",
 }: UploadFontModalProps) {
   const { showToast } = useNotification();
   const [files, setFiles] = useState<File[]>([]);
-  const [target, setTarget] = useState<'backend' | 'frontend' | 'both'>(
-    defaultTarget
+  const [target, setTarget] = useState<"backend" | "frontend" | "both">(
+    defaultTarget,
   );
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
   const validateFile = (selectedFile: File) => {
-    const ext = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
+    const ext = "." + selectedFile.name.split(".").pop()?.toLowerCase();
     return validExtensions.includes(ext);
   };
 
@@ -47,12 +47,12 @@ export function UploadFontModal({
     const valid: File[] = [];
     for (const f of Array.from(newFiles)) {
       if (!validateFile(f)) {
-        showToast(t('不支持的文件类型: {name}', { name: f.name }), 'warning');
+        showToast(t("不支持的文件类型: {name}", { name: f.name }), "warning");
         continue;
       }
       if (
         files.some(
-          (existing) => existing.name === f.name && existing.size === f.size
+          (existing) => existing.name === f.name && existing.size === f.size,
         )
       ) {
         continue;
@@ -75,7 +75,7 @@ export function UploadFontModal({
 
   const handleUpload = async () => {
     if (files.length === 0) {
-      showToast(t('请选择文件'), 'warning');
+      showToast(t("请选择文件"), "warning");
       return;
     }
 
@@ -88,13 +88,13 @@ export function UploadFontModal({
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则上传失败仍弹"成功上传"并刷新列表（历史 bug）
       showToast(
-        t('成功上传 {count} 个字体文件', { count: String(files.length) }),
-        'success'
+        t("成功上传 {count} 个字体文件", { count: String(files.length) }),
+        "success",
       );
       onSuccess();
     } catch (error) {
-      console.error('上传失败:', error);
-      showToast(getErrorMessage(error), 'error');
+      console.error("上传失败:", error);
+      showToast(getErrorMessage(error), "error");
     } finally {
       setUploading(false);
     }
@@ -135,10 +135,10 @@ export function UploadFontModal({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-text-primary">
-                {t('上传字体')}
+                {t("上传字体")}
               </h2>
               <p className="text-sm text-text-tertiary">
-                {t('支持 TTF、OTF、WOFF 等格式，可一次选择多个文件')}
+                {t("支持 TTF、OTF、WOFF 等格式，可一次选择多个文件")}
               </p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export function UploadFontModal({
             variant="secondary"
             icon={X}
             onClick={onClose}
-            tooltip={t('关闭')}
+            tooltip={t("关闭")}
           />
         </div>
 
@@ -157,10 +157,10 @@ export function UploadFontModal({
             onDrop={handleDrop}
             className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${
               dragOver
-                ? 'border-[var(--primary-500)] bg-[var(--primary-50)]'
+                ? "border-[var(--primary-500)] bg-[var(--primary-50)]"
                 : files.length > 0
-                  ? 'border-[var(--success)] bg-[var(--success-light)]'
-                  : 'border-border-default hover:border-border-strong bg-bg-tertiary/50'
+                  ? "border-[var(--success)] bg-[var(--success-light)]"
+                  : "border-border-default hover:border-border-strong bg-bg-tertiary/50"
             }`}
           >
             <input
@@ -218,11 +218,11 @@ export function UploadFontModal({
                   </div>
                 </div>
                 <h3 className="font-medium text-text-primary mb-1">
-                  {t('点击或拖拽文件到此处')}
+                  {t("点击或拖拽文件到此处")}
                 </h3>
                 <p className="text-sm text-text-tertiary">
                   {t(
-                    '支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX，可一次选择多个文件'
+                    "支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX，可一次选择多个文件",
                   )}
                 </p>
               </div>
@@ -231,23 +231,23 @@ export function UploadFontModal({
 
           {files.length > 1 && (
             <p className="text-sm text-text-tertiary text-center">
-              {t('已选择 {count} 个文件', { count: String(files.length) })}
+              {t("已选择 {count} 个文件", { count: String(files.length) })}
             </p>
           )}
 
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-3">
-              {t('上传位置')}
+              {t("上传位置")}
             </label>
             <Select
               value={target}
               onChange={(val) =>
-                setTarget(val as 'backend' | 'frontend' | 'both')
+                setTarget(val as "backend" | "frontend" | "both")
               }
               options={[
-                { value: 'both', label: t('同时上传（后端和前端）') },
-                { value: 'backend', label: t('仅后端（转换程序）') },
-                { value: 'frontend', label: t('仅前端（Web 显示）') },
+                { value: "both", label: t("同时上传（后端和前端）") },
+                { value: "backend", label: t("仅后端（转换程序）") },
+                { value: "frontend", label: t("仅前端（Web 显示）") },
               ]}
             />
           </div>
@@ -255,7 +255,7 @@ export function UploadFontModal({
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default">
           <Button variant="outline" onClick={onClose} disabled={uploading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             icon={Upload}
@@ -264,10 +264,10 @@ export function UploadFontModal({
             onClick={handleUpload}
           >
             {uploading
-              ? t('上传中...')
+              ? t("上传中...")
               : files.length > 0
-                ? t('上传 ({count})', { count: String(files.length) })
-                : t('上传')}
+                ? t("上传 ({count})", { count: String(files.length) })
+                : t("上传")}
           </Button>
         </div>
       </div>

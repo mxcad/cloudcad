@@ -1,8 +1,8 @@
-import React from 'react';
-import { MessageCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import styles from '../Login.module.css';
+import React from "react";
+import { MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "../Login.module.css";
 
 interface WechatLoginButtonProps {
   onWechatLogin: () => void;
@@ -14,7 +14,7 @@ export const WechatLoginButton: React.FC<WechatLoginButtonProps> = ({
   return (
     <>
       <div className={styles.divider}>
-        <span>{t('其他登录方式')}</span>
+        <span>{t("其他登录方式")}</span>
       </div>
       <Button
         variant="secondary"
@@ -23,7 +23,7 @@ export const WechatLoginButton: React.FC<WechatLoginButtonProps> = ({
         onClick={onWechatLogin}
         className="w-full justify-center"
       >
-        {t('微信登录')}
+        {t("微信登录")}
       </Button>
     </>
   );

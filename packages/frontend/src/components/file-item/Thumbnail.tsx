@@ -64,6 +64,8 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
           alt={node.name}
           draggable={false}
           className="object-contain"
+          // LCP 元素通常是最早可见的图纸缩略图；提升优先级确保其尽快下载
+          fetchPriority="high"
           style={{
             position: 'absolute',
             top: 0,

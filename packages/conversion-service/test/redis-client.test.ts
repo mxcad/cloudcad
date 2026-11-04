@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import RedisClient from '../lib/redis-client';
+import RedisClient, { maskRedisUrl } from '../lib/redis-client';
 import { startMockRedis, simple } from '../test-utils/mock-redis';
 
 describe('RedisClient (最小 RESP 客户端)', () => {
@@ -101,6 +101,45 @@ describe('RedisClient (最小 RESP 客户端)', () => {
     assert.ok(authSent, '应在 PING 前发送 AUTH');
     const pong = await client.command(['PING']);
     assert.equal(String(pong), 'PONG');
+  });
+
+  it('密码含 URL 特殊字符(@#%)时 AUTH 发送解码后的原始密码（回归 invalid password）', async () => {
+    mock.server.close();
+    let authPwd: string | null = null;
+    mock = await startMockRedis({
+      custom: (args) => {
+        if (String(args[0]).toUpperCase() === 'AUTH') {
+          authPwd = String(args[1]);
+          if (authPwd === 'pa@ss#word%20') return simple('OK');
+          return Buffer.from('-WRONGPASS invalid password\r\n');
+        }
+        return null;
+      },
+    });
+    // 模拟 start.js 拼串：密码经 encodeURIComponent 后进 URL（消费端须 decode 还原）
+    client = new RedisClient(
+      `redis://:${encodeURIComponent('pa@ss#word%20')}@127.0.0.1:${mock.port}/0`,
+    );
+    await client.connect(2000);
+    assert.equal(authPwd, 'pa@ss#word%20', 'AUTH 应发送解码后的原始密码，而非 %40 编码形式');
+    const pong = await client.command(['PING']);
+    assert.equal(String(pong), 'PONG');
+  });
+
+  it('maskRedisUrl 脱敏密码（日志不泄露明文 requirepass）', () => {
+    // 含 @ 特殊字符密码：WHATWG 解析后重写 password 为 ***
+    assert.equal(
+      maskRedisUrl('redis://:jA75@gCosr@8-u_e@localhost:6379/0'),
+      'redis://:***@localhost:6379/0',
+    );
+    // 普通密码
+    assert.equal(maskRedisUrl('redis://:secret123@127.0.0.1:6380/0'), 'redis://:***@127.0.0.1:6380/0');
+    // 用户名+密码形态
+    assert.equal(maskRedisUrl('redis://user:secret@127.0.0.1:6379/0'), 'redis://user:***@127.0.0.1:6379/0');
+    // 无密码：原样保留
+    assert.equal(maskRedisUrl('redis://127.0.0.1:6379/0'), 'redis://127.0.0.1:6379/0');
+    // 无效 URL（无效 REDIS_URL 报错场景）：不回显明文，原样返回且不含密码段
+    assert.equal(maskRedisUrl('not-a-url'), 'not-a-url');
   });
 
   it('无密码 URL 不发 AUTH（向后兼容）', async () => {

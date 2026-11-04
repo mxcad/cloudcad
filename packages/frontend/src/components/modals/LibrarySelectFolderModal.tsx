@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Button, Modal, FileTree } from "@/components/ui";
+
+import { Loader2 } from "lucide-react";
 import {
   libraryControllerGetDrawingLibrary,
   libraryControllerGetDrawingChildren,
   libraryControllerGetBlockLibrary,
   libraryControllerGetBlockChildren,
-} from '@/api-sdk';
-import type { FileSystemNode } from '../../types/filesystem';
-import { FileTree } from '../ui/FileTree';
-import { t } from '@/languages';
+} from "@/api-sdk";
+import type { FileSystemNode } from "../../types/filesystem";
+
+import { t } from "@/languages";
 
 interface LibrarySelectFolderModalProps {
   isOpen: boolean;
-  libraryType?: 'drawing' | 'block';
-  libraryTypes?: ('drawing' | 'block')[];
+  libraryType?: "drawing" | "block";
+  libraryTypes?: ("drawing" | "block")[];
   currentNodeId: string;
   onClose: () => void;
   onConfirm: (targetParentId: string, folderName?: string) => void;
@@ -29,21 +29,21 @@ interface FolderNode extends FileSystemNode {
 }
 
 async function loadLibraryTree(
-  libraryType: 'drawing' | 'block',
-  excludeNodeId: string
+  libraryType: "drawing" | "block",
+  excludeNodeId: string,
 ): Promise<FolderNode> {
   const getLibraryApi =
-    libraryType === 'drawing'
+    libraryType === "drawing"
       ? libraryControllerGetDrawingLibrary
       : libraryControllerGetBlockLibrary;
   const getChildrenApi =
-    libraryType === 'drawing'
+    libraryType === "drawing"
       ? libraryControllerGetDrawingChildren
       : libraryControllerGetBlockChildren;
 
   const libResult = await getLibraryApi();
   if (libResult.error || !libResult.data)
-    throw libResult.error || new Error('Failed to load library');
+    throw libResult.error || new Error("Failed to load library");
   const libData = libResult.data as { id: string; name: string };
 
   const childrenResult = await getChildrenApi({
@@ -67,13 +67,13 @@ async function loadLibraryTree(
   return {
     id: libData.id,
     name: libData.name,
-    nodeType: 'FOLDER',
+    nodeType: "FOLDER",
     isFolder: true,
     isRoot: true,
-    createdAt: '',
-    updatedAt: '',
-    path: '',
-    ownerId: '',
+    createdAt: "",
+    updatedAt: "",
+    path: "",
+    ownerId: "",
     expanded: true,
     children: folders,
     loading: false,
@@ -82,12 +82,12 @@ async function loadLibraryTree(
 }
 
 async function loadChildren(
-  libraryType: 'drawing' | 'block',
+  libraryType: "drawing" | "block",
   nodeId: string,
-  excludeNodeId: string
+  excludeNodeId: string,
 ): Promise<FolderNode[]> {
   const getChildrenApi =
-    libraryType === 'drawing'
+    libraryType === "drawing"
       ? libraryControllerGetDrawingChildren
       : libraryControllerGetBlockChildren;
   try {
@@ -99,7 +99,7 @@ async function loadChildren(
       (result.data as { nodes?: FileSystemNode[] })?.nodes || [];
     return children
       .filter(
-        (child) => child.isFolder && child.id !== excludeNodeId && child.id
+        (child) => child.isFolder && child.id !== excludeNodeId && child.id,
       )
       .map((folder) => ({
         ...folder,
@@ -129,8 +129,8 @@ export const LibrarySelectFolderModal: React.FC<
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const types: ('drawing' | 'block')[] =
-    libraryTypes || (libraryType ? [libraryType] : ['drawing', 'block']);
+  const types: ("drawing" | "block")[] =
+    libraryTypes || (libraryType ? [libraryType] : ["drawing", "block"]);
 
   const loadFolderTree = useCallback(async () => {
     if (!isOpen) return;
@@ -140,11 +140,11 @@ export const LibrarySelectFolderModal: React.FC<
 
     try {
       const allTrees = await Promise.all(
-        types.map((lt) => loadLibraryTree(lt, currentNodeId))
+        types.map((lt) => loadLibraryTree(lt, currentNodeId)),
       );
       setFolderTree(allTrees);
     } catch (err) {
-      setError(t('加载文件夹失败'));
+      setError(t("加载文件夹失败"));
       setFolderTree([]);
     } finally {
       setLoading(false);
@@ -167,23 +167,26 @@ export const LibrarySelectFolderModal: React.FC<
   const typesRef = useRef(types);
   typesRef.current = types;
 
-  const getNodeLibraryType = useCallback((nodeId: string): 'drawing' | 'block' => {
-    for (const root of folderTreeRef.current) {
-      if (root.id === nodeId)
-        return root.name.includes('图纸') ? 'drawing' : 'block';
-      const findInChildren = (nodes: FolderNode[]): boolean => {
-        for (const n of nodes) {
-          if (n.id === nodeId) return true;
-          if (n.children && findInChildren(n.children)) return true;
+  const getNodeLibraryType = useCallback(
+    (nodeId: string): "drawing" | "block" => {
+      for (const root of folderTreeRef.current) {
+        if (root.id === nodeId)
+          return root.name.includes("图纸") ? "drawing" : "block";
+        const findInChildren = (nodes: FolderNode[]): boolean => {
+          for (const n of nodes) {
+            if (n.id === nodeId) return true;
+            if (n.children && findInChildren(n.children)) return true;
+          }
+          return false;
+        };
+        if (root.children && findInChildren(root.children)) {
+          return root.name.includes("图纸") ? "drawing" : "block";
         }
-        return false;
-      };
-      if (root.children && findInChildren(root.children)) {
-        return root.name.includes('图纸') ? 'drawing' : 'block';
       }
-    }
-    return typesRef.current[0]!;
-  }, []);
+      return typesRef.current[0]!;
+    },
+    [],
+  );
 
   const handleToggleFolder = useCallback(
     async (nodeId: string) => {
@@ -206,9 +209,9 @@ export const LibrarySelectFolderModal: React.FC<
                         children,
                         expanded: true,
                         hasChildren: children.length > 0,
-                      })
+                      }),
                     );
-                  }
+                  },
                 );
                 return node;
               }
@@ -225,7 +228,7 @@ export const LibrarySelectFolderModal: React.FC<
       const updateTreeAndSet = (
         nodes: FolderNode[],
         targetId: string,
-        updatedNode: FolderNode
+        updatedNode: FolderNode,
       ): FolderNode[] => {
         return nodes.map((node) => {
           if (node.id === targetId) {
@@ -243,7 +246,7 @@ export const LibrarySelectFolderModal: React.FC<
 
       setFolderTree((prev) => updateTree(prev));
     },
-    [getNodeLibraryType]
+    [getNodeLibraryType],
   );
 
   const handleSelectFolder = useCallback((nodeId: string) => {
@@ -252,7 +255,7 @@ export const LibrarySelectFolderModal: React.FC<
 
   const findNodeById = (
     nodes: FolderNode[],
-    id: string
+    id: string,
   ): FolderNode | undefined => {
     for (const node of nodes) {
       if (node.id === id) return node;
@@ -272,15 +275,15 @@ export const LibrarySelectFolderModal: React.FC<
   }, [selectedFolderId, folderTree, onConfirm]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('选择目标文件夹')}>
+    <Modal isOpen={isOpen} onClose={onClose} title={t("选择目标文件夹")}>
       <div className="space-y-4">
         {error && (
           <div
             className="p-3 rounded-lg"
             style={{
-              background: 'var(--bg-error)',
-              border: '1px solid var(--border-error)',
-              color: 'var(--error)',
+              background: "var(--bg-error)",
+              border: "1px solid var(--border-error)",
+              color: "var(--error)",
             }}
           >
             {error}
@@ -290,8 +293,8 @@ export const LibrarySelectFolderModal: React.FC<
         <div
           className="max-h-80 overflow-y-auto border rounded-[3px]"
           style={{
-            borderColor: 'var(--border-default)',
-            background: 'var(--bg-primary)',
+            borderColor: "var(--border-default)",
+            background: "var(--bg-primary)",
           }}
         >
           {loading ? (
@@ -299,15 +302,15 @@ export const LibrarySelectFolderModal: React.FC<
               <Loader2
                 size={24}
                 className="animate-spin"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: "var(--text-muted)" }}
               />
             </div>
           ) : folderTree.length === 0 ? (
             <div
               className="p-4 text-center"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
-              {t('暂无文件夹')}
+              {t("暂无文件夹")}
             </div>
           ) : (
             <FileTree
@@ -321,14 +324,14 @@ export const LibrarySelectFolderModal: React.FC<
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             variant="primary"
             onClick={handleConfirm}
             disabled={!selectedFolderId}
           >
-            {t('确认')}
+            {t("确认")}
           </Button>
         </div>
       </div>

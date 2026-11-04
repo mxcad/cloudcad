@@ -1,12 +1,12 @@
-import React from 'react';
-import { Menu } from '@/components/ui/Menu';
+import React from "react";
+import { Menu } from "@/components/ui";
 import type {
   ActionCallbacks,
   FileActionContext,
-} from '@/components/file-item/fileActionConfig';
-import { buildNodeActions } from '@/hooks/file-browser';
-import type { FileSystemNode } from '@/types/filesystem';
-import type { FileSystemNodePermissionProps } from './hooks/useFileSystemNodePermissionProps';
+} from "@/components/file-item/fileActionConfig";
+import { buildNodeActions } from "@/hooks/file-browser";
+import type { FileSystemNode } from "@/types/filesystem";
+import type { FileSystemNodePermissionProps } from "./hooks/useFileSystemNodePermissionProps";
 
 export interface FileSystemNodeContextMenuProps {
   node: FileSystemNode;
@@ -117,7 +117,7 @@ export const FileSystemNodeContextMenu: React.FC<
     onClose();
     action.run({
       node,
-      e: new MouseEvent('click') as unknown as React.MouseEvent,
+      e: new MouseEvent("click") as unknown as React.MouseEvent,
       callbacks,
     });
   };

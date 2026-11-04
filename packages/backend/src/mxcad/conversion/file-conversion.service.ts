@@ -34,6 +34,7 @@ import {
 import { VipFeatureRequiredException } from "../../vip/errors/vip-feature-required.error";
 import {
 	interpretEngineRun,
+	isArtifactLocked,
 	resolveEngineNewpath,
 	resolveMxExecutablePath,
 	runMxcadAssembly,
@@ -58,7 +59,7 @@ import type {
 	EngineInputField,
 	MxCadEngineParams,
 } from "@cloudcad/contracts";
-import { cachedArtifactReady } from "../utils/conversion-artifact";
+import { cachedArtifactReady, cachedArtifactPath } from "../utils/conversion-artifact";
 import { buildIngestConversionOptions } from "../utils/ingest-conversion-options";
 
 /**
@@ -419,6 +420,42 @@ export class FileConversionService implements IMxcadConversionService {
 			// 确保源文件路径是绝对路径
 			absoluteSrcPath = this.resolveToAbsolutePath(srcPath);
 
+			// 目标产物被占用检测（真实转换前）：引擎写「已存在的被锁文件」会报
+			// write file error（code 2，退出码恒 2123），且失败后旧产物保持原样
+			// （实例 2026-11-03 移动端无缓存打开「01海绵城市专篇设计说明_t3.dwg」，
+			// 旧产物 4b298d….dwg.mxweb 被某进程句柄占用，引擎写不进去、mtime 不变）。
+			// 打开方向（产物位置可推导）在调引擎前拦截，归为可重试的 file-locked，
+			// 避免裸 write file error 被误判为 content-error 永久失败（占用是瞬态）。
+			// 注意：被占用时清理旧产物也会失败（unlink 同被锁），故检测先于清理。
+			if (this.canDeriveDefaultArtifact(options)) {
+				const artifact = cachedArtifactPath(
+					this.mxcadUploadPath,
+					options.fileHash as string,
+					options.srcPath,
+				);
+				if (isArtifactLocked(artifact)) {
+					const msg = `目标转换产物文件被占用，无法写入: ${path.basename(
+						artifact,
+					)}。文件正被其他进程或工具打开，请稍后重试；若持续出现，检查是否有残留进程持有该文件。`;
+					this.logger.warn(`[FileConversion] ${msg}`);
+					return {
+						isOk: false,
+						ret: { code: -2, message: msg },
+						error: msg,
+						errorCategory: "file-locked",
+						transient: isTransientFailure("file-locked"),
+					};
+				}
+			}
+
+			// 「无缓存打开」（forceConvert）重转前清理旧产物：引擎无法覆盖写已存在的
+			// 产物（报 write file error，code 2；实例 2026-11-03 移动端无缓存
+			// 打开「01海绵城市专篇设计说明_t3.dwg」失败）。仅打开方向产物位置可推导为
+			// <fileHash>.<源扩展名>.mxweb；其余方向（outpath/outname/cmd）产物位置不可知，交引擎处理。
+			if (options.forceConvert && this.canDeriveDefaultArtifact(options)) {
+				this.removeStaleConversionArtifact(options);
+			}
+
 			// 引擎参数对象（srcpath/src_file_md5/dwg_version 等小写下划线低层形状）统一由
 			// @cloudcad/contracts 的 buildEngineParams 生成：字段集与逐字段判定条件
 			// （truthy vs !== undefined）与 conversion-service runner 同源，见 ADR-0064/0069。
@@ -564,6 +601,53 @@ export class FileConversionService implements IMxcadConversionService {
 					errorCategory: "unknown",
 					transient: isTransientFailure("unknown"),
 				};
+		}
+	}
+
+	/**
+	 * 默认产物位置是否可推导（打开方向：<fileHash>.<源扩展名>.mxweb，需 fileHash）。
+	 * 与 cachedConversionResult 的「不可推导」判定互补（outpath/outname/cmd/导出方向
+	 * 的产物位置不可知，交引擎自身处理）。
+	 */
+	private canDeriveDefaultArtifact(options: ConversionOptions): boolean {
+		return (
+			!!options.fileHash &&
+			options.outpath === undefined &&
+			!options.outname &&
+			!options.cmd &&
+			!this.isExportDirection(options.srcPath)
+		);
+	}
+
+	/**
+	 * forceConvert（「无缓存打开」）重转前删除旧默认产物（<fileHash>.<源扩展名>.mxweb
+	 * 及其 _preloading.json）。引擎写已存在的 mxweb 会报 write file error（code 2），
+	 * 必须让引擎写全新文件。命名推导走 cachedArtifactPath（conversion-artifact 唯一出口，
+	 * 与秒传就位短路同源，任一处拼法漂移会让缓存命中判定失效）。清理失败不阻塞转换
+	 * （引擎可能仍能覆盖，或失败后落盘 debug 供定位）。
+	 */
+	private removeStaleConversionArtifact(options: ConversionOptions): void {
+		const artifact = cachedArtifactPath(
+			this.mxcadUploadPath,
+			options.fileHash as string,
+			options.srcPath
+		);
+		const preloading = `${artifact}_preloading.json`;
+		for (const p of [artifact, preloading]) {
+			try {
+				if (fs.existsSync(p)) {
+					fs.unlinkSync(p);
+					this.logger.warn(
+						`[FileConversion] forceConvert 重转前清理旧产物: ${p}`
+					);
+				}
+			} catch (e) {
+				this.logger.warn(
+					`[FileConversion] 清理旧产物失败（不阻塞转换）: ${
+						e instanceof Error ? e.message : String(e)
+					}`
+				);
+			}
 		}
 	}
 

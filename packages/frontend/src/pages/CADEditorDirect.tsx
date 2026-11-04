@@ -15,39 +15,39 @@ import React, {
   useState,
   useCallback,
   useMemo,
-} from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { Z_LAYERS } from '@/constants/layers';
-import { CAD_EVENTS } from '@/constants/events';
-import { subscribe, patchSessionFlags } from '@/services/drawingSession';
-import { SystemPermission } from '../constants/permissions';
-import { usePermission } from '../hooks/usePermission';
-import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
-import { ExportModals } from '@/components/export';
-import type { ExportModalsHandle } from '@/components/export';
-import { ImagePreviewModal } from '../components/modals/ImagePreviewModal';
-import { UrlHelper } from '@/utils/mxcadUtils';
-import { ShareDialog } from '../components/modals/ShareDialog';
-import { Button } from '@/components/ui/Button';
-import { ExternalReferencePanel } from '../components/modals/ExternalReferencePanel';
-import type { ExternalReferenceFile } from '../types/filesystem';
-import { SidebarContainer } from '../components/sidebar/SidebarContainer';
-import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
-import { hideGlobalLoading, getLoadingState } from '../services/loadingService';
-import { useCADEditorStore } from '../stores/useCADEditorStore';
-import { globalShowToast } from '../utils/notificationEvents';
+} from "react";
+import { useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { Z_LAYERS } from "@/constants/layers";
+import { CAD_EVENTS } from "@/constants/events";
+import { subscribe, patchSessionFlags } from "@/services/drawingSession";
+import { SystemPermission } from "../constants/permissions";
+import { usePermission } from "../hooks/usePermission";
+import { usePersonalSpaceQuery } from "@/hooks/usePersonalSpaceQuery";
+import { ExportModals } from "@/components/export";
+import type { ExportModalsHandle } from "@/components/export";
+import { ImagePreviewModal } from "../components/modals/ImagePreviewModal";
+import { UrlHelper } from "@/utils/mxcadUtils";
+import { ShareDialog } from "../components/modals/ShareDialog";
+import { Button } from "@/components/ui";
+import { ExternalReferencePanel } from "../components/modals/ExternalReferencePanel";
+import type { ExternalReferenceFile } from "../types/filesystem";
+import { SidebarContainer } from "../components/sidebar/SidebarContainer";
+import { useExternalReferenceUpload } from "../hooks/useExternalReferenceUpload";
+import { hideGlobalLoading, getLoadingState } from "../services/loadingService";
+import { useCADEditorStore } from "../stores/useCADEditorStore";
+import { globalShowToast } from "../utils/notificationEvents";
 import {
   downloadExternalRefFile,
   fetchXrefViewBlobUrl,
   revokeXrefViewBlobUrl,
-} from '../utils/download';
-import { useFileDropToOpen } from '../hooks/useFileDropToOpen';
-import { DropIndicator } from '../components/drop-indicator/DropIndicator';
-import { i18nScope, t } from '@/languages';
+} from "../utils/download";
+import { useFileDropToOpen } from "../hooks/useFileDropToOpen";
+import { DropIndicator } from "../components/drop-indicator/DropIndicator";
+import { i18nScope, t } from "@/languages";
 
-import { useVoerkaI18n } from '@voerkai18n/react';
+import { useVoerkaI18n } from "@voerkai18n/react";
 
 declare global {
   interface Window {
@@ -83,29 +83,29 @@ declare global {
 import {
   useFileRouteParser,
   useHistoryBackFix,
-} from '../hooks/useFileRouteParser';
-import { useCadFileLoader } from '../hooks/useCadFileLoader';
-import { useFileOpenGuard } from '../hooks/useFileOpenGuard';
-import { useCadPermissions } from '../hooks/useCadPermissions';
-import { useExternalRefCompletion } from '../hooks/useExternalRefCompletion';
-import { useCollabShare } from '../hooks/useCollabShare';
-import { useCollabAutoJoin } from '../hooks/useCollabAutoJoin';
-import { useFileInsert } from '../hooks/useFileInsert';
-import { useHomeInit } from '../hooks/useHomeInit';
-import { useSidebarContentReady } from '../hooks/useSidebarContentReady';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
+} from "../hooks/useFileRouteParser";
+import { useCadFileLoader } from "../hooks/useCadFileLoader";
+import { useFileOpenGuard } from "../hooks/useFileOpenGuard";
+import { useCadPermissions } from "../hooks/useCadPermissions";
+import { useExternalRefCompletion } from "../hooks/useExternalRefCompletion";
+import { useCollabShare } from "../hooks/useCollabShare";
+import { useCollabAutoJoin } from "../hooks/useCollabAutoJoin";
+import { useFileInsert } from "../hooks/useFileInsert";
+import { useHomeInit } from "../hooks/useHomeInit";
+import { useSidebarContentReady } from "../hooks/useSidebarContentReady";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import {
   buildCadEditorUrl,
   getCadEditorBackUrl,
   parseCADEditorRoute,
-} from '../utils/cadEditorRoute';
+} from "../utils/cadEditorRoute";
 import {
   editorDisplayName,
   mxcadManager,
   isEmptyDocumentName,
   zoomToRegion,
-} from '../services/mxcadManager';
-import { decodeShareRegion, extRefAccessPath } from '@cloudcad/platform';
+} from "../services/mxcadManager";
+import { decodeShareRegion, extRefAccessPath } from "@cloudcad/platform";
 
 export const CADEditorDirect: React.FC = () => {
   const navigate = useNavigate();
@@ -157,7 +157,7 @@ export const CADEditorDirect: React.FC = () => {
   });
 
   // 存储当前文件的 hash（用于未登录用户的外部参照上传）
-  const [currentFileHash, setCurrentFileHash] = useState('');
+  const [currentFileHash, setCurrentFileHash] = useState("");
 
   // 存储文件打开回调函数
   const openFileCallbackRef = useRef<(() => Promise<void>) | null>(null);
@@ -174,15 +174,15 @@ export const CADEditorDirect: React.FC = () => {
           openFileCallbackRef.current = null;
         } else {
           // 如果没有回调函数，重新加载当前文件
-          import('../services/mxcadManager').then(({ mxcadManager }) => {
+          import("../services/mxcadManager").then(({ mxcadManager }) => {
             mxcadManager.reloadCurrentFile().catch((err) => {
-              console.error('重新加载文件失败:', err);
+              console.error("重新加载文件失败:", err);
             });
           });
         }
       },
       onError: (error: unknown) => {
-        console.error('外部参照检查失败:', error);
+        console.error("外部参照检查失败:", error);
         // 即使外部参照检查失败，也调用回调函数打开文件
         if (openFileCallbackRef.current) {
           openFileCallbackRef.current();
@@ -197,12 +197,12 @@ export const CADEditorDirect: React.FC = () => {
         }
       },
     }),
-    [fileId, currentFileHash]
+    [fileId, currentFileHash],
   );
 
   // 外部参照上传 hook
   const externalReferenceUpload = useExternalReferenceUpload(
-    externalReferenceConfig
+    externalReferenceConfig,
   );
 
   // 浏览器标签标题随当前文件同步：编辑器标题栏走引擎 useFileName，标签标题此前从不更新，
@@ -210,7 +210,7 @@ export const CADEditorDirect: React.FC = () => {
   const currentFileName = useCADEditorStore((s) => s.currentFileName);
   useDocumentTitle(
     editorDisplayName(currentFileName, isAuthenticated),
-    !isActive
+    !isActive,
   );
 
   // 用 ref 包装避免 effect 依赖不稳定对象导致重复执行
@@ -239,8 +239,8 @@ export const CADEditorDirect: React.FC = () => {
         canExport?: boolean;
         canManageExternalRef?: boolean;
       }) => setPermissions(perms),
-      [setPermissions]
-    )
+      [setPermissions],
+    ),
   );
 
   // 导出/另存为子系统：ExportModals 自包含组件（ADR-0040），
@@ -250,7 +250,7 @@ export const CADEditorDirect: React.FC = () => {
   // 分享对话框状态
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareFileId, setShareFileId] = useState<string | null>(null);
-  const [shareFileName, setShareFileName] = useState('');
+  const [shareFileName, setShareFileName] = useState("");
 
   useHistoryBackFix(fileId);
 
@@ -263,10 +263,10 @@ export const CADEditorDirect: React.FC = () => {
   // 同步到 mxcadManager 缓存
   useEffect(() => {
     if (personalSpaceId) {
-      import('../services/mxcadManager').then(
+      import("../services/mxcadManager").then(
         ({ setPersonalSpaceId: setCachedPersonalSpaceId }) => {
           setCachedPersonalSpaceId(personalSpaceId);
-        }
+        },
       );
     }
   }, [personalSpaceId]);
@@ -304,9 +304,13 @@ export const CADEditorDirect: React.FC = () => {
   }, [collabWorkIdParam]);
 
   // 侧边栏内容就绪门控：Tab 栏立即渲染，数据面板等引擎就绪 + 图纸打开终态
+  // hasDrawingOpenIntent：?hash=/?nodeId= 直开（pathname 同为 /cad-editor，
+  // isHomeMode 为 true）是真实图纸打开，排除出「无图纸入口」提前放行，
+  // 避免库列表与图纸 mxweb 下载抢带宽
   const contentReady = useSidebarContentReady({
     isActive,
     isHomeMode,
+    hasDrawingOpenIntent: !!hashParam || !!nodeIdParam,
     isCollabLink,
     error,
   });
@@ -317,7 +321,7 @@ export const CADEditorDirect: React.FC = () => {
   // 已登录/已抑制的判定收敛在 requireLogin 内部。
   useEffect(() => {
     if (isCollabLink) {
-      loginGate.requireLogin(t('加入协同'));
+      loginGate.requireLogin(t("加入协同"));
     }
   }, [isCollabLink, loginGate.requireLogin]);
 
@@ -335,10 +339,10 @@ export const CADEditorDirect: React.FC = () => {
       shareFileNameParam,
       hashParam,
       hasLibraryDrawingManage: hasPermission(
-        SystemPermission.LIBRARY_DRAWING_MANAGE
+        SystemPermission.LIBRARY_DRAWING_MANAGE,
       ),
       hasLibraryBlockManage: hasPermission(
-        SystemPermission.LIBRARY_BLOCK_MANAGE
+        SystemPermission.LIBRARY_BLOCK_MANAGE,
       ),
       isInitializedRef,
       loadedFileUrlRef,
@@ -372,8 +376,8 @@ export const CADEditorDirect: React.FC = () => {
         // 只有 URL 里的文件与本次打开的一致才保留，避免切换文件时串用上一张的版本号。
         // shareToken 同理：分享链接打开后若从 URL 上抹掉，刷新会改走节点鉴权接口，
         // 游客直接被判未登录——分享链接变成一次性的。只跟随它所属的那个文件。
-        const urlFileId = parseCADEditorRoute(window.location.pathname) ?? '';
-        const sameFileAsUrl = urlFileId === (openedFileId || '');
+        const urlFileId = parseCADEditorRoute(window.location.pathname) ?? "";
+        const sameFileAsUrl = urlFileId === (openedFileId || "");
         const url = buildCadEditorUrl({
           fileId: openedFileId,
           parentId,
@@ -384,7 +388,7 @@ export const CADEditorDirect: React.FC = () => {
           shareToken: sameFileAsUrl ? shareTokenParam : null,
           back: getCadEditorBackUrl(),
         });
-        window.history.replaceState(null, '', url);
+        window.history.replaceState(null, "", url);
         currentFileIdRef.current = openedFileId;
         patchSessionFlags({ fileId: openedFileId, fileName: fileName || null });
       },
@@ -395,24 +399,24 @@ export const CADEditorDirect: React.FC = () => {
         // 'none'，协同面板误判「未打开图纸」。只同步回退导航引用。
         currentFileIdRef.current = null;
       },
-    }
+    },
   );
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     (async () => {
-      const { mxcadApp } = await import('mxcad-app');
+      const { mxcadApp } = await import("mxcad-app");
       const handler = (language: string) => {
         i18nScope.change(language);
-        console.log('[CADEditorDirect] mxcadApp i18nScope changed:', language);
+        console.log("[CADEditorDirect] mxcadApp i18nScope changed:", language);
       };
       if ((mxcadApp as any).i18nScope) {
         const scope = (mxcadApp as any).i18nScope;
-        scope.on('change', handler);
-        cleanup = () => scope.off('change', handler);
+        scope.on("change", handler);
+        cleanup = () => scope.off("change", handler);
       } else {
         console.warn(
-          '[CADEditorDirect] mxcadApp.i18nScope 未定义，跳过 i18n 同步'
+          "[CADEditorDirect] mxcadApp.i18nScope 未定义，跳过 i18n 同步",
         );
         cleanup = undefined;
       }
@@ -428,7 +432,7 @@ export const CADEditorDirect: React.FC = () => {
     (cb) => {
       openFileCallbackRef.current = cb;
     },
-    setCurrentFileHash
+    setCurrentFileHash,
   );
 
   const { handleInsertFile } = useFileInsert({
@@ -450,7 +454,7 @@ export const CADEditorDirect: React.FC = () => {
   // 外部参照查看
   const handleViewXref = useCallback(
     async (file: ExternalReferenceFile) => {
-      if (file.type === 'img') {
+      if (file.type === "img") {
         if (!xrefId) return;
         if (currentFileHash) {
           // 未登录场景：public-file/access 无鉴权，可直接加载。
@@ -458,7 +462,7 @@ export const CADEditorDirect: React.FC = () => {
           // 故追加时间戳参数绕过浏览器 HTTP 缓存
           const url = UrlHelper.buildPublicFileAccessUrl(
             `${encodeURIComponent(currentFileHash)}/${encodeURIComponent(file.name)}`,
-            { cacheBust: true }
+            { cacheBust: true },
           );
           setPreviewXref((prev) => {
             if (prev && prev.url !== url) revokeXrefViewBlobUrl(prev.url);
@@ -475,7 +479,7 @@ export const CADEditorDirect: React.FC = () => {
             return { file, url };
           });
         } catch (error) {
-          globalShowToast(t('打开外部参照失败'), 'error');
+          globalShowToast(t("打开外部参照失败"), "error");
         }
       } else {
         if (!xrefId) return;
@@ -484,19 +488,19 @@ export const CADEditorDirect: React.FC = () => {
         const fileUrl = currentFileHash
           ? UrlHelper.buildPublicFileAccessUrl(
               extRefAccessPath(currentFileHash!, file.name)
-                .split('/')
+                .split("/")
                 .map(encodeURIComponent)
-                .join('/'),
-              { cacheBust: true }
+                .join("/"),
+              { cacheBust: true },
             )
           : `/api/v1/mxcad/external-ref-view/${encodeURIComponent(fileId!)}/${encodeURIComponent(file.name)}`;
         window.open(
           `/cad-editor?fileUrl=${encodeURIComponent(fileUrl)}`,
-          '_blank'
+          "_blank",
         );
       }
     },
-    [xrefId, currentFileHash, fileId]
+    [xrefId, currentFileHash, fileId],
   );
 
   // 外部参照下载（图片直接下载，图纸走格式转换）
@@ -504,15 +508,15 @@ export const CADEditorDirect: React.FC = () => {
     async (file: ExternalReferenceFile) => {
       if (!xrefId || !file.name) return;
 
-      if (file.type === 'img') {
+      if (file.type === "img") {
         if (currentFileHash) {
           // 未登录场景：public-file/access 无鉴权，可直接下载。
           // 追加时间戳绕过浏览器缓存，确保下载的是替换后的最新图片
           const downloadUrl = UrlHelper.buildPublicFileAccessUrl(
             `${encodeURIComponent(currentFileHash)}/${encodeURIComponent(file.name)}`,
-            { cacheBust: true }
+            { cacheBust: true },
           );
-          const a = document.createElement('a');
+          const a = document.createElement("a");
           a.href = downloadUrl;
           a.download = file.name;
           document.body.appendChild(a);
@@ -525,13 +529,13 @@ export const CADEditorDirect: React.FC = () => {
           // 登录场景：走 SDK（自动带 token），避免 <a> 下载 401
           await downloadExternalRefFile(fileId, file.name, {}, file.name);
         } catch (error) {
-          globalShowToast(t('外部参照下载失败'), 'error');
+          globalShowToast(t("外部参照下载失败"), "error");
         }
       } else {
         exportModalsRef.current?.openExtRefDownload(file);
       }
     },
-    [xrefId, currentFileHash, fileId]
+    [xrefId, currentFileHash, fileId],
   );
 
   useHomeInit({
@@ -583,7 +587,7 @@ export const CADEditorDirect: React.FC = () => {
   // 处理外部参照查看请求（fileUrl URL 参数）
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    const fileUrl = searchParams.get('fileUrl');
+    const fileUrl = searchParams.get("fileUrl");
     if (!fileUrl) return;
 
     const decodedUrl = decodeURIComponent(fileUrl);
@@ -591,8 +595,8 @@ export const CADEditorDirect: React.FC = () => {
     const openExternalRef = async () => {
       // 打开序列（loading 配对、引擎就绪等待、openFile、失败 toast）收敛在
       // openDrawing(external-ref)，内部已含错误收尾、不会 reject
-      const { openDrawing } = await import('../services/mxcadManager');
-      await openDrawing({ source: 'external-ref', url: decodedUrl });
+      const { openDrawing } = await import("../services/mxcadManager");
+      await openDrawing({ source: "external-ref", url: decodedUrl });
     };
 
     openExternalRef();
@@ -606,7 +610,7 @@ export const CADEditorDirect: React.FC = () => {
       // autoJoin（URL 协同链接）不再早退：其 loading 前置到意图出现，空模板的
       // OPEN_COMPLETE 落在 loading 窗口内，须由本 handler 在真实图纸（协同文件）
       // 加载完成时才 hide（下方空模板判据），否则会在协同文件打开前就摘掉 loading。
-      if (source === 'handleJoin') return;
+      if (source === "handleJoin") return;
       // 空模板（引擎初始化的默认文档）的 OPEN_COMPLETE 不是任何打开意图的终态：
       // loading 前置到意图出现后，空模板的 openFileComplete 落在 loading 窗口内，
       // 若在此 hide 会在真实图纸打开前就摘掉 loading（真实图纸随后无 loading 打开）。
@@ -626,7 +630,7 @@ export const CADEditorDirect: React.FC = () => {
   // 意图的终态，等真实图纸加载完成再 zoom（判据与上方 loading handler 一致）。
   useEffect(() => {
     const region = decodeShareRegion(
-      new URLSearchParams(window.location.search).get('region')
+      new URLSearchParams(window.location.search).get("region"),
     );
     if (!region) return;
     let zoomed = false;
@@ -645,9 +649,9 @@ export const CADEditorDirect: React.FC = () => {
     if (isHomeMode) {
       window.location.reload();
     } else if (isPersonalSpaceMode) {
-      navigate('/personal-space');
+      navigate("/personal-space");
     } else {
-      navigate('/projects');
+      navigate("/projects");
     }
   };
 
@@ -656,31 +660,31 @@ export const CADEditorDirect: React.FC = () => {
     <div
       className="fixed inset-0"
       style={{
-        visibility: isActive ? 'visible' : 'hidden',
+        visibility: isActive ? "visible" : "hidden",
         zIndex: isActive ? Z_LAYERS.CAD_EDITOR : -1,
-        pointerEvents: isActive ? 'auto' : 'none',
-        background: 'transparent',
+        pointerEvents: isActive ? "auto" : "none",
+        background: "transparent",
       }}
     >
       {error && (
         <div
           className="flex flex-col items-center justify-center h-full px-4"
-          style={{ background: 'var(--bg-primary)' }}
+          style={{ background: "var(--bg-primary)" }}
         >
           <div
             className="flex items-center justify-center w-20 h-20 rounded-full mb-6"
-            style={{ background: 'var(--bg-tertiary)' }}
+            style={{ background: "var(--bg-tertiary)" }}
           >
-            <AlertCircle size={40} style={{ color: 'var(--error)' }} />
+            <AlertCircle size={40} style={{ color: "var(--error)" }} />
           </div>
           <div
             className="text-lg mb-6 max-w-md text-center"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
             {error}
           </div>
           <Button onClick={handleGoBack} variant="primary">
-            {isHomeMode ? t('刷新页面') : t('返回项目列表')}
+            {isHomeMode ? t("刷新页面") : t("返回项目列表")}
           </Button>
         </div>
       )}
@@ -690,12 +694,12 @@ export const CADEditorDirect: React.FC = () => {
         <div
           className="absolute top-0 left-0 right-0 z-[100] flex items-center justify-center gap-2 px-4 py-2 text-sm"
           style={{
-            backgroundColor: 'var(--bg-warning)',
-            color: 'var(--warning)',
-            borderBottom: '1px solid var(--border-warning)',
+            backgroundColor: "var(--bg-warning)",
+            color: "var(--warning)",
+            borderBottom: "1px solid var(--border-warning)",
           }}
         >
-          <span>{t('当前图纸已被删除，保存将另存为新文件')}</span>
+          <span>{t("当前图纸已被删除，保存将另存为新文件")}</span>
         </div>
       )}
 
@@ -704,7 +708,7 @@ export const CADEditorDirect: React.FC = () => {
           <SidebarContainer
             key={activeLanguage}
             projectId={
-              isHomeMode ? personalSpaceId || '' : currentProjectId || ''
+              isHomeMode ? personalSpaceId || "" : currentProjectId || ""
             }
             onInsertFile={handleInsertFile}
             loading={loading}
@@ -714,7 +718,7 @@ export const CADEditorDirect: React.FC = () => {
           {/* CAD编辑器内容区域 */}
           <div
             className="flex-1 relative"
-            style={{ background: 'transparent' }}
+            style={{ background: "transparent" }}
           >
             {/* 导出/另存为子系统（ADR-0040）：5 组导出/另存为弹窗全部收进 ExportModals */}
             <ExportModals
@@ -751,10 +755,10 @@ export const CADEditorDirect: React.FC = () => {
       {/* 外部参照图片预览 */}
       <ImagePreviewModal
         isOpen={!!previewXref}
-        src={previewXref?.url || ''}
-        alt={previewXref?.file.name || ''}
+        src={previewXref?.url || ""}
+        alt={previewXref?.file.name || ""}
         onClose={() => {
-          revokeXrefViewBlobUrl(previewXref?.url || '');
+          revokeXrefViewBlobUrl(previewXref?.url || "");
           setPreviewXref(null);
         }}
       />
@@ -765,7 +769,7 @@ export const CADEditorDirect: React.FC = () => {
         onClose={() => {
           setShareDialogOpen(false);
           setShareFileId(null);
-          setShareFileName('');
+          setShareFileName("");
         }}
         fileId={shareFileId ?? undefined}
         fileName={shareFileName}

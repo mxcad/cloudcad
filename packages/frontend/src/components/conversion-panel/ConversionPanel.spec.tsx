@@ -306,7 +306,7 @@ describe('ConversionPanel', () => {
     });
   });
 
-  it('双击 header 复位：position 回 null（默认右下角）+ size 回默认尺寸（#476 扩展）', async () => {
+  it('双击 header 复位：position 回右下角合理位置 + size 回默认（视口内 clamp）', async () => {
     // 模拟「拖走后一直停在旧位置」：非默认 position + 非默认 size
     useConversionQueueStore.setState({
       collapsed: false,
@@ -316,18 +316,27 @@ describe('ConversionPanel', () => {
     await renderPanel();
     const header = document.querySelector('.conversion-header')!;
 
-    // 双击标题栏 → 复位到默认右下角（position null）+ 默认尺寸
+    // 双击标题栏 → 复位到默认尺寸（超视口部分 clamp）+ 右下角合理位置
     await act(async () => {
       header.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     });
 
     const { position, size } = useConversionQueueStore.getState();
-    expect(position).toBeNull();
-    expect(size).toEqual(DEFAULT_PANEL_SIZE);
-    // position null → 外层 portal 无内联 left/top（走 CSS 默认右下角）
+    expect(position).toBeTruthy();
+    // 尺寸回默认；默认尺寸超视口时 clamp 回视口内
+    expect(size).toEqual({
+      width: Math.min(DEFAULT_PANEL_SIZE.width, window.innerWidth - 16),
+      height: Math.min(DEFAULT_PANEL_SIZE.height, window.innerHeight - 16),
+    });
+    // 右下角合理位置：距边缘有留白、整体在视口内
+    expect(position!.x).toBeGreaterThanOrEqual(8);
+    expect(position!.y).toBeGreaterThanOrEqual(8);
+    expect(position!.x + size.width).toBeLessThanOrEqual(window.innerWidth);
+    expect(position!.y + size.height).toBeLessThanOrEqual(window.innerHeight);
+    // 内联 left/top 挂外层 portal（首帧即复位位置，不走 CSS 兜底）
     const portal = document.querySelector('.conversion-panel-portal')!;
-    expect(portal.style.left).toBe('');
-    expect(portal.style.top).toBe('');
+    expect(portal.style.left).toBe(`${position!.x}px`);
+    expect(portal.style.top).toBe(`${position!.y}px`);
   });
 
   it('双击隐藏按钮不触发复位（onDoubleClick stopPropagation 隔离，不冒泡到 header）', async () => {

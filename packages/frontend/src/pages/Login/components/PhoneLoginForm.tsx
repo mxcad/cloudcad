@@ -3,11 +3,11 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React from 'react';
-import { Phone, MessageSquare, ArrowRight, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import styles from '../Login.module.css';
+import React from "react";
+import { Phone, MessageSquare, ArrowRight, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "../Login.module.css";
 
 interface PhoneLoginFormProps {
   phoneForm: { phone: string; code: string };
@@ -37,15 +37,15 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
   return (
     <form className={styles.loginForm} onSubmit={onSubmit}>
       <div
-        className={`${styles.inputGroup} ${focusedField === 'phone' ? styles.focused : ''}`}
+        className={`${styles.inputGroup} ${focusedField === "phone" ? styles.focused : ""}`}
       >
         <label htmlFor="phone" className={styles.inputLabel}>
-          {t('手机号')}
+          {t("手机号")}
         </label>
         <div className={styles.inputWrapper}>
           <Phone
             size={18}
-            className={`${styles.inputIcon} ${focusedField === 'phone' ? styles.active : ''}`}
+            className={`${styles.inputIcon} ${focusedField === "phone" ? styles.active : ""}`}
           />
           <input
             id="phone"
@@ -55,10 +55,10 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             required
             maxLength={11}
             className={styles.inputField}
-            placeholder={t('请输入手机号')}
+            placeholder={t("请输入手机号")}
             value={phoneForm.phone}
             onChange={onChange}
-            onFocus={() => onFocus('phone')}
+            onFocus={() => onFocus("phone")}
             onBlur={onBlur}
           />
           <div className={styles.inputGlow} />
@@ -66,15 +66,15 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
       </div>
 
       <div
-        className={`${styles.inputGroup} ${focusedField === 'code' ? styles.focused : ''}`}
+        className={`${styles.inputGroup} ${focusedField === "code" ? styles.focused : ""}`}
       >
         <label htmlFor="code" className={styles.inputLabel}>
-          {t('验证码')}
+          {t("验证码")}
         </label>
         <div className={`${styles.inputWrapper} ${styles.hasButton}`}>
           <MessageSquare
             size={18}
-            className={`${styles.inputIcon} ${focusedField === 'code' ? styles.active : ''}`}
+            className={`${styles.inputIcon} ${focusedField === "code" ? styles.active : ""}`}
           />
           <input
             id="code"
@@ -84,10 +84,10 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             required
             maxLength={6}
             className={`${styles.inputField} ${styles.hasButton}`}
-            placeholder={t('请输入验证码')}
+            placeholder={t("请输入验证码")}
             value={phoneForm.code}
             onChange={onChange}
-            onFocus={() => onFocus('code')}
+            onFocus={() => onFocus("code")}
             onBlur={onBlur}
           />
           <button
@@ -103,7 +103,7 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             ) : countdown > 0 ? (
               `${countdown}s`
             ) : (
-              t('获取验证码')
+              t("获取验证码")
             )}
           </button>
           <div className={styles.inputGlow} />
@@ -118,10 +118,10 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
         className="w-full"
       >
         {loading ? (
-          <span>{t('登录中...')}</span>
+          <span>{t("登录中...")}</span>
         ) : (
           <>
-            <span>{t('立即登录')}</span>
+            <span>{t("立即登录")}</span>
             <ArrowRight size={18} className={styles.buttonArrow} />
           </>
         )}

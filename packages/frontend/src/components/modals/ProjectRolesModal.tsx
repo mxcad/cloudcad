@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Plus,
   Trash2,
@@ -7,23 +7,21 @@ import {
   Edit,
   Loader2,
   AlertCircle,
-} from 'lucide-react';
-import { Button } from '../ui/Button';
-import { Tag } from '../ui/Tag';
-import { Modal } from '../ui/Modal';
-import { DescriptionText } from '../ui/TruncateText';
-import { PermissionConfigModal } from '../permission/PermissionAssignment';
-import { useProjectRoleCRUD } from './hooks/useProjectRoleCRUD';
-import { usePermission } from '../../hooks/usePermission';
-import { useProjectPermissions } from '../../hooks/useProjectPermissions';
-import { useNotification } from '../../contexts/NotificationContext';
+} from "lucide-react";
+import { Button, Tag, Modal, DescriptionText } from "@/components/ui";
+
+import { PermissionConfigModal } from "../permission/PermissionAssignment";
+import { useProjectRoleCRUD } from "./hooks/useProjectRoleCRUD";
+import { usePermission } from "../../hooks/usePermission";
+import { useProjectPermissions } from "../../hooks/useProjectPermissions";
+import { useNotification } from "../../contexts/NotificationContext";
 import {
-  getProjectRoleNames,
+  getRoleDisplayName,
   ProjectPermission,
-} from '../../constants/permissions';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { t } from '@/languages';
-import type { ProjectRoleDto } from '@/api-sdk';
+} from "../../constants/permissions";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { t } from "@/languages";
+import type { ProjectRoleDto } from "@/api-sdk";
 
 interface ProjectRolesModalProps {
   isOpen: boolean;
@@ -61,8 +59,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   // 权限配置弹窗状态
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<ProjectRoleDto | null>(null);
-  const [roleName, setRoleName] = useState('');
-  const [roleDesc, setRoleDesc] = useState('');
+  const [roleName, setRoleName] = useState("");
+  const [roleDesc, setRoleDesc] = useState("");
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -72,7 +70,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
 
   // 项目角色管理：项目权限 PROJECT_ROLE_MANAGE（#262，项目所有者/管理员可管理）
   const canManageRoles = checkProjectPermission(
-    ProjectPermission.PROJECT_ROLE_MANAGE
+    ProjectPermission.PROJECT_ROLE_MANAGE,
   );
 
   // 编辑角色：PATCH 支持 permissions 全量替换，需同时具备权限配置权限
@@ -83,8 +81,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   // 创建角色
   const handleCreateRole = () => {
     setEditingRole(null);
-    setRoleName('');
-    setRoleDesc('');
+    setRoleName("");
+    setRoleDesc("");
     setSelectedPerms([]);
     setConfigModalOpen(true);
   };
@@ -93,7 +91,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   const handleEditRole = (role: ProjectRoleDto) => {
     setEditingRole(role);
     setRoleName(role.name);
-    setRoleDesc(role.description || '');
+    setRoleDesc(role.description || "");
     const permissions = Array.isArray(role.permissions)
       ? role.permissions.map((p) => p.permission)
       : [];
@@ -104,7 +102,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   // 保存角色
   const handleSaveRole = async () => {
     if (!roleName) {
-      showToast(t('请输入角色名称'), 'warning');
+      showToast(t("请输入角色名称"), "warning");
       return;
     }
 
@@ -116,22 +114,22 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           description: roleDesc,
           permissions: selectedPerms,
         });
-        showToast(t('角色更新成功'), 'success');
+        showToast(t("角色更新成功"), "success");
       } else {
         await createRole({
           name: roleName,
           description: roleDesc,
           permissions: selectedPerms,
         });
-        showToast(t('角色创建成功'), 'success');
+        showToast(t("角色创建成功"), "success");
       }
 
       setConfigModalOpen(false);
     } catch (error) {
-      console.error('保存角色失败:', error);
+      console.error("保存角色失败:", error);
       // SDK 默认不抛错：mutationFn 抛出的 result.error 是后端 body 对象（带 message 字段），
       // 用 getErrorMessage 统一提取（.response?.data?.message 形状恒 undefined）
-      showToast(getErrorMessage(error) || t('保存失败'), 'error');
+      showToast(getErrorMessage(error) || t("保存失败"), "error");
     } finally {
       setSaving(false);
     }
@@ -142,7 +140,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   // 非所有者角色，后端会自动创建默认成员角色接住成员/保证项目仍可邀人。
   const handleDeleteRole = (role: ProjectRoleDto) => {
     if (role.isOwnerRole) {
-      showToast(t('项目所有者使用的角色不可删除'), 'warning');
+      showToast(t("项目所有者使用的角色不可删除"), "warning");
       return;
     }
     setRoleToDelete(role);
@@ -157,8 +155,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
       setDeleteConfirmOpen(false);
       setRoleToDelete(null);
     } catch (error) {
-      console.error('删除角色失败:', error);
-      showToast(getErrorMessage(error) || t('删除失败'), 'error');
+      console.error("删除角色失败:", error);
+      showToast(getErrorMessage(error) || t("删除失败"), "error");
     }
   };
 
@@ -167,7 +165,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title={t('项目角色管理')}
+        title={t("项目角色管理")}
         className="max-w-4xl"
         footer={
           <Button
@@ -175,7 +173,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
             onClick={onClose}
             data-tour="modal-close-btn"
           >
-            {t('关闭')}
+            {t("关闭")}
           </Button>
         }
       >
@@ -184,7 +182,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           {hookError && (
             <div
               className="flex items-center gap-2 p-3 rounded-lg"
-              style={{ background: 'var(--bg-error)', color: 'var(--error)' }}
+              style={{ background: "var(--bg-error)", color: "var(--error)" }}
             >
               <AlertCircle size={16} />
               {hookError}
@@ -195,7 +193,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           {loading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 size={20} className="animate-spin text-slate-400" />
-              <span className="ml-2 text-slate-500">{t('加载中...')}</span>
+              <span className="ml-2 text-slate-500">{t("加载中...")}</span>
             </div>
           )}
 
@@ -206,12 +204,12 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                 <span
                   data-tour="project-role-hint"
                   style={{
-                    color: 'var(--text-muted)',
-                    fontSize: '0.75rem',
+                    color: "var(--text-muted)",
+                    fontSize: "0.75rem",
                   }}
                 >
                   {t(
-                    '项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色'
+                    "项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色",
                   )}
                 </span>
                 {canManageRoles && (
@@ -220,30 +218,30 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                     onClick={handleCreateRole}
                     data-tour="create-role-btn"
                   >
-                    {t('新建角色')}
+                    {t("新建角色")}
                   </Button>
                 )}
               </div>
               {roles.length === 0 ? (
                 <div
                   className="text-center py-8"
-                  style={{ color: 'var(--text-tertiary)' }}
+                  style={{ color: "var(--text-tertiary)" }}
                 >
                   <Users
                     size={32}
                     className="mx-auto mb-2"
-                    style={{ color: 'var(--text-muted)' }}
+                    style={{ color: "var(--text-muted)" }}
                   />
-                  <p>{t('暂无项目角色')}</p>
+                  <p>{t("暂无项目角色")}</p>
                   {canManageRoles && (
                     <p
                       style={{
-                        color: 'var(--text-muted)',
-                        fontSize: '0.75rem',
-                        marginTop: '0.25rem',
+                        color: "var(--text-muted)",
+                        fontSize: "0.75rem",
+                        marginTop: "0.25rem",
                       }}
                     >
-                      {t('点击\u201C新建角色\u201D创建项目专属角色')}
+                      {t("点击\u201C新建角色\u201D创建项目专属角色")}
                     </p>
                   )}
                 </div>
@@ -259,8 +257,8 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                         key={role.id}
                         className={`p-4 rounded-lg border-2 transition-colors ${
                           isDefault
-                            ? 'bg-slate-50 border-slate-200'
-                            : 'bg-white border-emerald-200 hover:border-emerald-300'
+                            ? "bg-slate-50 border-slate-200"
+                            : "bg-white border-emerald-200 hover:border-emerald-300"
                         }`}
                       >
                         <div className="flex items-start justify-between">
@@ -268,16 +266,16 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                             <div className="flex items-center gap-2">
                               <h4
                                 className="font-semibold truncate"
-                                style={{ color: 'var(--text-primary)' }}
+                                style={{ color: "var(--text-primary)" }}
                               >
-                                {getProjectRoleNames()[role.name] || role.name}
+                                {getRoleDisplayName(role.name, false)}
                               </h4>
                               {isDefault && (
                                 <Tag
                                   variant="primary"
                                   className="flex-shrink-0"
                                 >
-                                  {t('默认')}
+                                  {t("默认")}
                                 </Tag>
                               )}
                               {role.isOwnerRole && (
@@ -285,16 +283,16 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                                   variant="neutral"
                                   className="flex-shrink-0"
                                 >
-                                  {t('项目所有者')}
+                                  {t("项目所有者")}
                                 </Tag>
                               )}
                             </div>
                             {role.description && (
                               <p
                                 style={{
-                                  color: 'var(--text-muted)',
-                                  fontSize: '0.75rem',
-                                  marginTop: '0.25rem',
+                                  color: "var(--text-muted)",
+                                  fontSize: "0.75rem",
+                                  marginTop: "0.25rem",
                                 }}
                               >
                                 <DescriptionText>
@@ -340,7 +338,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
       <PermissionConfigModal
         isOpen={configModalOpen}
         onClose={() => setConfigModalOpen(false)}
-        title={editingRole ? t('配置项目角色权限') : t('新建项目角色')}
+        title={editingRole ? t("配置项目角色权限") : t("新建项目角色")}
         roleName={roleName}
         roleDesc={roleDesc}
         onNameChange={setRoleName}
@@ -362,7 +360,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
             setDeleteConfirmOpen(false);
             setRoleToDelete(null);
           }}
-          title={t('确认删除')}
+          title={t("确认删除")}
           footer={
             <>
               <Button
@@ -372,13 +370,13 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                   setRoleToDelete(null);
                 }}
               >
-                {t('取消')}
+                {t("取消")}
               </Button>
               <Button
                 onClick={confirmDeleteRole}
                 className="bg-red-600 hover:bg-red-700"
               >
-                {t('确认删除')}
+                {t("确认删除")}
               </Button>
             </>
           }
@@ -387,20 +385,20 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
             <div
               className="flex items-start gap-3 p-4 rounded-lg"
               style={{
-                background: 'var(--warning-light)',
-                border: '1px solid var(--border-warning)',
+                background: "var(--warning-light)",
+                border: "1px solid var(--border-warning)",
               }}
             >
               <AlertCircle
                 size={20}
                 className="flex-shrink-0 mt-0.5"
-                style={{ color: 'var(--warning)' }}
+                style={{ color: "var(--warning)" }}
               />
-              <div style={{ color: 'var(--text-primary)' }}>
-                <p className="font-semibold mb-1">{t('重要提示')}</p>
-                <p style={{ color: 'var(--text-secondary)' }}>
+              <div style={{ color: "var(--text-primary)" }}>
+                <p className="font-semibold mb-1">{t("重要提示")}</p>
+                <p style={{ color: "var(--text-secondary)" }}>
                   {t(
-                    '删除角色后，使用该角色的成员将自动降级为项目内的可用角色（优先项目成员）；若项目已无可用角色，系统将自动创建默认的项目成员角色。'
+                    "删除角色后，使用该角色的成员将自动降级为项目内的可用角色（优先项目成员）；若项目已无可用角色，系统将自动创建默认的项目成员角色。",
                   )}
                 </p>
               </div>
@@ -409,38 +407,37 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
             <div className="space-y-2">
               <p
                 className="font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('删除角色：')}
+                {t("删除角色：")}
               </p>
               <div
                 className="p-3 rounded-lg"
-                style={{ background: 'var(--bg-tertiary)' }}
+                style={{ background: "var(--bg-tertiary)" }}
               >
                 <p
                   className="font-medium"
-                  style={{ color: 'var(--text-primary)' }}
+                  style={{ color: "var(--text-primary)" }}
                 >
-                  {getProjectRoleNames()[roleToDelete.name] ||
-                    roleToDelete.name}
+                  {getRoleDisplayName(roleToDelete.name, false)}
                 </p>
                 {roleToDelete.description && (
                   <p
                     style={{
-                      color: 'var(--text-muted)',
-                      fontSize: '0.75rem',
-                      marginTop: '0.25rem',
+                      color: "var(--text-muted)",
+                      fontSize: "0.75rem",
+                      marginTop: "0.25rem",
                     }}
                   >
-                    {roleToDelete.description}
+                    {t(roleToDelete.description)}
                   </p>
                 )}
               </div>
             </div>
 
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-              <p>{t('• 该角色下的成员将自动降级为项目内角色')}</p>
-              <p>{t('• 删除操作不可恢复')}</p>
+            <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+              <p>{t("• 该角色下的成员将自动降级为项目内角色")}</p>
+              <p>{t("• 删除操作不可恢复")}</p>
             </div>
           </div>
         </Modal>

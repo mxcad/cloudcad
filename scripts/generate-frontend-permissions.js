@@ -274,7 +274,9 @@ export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): str
   // 根据角色名称前缀判断是否为项目角色
   const isProjectRole = roleName.startsWith('PROJECT_');
   const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
-  return mapping[roleName] || roleName;
+  // 已知角色名走 t() 翻译（渲染期按当前语言取值）；自定义角色名是用户数据，原样透传
+  const mapped = mapping[roleName];
+  return mapped ? t(mapped) : roleName;
 };
 
 /**

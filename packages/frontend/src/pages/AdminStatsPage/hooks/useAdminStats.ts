@@ -22,11 +22,6 @@ export interface AdminStatsRangeParams {
   [key: string]: unknown;
 }
 
-const OVERVIEW_ERROR = t('加载总量概览失败');
-const REGISTRATIONS_ERROR = t('加载新增用户统计失败');
-const PURCHASES_ERROR = t('加载会员购买统计失败');
-const ACTIVE_ERROR = t('加载活跃用户统计失败');
-
 /**
  * 运营总量概览（当前用户总数 / 累计付费用户，与统计区间无关）
  * @param enabled 无权限时为 false，不发请求
@@ -44,7 +39,8 @@ export function useAdminStatsOverview(enabled: boolean) {
   return {
     stats: data,
     loading: isLoading,
-    error: error ? getErrorMessage(error) || OVERVIEW_ERROR : null,
+    // 兜底文案渲染期走 t()（模块级烘焙会在 en-US pack 未就绪时回退 zh-CN）
+    error: error ? getErrorMessage(error) || t('加载总量概览失败') : null,
   };
 }
 
@@ -71,7 +67,7 @@ export function useDailyRegistrations(
   return {
     stats: data,
     loading: isLoading,
-    error: error ? getErrorMessage(error) || REGISTRATIONS_ERROR : null,
+    error: error ? getErrorMessage(error) || t('加载新增用户统计失败') : null,
   };
 }
 
@@ -98,7 +94,7 @@ export function useDailyPurchases(
   return {
     stats: data,
     loading: isLoading,
-    error: error ? getErrorMessage(error) || PURCHASES_ERROR : null,
+    error: error ? getErrorMessage(error) || t('加载会员购买统计失败') : null,
   };
 }
 
@@ -126,6 +122,6 @@ export function useActiveStats(
   return {
     stats: data,
     loading: isLoading,
-    error: error ? getErrorMessage(error) || ACTIVE_ERROR : null,
+    error: error ? getErrorMessage(error) || t('加载活跃用户统计失败') : null,
   };
 }

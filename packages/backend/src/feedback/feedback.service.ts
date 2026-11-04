@@ -2,7 +2,7 @@
 // 用户反馈模块 - 主服务（用户侧 + 管理侧列表/详情/状态）
 ///////////////////////////////////////////////////////////////////////////////
 
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import {
   FeedbackAttachmentKind as PrismaFeedbackAttachmentKind,
@@ -17,6 +17,8 @@ import { I18nContext } from 'nestjs-i18n';
 import { DatabaseService } from '../database/database.service';
 import { FeedbackRateLimitService } from './feedback-rate-limit.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
+import { Audit } from '../common/decorators/audit.decorator';
+import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import {
   IPERMISSION_SERVICE,
   IPermissionService,
@@ -131,6 +133,8 @@ export interface FeedbackCreateContext {
 
 @Injectable()
 export class FeedbackService {
+  private readonly logger = new Logger(FeedbackService.name);
+
   constructor(
     private readonly prisma: DatabaseService,
     private readonly rateLimit: FeedbackRateLimitService,
@@ -391,6 +395,80 @@ export class FeedbackService {
       SystemPermission.SYSTEM_FEEDBACK_MANAGE
     );
     return this.toResponse(updated as FeedbackRow, { mode: 'admin', canManage });
+  }
+
+  /**
+   * 管理端删除单条反馈（级联删奖励凭据与附件记录；附件物理文件经附件服务清理，
+   * 每条留审计。已发放的会员不回收——会员在 UserMembership，凭据删除不影响已发权益）。
+   */
+  @Audit(AuditAction.FEEDBACK_DELETE, ResourceType.FEEDBACK, {
+    resourceId: (_result, args) => args[0] as string,
+    userId: (_result, args) => args[1] as string,
+    details: (_result, args) => args[2] as Record<string, unknown>,
+  })
+  async adminDelete(
+    id: string,
+    operatorId: string,
+    detail?: Record<string, unknown>
+  ): Promise<{ success: boolean }> {
+    const feedback = await this.prisma.feedback.findUnique({ where: { id } });
+    if (!feedback) {
+      throw new NotFoundException(t('error.feedback.not_found', '反馈不存在'));
+    }
+    // 先清附件（物理文件 + 记录 + 审计），再删反馈（级联删奖励凭据与剩余附件记录）。
+    // 附件删除复用附件服务 adminDelete：FILE 形态删物理文件（内容寻址引用检查），
+    // REFERENCE 只删记录；反馈删除时附件记录由级联一并删除。
+    const attachments = await this.prisma.feedbackAttachment.findMany({
+      where: { feedbackId: id },
+      select: { id: true, type: true, kind: true },
+    });
+    for (const att of attachments) {
+      await this.attachmentService.adminDelete(att.id, operatorId, {
+        type: att.type,
+        kind: att.kind,
+      });
+    }
+    await this.prisma.feedback.delete({ where: { id } });
+    this.logger.log(`反馈已删除：${id}，操作者=${operatorId}`);
+    return { success: true };
+  }
+
+  /**
+   * 管理端批量删除（复用 adminDelete 逐条执行，每条留审计）。
+   *
+   * 不存在的 ID 不抛错、记入 notFoundIds；返回实际删除数与未找到 ID，
+   * 供前端提示「部分反馈不存在」。删除反馈会级联删奖励凭据与附件（含物理文件）。
+   */
+  async adminDeleteMany(
+    ids: string[],
+    operatorId: string
+  ): Promise<{ deleted: number; notFoundIds: string[] }> {
+    // DTO 层已拦空数组，此处防御性短路避免空 in 查询
+    if (ids.length === 0) return { deleted: 0, notFoundIds: [] };
+    const existing = await this.prisma.feedback.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        status: true,
+        rewardStatus: true,
+        _count: { select: { attachments: true } },
+      },
+    });
+    const existingById = new Map(existing.map((f) => [f.id, f]));
+    const notFoundIds = ids.filter((id) => !existingById.has(id));
+
+    let deleted = 0;
+    for (const id of ids) {
+      const fb = existingById.get(id);
+      if (!fb) continue;
+      await this.adminDelete(id, operatorId, {
+        status: fb.status,
+        rewardStatus: fb.rewardStatus,
+        attachmentCount: fb._count.attachments,
+      });
+      deleted += 1;
+    }
+    return { deleted, notFoundIds };
   }
 
   /** 管理端：奖励记录列表（可按状态/分类筛选，可按查询码/标题/账号搜索） */

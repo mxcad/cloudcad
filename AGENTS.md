@@ -119,6 +119,20 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `docs/deployment-runtime-refactor-plan.md` | 部署运行时工程化重构的**可执行路线图**（痛点 P1-P9、契约 C1-C11、决策点、回归矩阵 V1-V8）——改 `runtime/scripts`、`scripts/pack-offline.js`、`start.sh`、`cloudcad.sh`、打包/启动相关代码前必读 |
 | `docs/packaging-unification-plan.md` | 打包入口与交付形态统一的**可执行路线图**（v1 三类包统一入口/命名/交互/CI、v2 docker windows 宿主+private、v3 docker 升级包；痛点 P1-P10、契约 C1-C12、回归矩阵 V1-V8）——改 `pack-menu.js`、`pack-linux-docker.js`、`runtime/docker-runtime`、release.yml 打包/验证/CI 相关代码前必读 |
 
+## ⚠️ 铁律：前端 i18n 编译产物禁止手动编辑
+
+前端 i18n 由 VoerkaI18n 管道（`pnpm i18n` = `extract` → `translate` → `compile`）自动生成。**以下文件全部是编译/生成产物，禁止手动编辑**——手改会在下一次 `pnpm i18n` 时被覆盖或规范化（`$id` 重排、死键清除）：
+
+- `packages/frontend/src/languages/messages/{en-US,ko-KR,zh-CN,zh-TW}.ts` 与 `idMap.json`（`compile` 生成）
+- `packages/frontend/src/languages/translates/messages/default.json`（`extract` 生成）
+- `packages/frontend/src/languages/index.ts`、`paragraphs/`、`component.tsx`、`api.json`、`formatters.json` 等（`compile` 生成）
+
+**唯一手动维护的输入源** = `packages/frontend/src/languages/translates/messages/db-strings.json`（非源码提取文本：环境变量/DB 配置等文案）。改完它跑一次 `pnpm i18n` 即自动翻译 + 编译出对应的 `.ts`/`.json`，**不要手改编译产物**。
+
+**默认路径（源码提取文本）**：新文案在源码写 `t('中文')`，跑 `pnpm i18n` 全自动（extract 分配 `$id` → 自动翻译 → 编译），无需任何手动步骤。
+
+做完 i18n 改动后，`messages/*.ts`/`idMap.json`/`default.json` 的 diff 是编译产物，直接提交即可，**不要手改**。详细规则见 `packages/frontend/AGENTS.md`（74–157 行）。
+
 ## 包总览
 
 **pnpm monorepo** (`pnpm@9.15.9`, `node >=20.19.5`)。
@@ -195,6 +209,7 @@ pnpm build                  # i18n compile → vite build
 | conversion-service 参数两级命名 | backend↔conversion-service **HTTP 契约是 camelCase `ConversionOptions`**（`srcPath`/`fileHash`/`createPreloadingData`/`dwgVersion`），**不是** lowercase；lowercase `srcpath`/`src_file_md5`/`create_preloading_data` 是**低层 mxcadassembly 二进制接口**。**唯一翻译点 = `@cloudcad/contracts` 的 `buildEngineParams`**，backend 进程内 spawn 与 conversion-service runner 共同调用（不再手写映射）；新增引擎字段只改 contracts 的 `ENGINE_INPUT_FIELDS` 一处，`CONTENT_KEY_FIELDS` 由它派生（**禁止再手写第二份清单**——721fe02 曾因手写枚举漏抄 6 字段致 cut_dwg 静默返回字符串 `"false"`）。输出解析同理走 `parseEngineOutput`。**改任一层字段名须同步 backend spec + conversion-service runner 测试**（721fe02 曾因转发分支误发 lowercase 致 `replace` 崩溃） | ADR-0064/0069 |
 | contracts 纯函数式契约 | 允许无 IO/无框架/无副作用的纯函数进 `@cloudcad/contracts`（准入四条 + 逃逸口见 ADR-0069），门禁 = `pnpm --filter @cloudcad/contracts scan:purity`（白名单扫描 src/ 的 import 与 `require(`/`import(`/`fetch(`/`process`/`globalThis`，命中即红灯）；一旦需要 IO 或框架能力**迁独立包**，勿就地扩展 | ADR-0069 |
 | conversion-service 是 runtime 依赖 | `@cloudcad/conversion-service` 依赖 `@cloudcad/contracts`（ADR-0069），部署/升级包的 `pnpm install --filter ... --prod` **必须含 `--filter @cloudcad/conversion-service`**，否则目标机建不出它的 workspace 链接、`dist/server.js` 的 `require('@cloudcad/contracts')` 解析失败 → 3100 无监听 → 断网验证失败。三处清单须同步：`scripts/pack-offline.js` `getDeployStoreInstallFilter`、`runtime/scripts/setup-offline.js` `runPnpmInstallOffline`、`runtime/scripts/verify-deploy.js` | ADR-0069 |
+| pnpm `patchedDependencies` 声明随包到目标机 | 根 `package.json` 的 `pnpm.patchedDependencies`（@voerkai18n/cli，dev-only i18n 翻译 CLI 补丁）与 `pnpm-lock.yaml` 的 patch 引用（顶层段 + importers `patch_hash` + packages 补丁条目）会随部署/升级包拷到目标机；pnpm `install --offline --prod` 对**全部**声明的补丁做 patch 文件哈希校验，**即使装不到该包**（dev 依赖 + filter 排除）→ 包内无 `patches/` 目录即 ENOENT 中断安装（2026-11-04 windows 部署包实测）。补丁只服务开发期翻译流程，部署用不到：包不携带 `patches/`，**须同步剥离声明**（只删 patch 文件无效——pnpm 按声明找文件）。`pack-offline.js` 的 `stripPatchedDepsFromDir`（调 `pack-lib/strip-patched-deps.js` 纯函数，残留 patch 引用即抛错中止打包）在 prepareDeployDir/packUpgrade 两路调用；仓库保留补丁文件（上游 3.1.0 至今未修，本地补丁是唯一修复来源），未来新增补丁管道自动剥离无需手动 | — |
 | CI | main/develop 分支；需要 PG15 + Redis7；前端 CI 只 type-check | — |
 | 开发环境自举（`pnpm i`） | `preinstall` → `scripts/ensure-runtime.js`：按【当前平台×架构】从产物索引 `scripts/pack-lib/mxcad-registry.json` 发现应就绪的**产品二进制**（Linux `mxcad`；Windows `mxcad`+`mxversion`+本地 `postgresql`），缺失即从 Release 下载解压到 `runtime/<platform>/<component>/`。**就绪判定按关键可执行文件、不是「目录非空」**（`runtime/windows/node/` 因 `package.json`/`package-lock.json` 入库而恒非空，干净 clone 下 `node.exe` 并不存在）。**标准组件不走 Release**：Windows 调 `build-windows-runtime.js` 从官方源下载 node/redis（postgresql 必须先由产品循环下齐，因其出口断言含 postgresql）；Linux 只检测系统 `psql`/`redis-server`/`svn`，缺失时打印 apt/dnf 安装命令，`CLOUDCAD_AUTO_INSTALL=1` 才自动装。失败恒不阻塞 `pnpm install`（`preinstall-runtime.js` 吞 exit 码） | ADR-0059 |
 | Linux 平台物料提取（node/pg/redis/svn） | 不走 Release 资产：容器挂载 `runtime/cache/linux-extract/<os>/`（gitignore、runner 恒空）为空时由 `extract-linux-runtime.js` 自提（apt/dnf/yum install + 收集依赖库）并落盘；复用靠 `release.yml` 的 `actions/cache@v4`（key 含 `scripts/pack-lib/component-versions.js` 哈希，组件升级即自然失效）。`pack-linux-deploy.js` 打包前后各做一次关键可执行文件检查——缺失自动重提、重提失败 fail-fast，**勿删这两道检查**（唯一挡住「残缺缓存被复用、打出缺组件部署包」的门）。**勿再加回 `runtime-deps` Release 资产线**：该 tag 从未发布（`/releases/tags/runtime-deps` 恒 404），旧下载步骤 `.catch→exit 1` 曾让每次打 Linux 部署包必失败（`scripts/pack-runtime-deps.js` / `runtime-deps.yml` 已删）。发行版收敛 3 glibc 档（centos7/ubuntu22/rocky9） | ADR-0059 |
@@ -206,6 +221,8 @@ pnpm build                  # i18n compile → vite build
 | ❌ 反模式 | ✅ 正确做法 |
 |----------|------------|
 | 自己写一套 Modal/Table | 复用 `src/components/ui/` 已有组件 |
+| 用了 `useFileBrowserSelection` 选择内核却手写表格本体（checkbox 列/行点击选中/框选接线/滚动分页） | 必须走 `SelectableTable` 容器（ADR-0052）：内核 + 容器 + `useSelectionShortcuts` + `BatchActionBar` 四件套一起复用，禁止只复用内核——「已复用部分」不构成豁免，表格本体手写即违规（实例：/admin/feedback 列表 tab 手写表格漏掉框选，2026-11-03 才补齐） |
+| 模块级 `const X = t('中文')` / 模块顶层对象字面量 `KEY: t('中文')`（非中文语言包异步加载，模块求值期 t() 回退 zh-CN → 烘焙成中文，切语言后永不刷新） | 函数式 getter（`getXxxLabel(x)` 内 switch + `t('中文')` 字面量，渲染期求值）或移入组件体；消费方渲染期已再包 `t(bakedValue)` 的自愈合点免修（先 grep 消费点再下结论）；zod v4 函数式消息用 `{ error: () => t('...') }`（`message` 参数只收 string，位置参数函数形式运行时不生效）；修完跑 `pnpm i18n` + **重启 Vite**（内存缓存旧模块页面显裸数字 id）；完整审计工作流见 `frontend-i18n-audit` 技能 |
 | 在组件文件中定义类型 | 提取到独立 types 文件 |
 | 后端 Controller 写业务逻辑 | 逻辑放 Service，Controller 只做路由委托 |
 | Controller 手动返回 `{ message, data: xxx }` | **直接 `return xxx`**：全局 `ResponseInterceptor` 已统一包装 `{ code, message, data, timestamp }`，手包形成 data 双层嵌套，前端 `responseTransformer` 只解包一层 → 页面数据恒空/"添加后列表不刷新"（实例：IP 黑名单；MSW 直通结构掩盖此问题） |

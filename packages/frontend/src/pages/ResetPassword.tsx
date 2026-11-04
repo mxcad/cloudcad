@@ -1,38 +1,38 @@
-import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { t } from '@/languages';
-import { useTheme } from '../contexts/ThemeContext';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { InteractiveBackground } from '../components/InteractiveBackground';
-import { passwordPlaceholder, usePasswordPolicy } from '@/lib/passwordPolicy';
-import { PasswordStrength } from '@/components/ui/PasswordStrength';
+import { getAppBrandConfig, getCopyrightLine } from "@/constants/appConfig";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { t } from "@/languages";
+import { useTheme } from "../contexts/ThemeContext";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { InteractiveBackground } from "../components/InteractiveBackground";
+import { passwordPlaceholder, usePasswordPolicy } from "@/lib/passwordPolicy";
+import { PasswordStrength, Button } from "@/components/ui";
 import {
   makeResetPasswordSchema,
   type ResetPasswordValues,
-} from './ResetPassword/resetPasswordSchema';
-import { useResetPassword } from './ResetPassword/useResetPassword';
+} from "./ResetPassword/resetPasswordSchema";
+import { useResetPassword } from "./ResetPassword/useResetPassword";
 
 // Lucide 图标
-import { Mail } from 'lucide-react';
-import { Lock } from 'lucide-react';
-import { KeyRound } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
-import { ArrowRight } from 'lucide-react';
-import { AlertCircle } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
-import { Eye } from 'lucide-react';
-import { EyeOff } from 'lucide-react';
-import { Phone } from 'lucide-react';
-import { Cpu } from 'lucide-react';
-import { Boxes } from 'lucide-react';
-import { ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import styles from './ResetPassword.module.css';
+import { Mail } from "lucide-react";
+import { Lock } from "lucide-react";
+import { KeyRound } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
+import { Eye } from "lucide-react";
+import { EyeOff } from "lucide-react";
+import { Phone } from "lucide-react";
+import { Cpu } from "lucide-react";
+import { Boxes } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+
+import styles from "./ResetPassword.module.css";
 
 interface LocationState {
   email?: string;
@@ -51,7 +51,7 @@ interface LocationState {
  * - 完美主题适配
  */
 export const ResetPassword: React.FC = () => {
-  useDocumentTitle(t('重置密码'));
+  useDocumentTitle(t("重置密码"));
   const navigate = useNavigate();
   const location = useLocation();
   const { isDark } = useTheme();
@@ -60,16 +60,16 @@ export const ResetPassword: React.FC = () => {
   const appName = getAppBrandConfig().title;
   const appLogo = getAppBrandConfig().logo;
 
-  const emailFromState = (location.state as LocationState)?.email || '';
-  const phoneFromState = (location.state as LocationState)?.phone || '';
-  const contactType = emailFromState ? 'email' : 'phone';
+  const emailFromState = (location.state as LocationState)?.email || "";
+  const phoneFromState = (location.state as LocationState)?.phone || "";
+  const contactType = emailFromState ? "email" : "phone";
 
   // 本页是「忘记密码」的续页：邮箱/手机号由上一步选定并已发出验证码，两处字段
   // 都是 readOnly。直访（手输 URL / 书签）时状态为空，用户会卡在一个不可编辑的
   // 空字段上，故跳回入口页重新走一遍选方式 + 发验证码。
   const hasIdentity = !!(emailFromState || phoneFromState);
   useEffect(() => {
-    if (!hasIdentity) navigate('/forgot-password', { replace: true });
+    if (!hasIdentity) navigate("/forgot-password", { replace: true });
   }, [hasIdentity, navigate]);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -81,7 +81,7 @@ export const ResetPassword: React.FC = () => {
   const policy = usePasswordPolicy();
   const resetSchema = useMemo(
     () => makeResetPasswordSchema(policy),
-    [policy.minLength, policy.minCategories]
+    [policy.minLength, policy.minCategories],
   );
 
   const {
@@ -92,14 +92,14 @@ export const ResetPassword: React.FC = () => {
   } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetSchema),
     defaultValues: {
-      code: '',
-      newPassword: '',
-      confirmPassword: '',
+      code: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
 
   // 强度条 + 要求清单（共享组件）需要实时密码值
-  const newPasswordValue = watch('newPassword');
+  const newPasswordValue = watch("newPassword");
 
   if (!hasIdentity) return null;
 
@@ -115,8 +115,8 @@ export const ResetPassword: React.FC = () => {
     if (ok) {
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login', {
-          state: { message: t('密码重置成功，请使用新密码登录') },
+        navigate("/login", {
+          state: { message: t("密码重置成功，请使用新密码登录") },
         });
       }, 2000);
     }
@@ -125,12 +125,12 @@ export const ResetPassword: React.FC = () => {
   // 重置成功状态
   if (success) {
     return (
-      <div className={styles.authPage} data-theme={isDark ? 'dark' : 'light'}>
+      <div className={styles.authPage} data-theme={isDark ? "dark" : "light"}>
         <InteractiveBackground />
 
         <div
           className={styles.themeToggleWrapper}
-          style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+          style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
         >
           <LanguageSwitcher />
           <ThemeToggle />
@@ -142,9 +142,9 @@ export const ResetPassword: React.FC = () => {
               <div className={styles.successIcon}>
                 <CheckCircle size={32} />
               </div>
-              <h2 className={styles.successTitle}>{t('密码重置成功！')}</h2>
+              <h2 className={styles.successTitle}>{t("密码重置成功！")}</h2>
               <p className={styles.successSubtitle}>
-                {t('即将自动跳转到登录页...')}
+                {t("即将自动跳转到登录页...")}
               </p>
             </div>
           </div>
@@ -154,7 +154,7 @@ export const ResetPassword: React.FC = () => {
   }
 
   return (
-    <div className={styles.authPage} data-theme={isDark ? 'dark' : 'light'}>
+    <div className={styles.authPage} data-theme={isDark ? "dark" : "light"}>
       <InteractiveBackground />
 
       <div className={styles.themeToggleWrapper}>
@@ -170,13 +170,13 @@ export const ResetPassword: React.FC = () => {
               <img src={appLogo} alt={appName} className={styles.logoImage} />
             </div>
             <h1 className={styles.appTitle}>{appName}</h1>
-            <p className={styles.appTagline}>{t('重置您的账户密码')}</p>
+            <p className={styles.appTagline}>{t("重置您的账户密码")}</p>
           </div>
 
           {/* 表单头部 */}
           <div className={styles.formHeader}>
-            <h2 className={styles.formTitle}>{t('设置新密码')}</h2>
-            <p className={styles.formSubtitle}>{t('请输入验证码和新密码')}</p>
+            <h2 className={styles.formTitle}>{t("设置新密码")}</h2>
+            <p className={styles.formSubtitle}>{t("请输入验证码和新密码")}</p>
           </div>
 
           {/* 错误提示 */}
@@ -189,10 +189,10 @@ export const ResetPassword: React.FC = () => {
 
           {/* 表单 */}
           <form className={styles.authForm} onSubmit={rhfSubmit(onSubmit)}>
-            {contactType === 'email' ? (
+            {contactType === "email" ? (
               <div className={styles.inputGroup}>
                 <label htmlFor="email" className={styles.inputLabel}>
-                  {t('邮箱地址')}
+                  {t("邮箱地址")}
                 </label>
                 <div className={styles.inputWrapper}>
                   <Mail size={18} className={styles.inputIcon} />
@@ -201,7 +201,7 @@ export const ResetPassword: React.FC = () => {
                     type="email"
                     autoComplete="email"
                     className={styles.inputField}
-                    placeholder={t('请输入邮箱地址')}
+                    placeholder={t("请输入邮箱地址")}
                     value={emailFromState}
                     readOnly
                   />
@@ -211,7 +211,7 @@ export const ResetPassword: React.FC = () => {
             ) : (
               <div className={styles.inputGroup}>
                 <label htmlFor="phone" className={styles.inputLabel}>
-                  {t('手机号码')}
+                  {t("手机号码")}
                 </label>
                 <div className={styles.inputWrapper}>
                   <Phone size={18} className={styles.inputIcon} />
@@ -220,7 +220,7 @@ export const ResetPassword: React.FC = () => {
                     type="tel"
                     autoComplete="tel"
                     className={styles.inputField}
-                    placeholder={t('请输入手机号码')}
+                    placeholder={t("请输入手机号码")}
                     value={phoneFromState}
                     readOnly
                   />
@@ -231,7 +231,7 @@ export const ResetPassword: React.FC = () => {
 
             <div className={styles.inputGroup}>
               <label htmlFor="code" className={styles.inputLabel}>
-                {t('验证码')}
+                {t("验证码")}
               </label>
               <div className={styles.inputWrapper}>
                 <KeyRound size={18} className={styles.inputIcon} />
@@ -240,9 +240,9 @@ export const ResetPassword: React.FC = () => {
                   type="text"
                   maxLength={6}
                   className={styles.inputField}
-                  placeholder={t('请输入6位验证码')}
+                  placeholder={t("请输入6位验证码")}
                   aria-invalid={!!errors.code}
-                  {...register('code')}
+                  {...register("code")}
                 />
                 <div className={styles.inputGlow} />
               </div>
@@ -255,18 +255,18 @@ export const ResetPassword: React.FC = () => {
 
             <div className={styles.inputGroup}>
               <label htmlFor="newPassword" className={styles.inputLabel}>
-                {t('新密码')}
+                {t("新密码")}
               </label>
               <div className={styles.inputWrapper}>
                 <Lock size={18} className={styles.inputIcon} />
                 <input
                   id="newPassword"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   className={styles.inputField}
                   placeholder={passwordPlaceholder(policy)}
                   aria-invalid={!!errors.newPassword}
-                  {...register('newPassword')}
+                  {...register("newPassword")}
                 />
                 <Button
                   type="button"
@@ -274,7 +274,7 @@ export const ResetPassword: React.FC = () => {
                   size="xs"
                   className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showPassword ? EyeOff : Eye}
-                  tooltip={showPassword ? t('隐藏密码') : t('显示密码')}
+                  tooltip={showPassword ? t("隐藏密码") : t("显示密码")}
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 />
@@ -292,18 +292,18 @@ export const ResetPassword: React.FC = () => {
 
             <div className={styles.inputGroup}>
               <label htmlFor="confirmPassword" className={styles.inputLabel}>
-                {t('确认新密码')}
+                {t("确认新密码")}
               </label>
               <div className={styles.inputWrapper}>
                 <CheckCircle size={18} className={styles.inputIcon} />
                 <input
                   id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   autoComplete="new-password"
                   className={styles.inputField}
-                  placeholder={t('请再次输入新密码')}
+                  placeholder={t("请再次输入新密码")}
                   aria-invalid={!!errors.confirmPassword}
-                  {...register('confirmPassword')}
+                  {...register("confirmPassword")}
                 />
                 <Button
                   type="button"
@@ -311,7 +311,7 @@ export const ResetPassword: React.FC = () => {
                   size="xs"
                   className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showConfirmPassword ? EyeOff : Eye}
-                  tooltip={showConfirmPassword ? t('隐藏密码') : t('显示密码')}
+                  tooltip={showConfirmPassword ? t("隐藏密码") : t("显示密码")}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   tabIndex={-1}
                 />
@@ -331,7 +331,7 @@ export const ResetPassword: React.FC = () => {
               loading={resetPassword.loading}
               icon={ArrowRight}
             >
-              {t('重置密码')}
+              {t("重置密码")}
             </Button>
           </form>
 
@@ -341,9 +341,9 @@ export const ResetPassword: React.FC = () => {
               variant="secondary"
               size="lg"
               icon={ArrowLeft}
-              onClick={() => navigate('/login')}
+              onClick={() => navigate("/login")}
             >
-              {t('返回登录')}
+              {t("返回登录")}
             </Button>
           </div>
 
@@ -351,19 +351,19 @@ export const ResetPassword: React.FC = () => {
           <div className={styles.featuresBar}>
             <div
               className={styles.featureDot}
-              data-tooltip={t('高性能 CAD 在线预览')}
+              data-tooltip={t("高性能 CAD 在线预览")}
             >
               <Cpu size={14} />
             </div>
             <div
               className={styles.featureDot}
-              data-tooltip={t('多用户实时协同编辑')}
+              data-tooltip={t("多用户实时协同编辑")}
             >
               <Boxes size={14} />
             </div>
             <div
               className={styles.featureDot}
-              data-tooltip={t('企业级数据安全保障')}
+              data-tooltip={t("企业级数据安全保障")}
             >
               <ShieldCheck size={14} />
             </div>

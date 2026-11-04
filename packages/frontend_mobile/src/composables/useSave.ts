@@ -17,10 +17,10 @@ import {
 import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { processPendingImages } from '../services/pendingImageService';
 import {
-  buildCacheKey,
   clearMxwebCache,
   setMxwebCache,
 } from '../services/mxwebCacheService';
+import { buildMxwebFileUrl } from '../utils/mxwebUrl';
 import { handleApiError } from '../utils/apiConfig';
 import { unwrap } from '../utils/apiError';
 import { isTokenExpired, readToken } from '../utils/authSession';
@@ -75,9 +75,14 @@ async function updateCacheAndState(
       const timestamp = nodeInfo.updatedAt
         ? new Date(nodeInfo.updatedAt).getTime()
         : Date.now();
-      const cacheKey = buildCacheKey(nodeInfo.path, timestamp);
-      await clearMxwebCache(cacheKey).catch(() => {});
-      await setMxwebCache(cacheKey, arrayBuffer).catch(() => {});
+      // 键 = 引擎 fetch URL（下次打开按此 URL 读 IDB 即命中，见 mxwebCacheService）。
+      // 库源带 libraryKey、项目源不带；分享文件走不到这里（canSave:false 已前置拦截）。
+      const cacheUrl = buildMxwebFileUrl(nodeInfo.path, {
+        libraryKey: editorState.state.libraryKey || undefined,
+        cacheTimestamp: timestamp,
+      });
+      await clearMxwebCache(cacheUrl).catch(() => {});
+      await setMxwebCache(cacheUrl, arrayBuffer).catch(() => {});
     }
 
     // 重置文档修改状态

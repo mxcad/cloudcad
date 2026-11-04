@@ -450,3 +450,88 @@ describe('MxcadRunner 双视角路径翻译（Windows 宿主 docker 形态，#44
     setPrefixes(savedEnv.c, savedEnv.h);
   });
 });
+
+describe('MxcadRunner.execute 产物占用检测（file-locked）', () => {
+  it('产物存在但未占用：前置检测不拦，正常走注入 runFn（真实 isArtifactLocked 返回 false）', async () => {
+    const os = await import('node:os');
+    const fs = await import('node:fs');
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-lock-'));
+    const src = path.join(tmp, 'a.dwg');
+    fs.writeFileSync(src, 'dummy');
+    fs.writeFileSync(src + '.mxweb', 'mxweb'); // 已存在的产物，但当前未被任何进程独占
+    try {
+      const fakeRun = async () => ({
+        stdout: '{"code":0,"message":"ok","newpath":"' + src.replace(/\\/g, '/') + '.mxweb"}',
+        stderr: '',
+        exitCode: 2123,
+        signal: null,
+        timedOut: false,
+      });
+      const runner = new MxcadRunner();
+      const result = await runner.execute(
+        { srcPath: src, fileHash: 'h1' },
+        60000,
+        undefined,
+        fakeRun
+      );
+      assert.equal(result.code, 0);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it(
+    '产物被占用：前置检测拦截为 file-locked（可重试），不调引擎',
+    { skip: process.platform !== 'win32' },
+    async () => {
+      const os = await import('node:os');
+      const fs = await import('node:fs');
+      const { spawn } = await import('node:child_process');
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-lock-'));
+      const src = path.join(tmp, 'a.dwg');
+      const artifact = src + '.mxweb';
+      fs.writeFileSync(src, 'dummy');
+      fs.writeFileSync(artifact, 'mxweb');
+      // PowerShell 以 FileShare.None 独占锁产物 20s，模拟「引擎写不进去」的占用状态。
+      // 与真实 write file error 复现实验（锁产物 → 调引擎 → code 2）同款锁法。
+      const locker = spawn(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-Command',
+          `$f=[System.IO.File]::Open('${artifact}','Open','ReadWrite','None'); Start-Sleep -Seconds 8; $f.Close()`,
+        ],
+        { windowsHide: true, stdio: 'ignore' }
+      );
+      try {
+        // 等 PowerShell 启动并建锁（延迟建锁需留足时间）
+        await new Promise((r) => setTimeout(r, 2500));
+        const fakeRun = async () => {
+          throw new Error('产物被占用时不应调用引擎');
+        };
+        const runner = new MxcadRunner();
+        await assert.rejects(
+          runner.execute({ srcPath: src, fileHash: 'h1' }, 60000, undefined, fakeRun),
+          (err: unknown) =>
+            err instanceof ConversionExecutionError &&
+            err.category === 'file-locked' &&
+            err.transient === true &&
+            /被占用/.test(err.message)
+        );
+      } finally {
+        locker.kill();
+        // 等 PowerShell 释放句柄并退出，否则 rmSync 撞 EBUSY（句柄仍锁产物）。
+        // kill 不一定中断 Start-Sleep，兜底 8s 后强删；temp 目录残留无害。
+        await new Promise((r) => {
+          locker.once('exit', r);
+          setTimeout(r, 8000);
+        });
+        try {
+          fs.rmSync(tmp, { recursive: true, force: true });
+        } catch {
+          /* 清理失败不掩盖断言结果 */
+        }
+      }
+    }
+  );
+});

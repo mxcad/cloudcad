@@ -216,7 +216,7 @@ async function seedConfigKeyRegistry(prisma: PrismaClient) {
       key: 'quota.conversion_window_count',
       type: 'number',
       label: '每窗口转换次数',
-      defaultValue: 10,
+      defaultValue: 100,
       description: '每窗口内图纸格式转换次数上限（PDF/DXF/DWG 统一计数）',
       sortOrder: 2,
     },
@@ -284,7 +284,7 @@ async function seedVipTiers(prisma: PrismaClient) {
       isActive: true,
       configs: {
         'quota.personal_storage_mb': 50,
-        'quota.conversion_window_count': 10,
+        'quota.conversion_window_count': 100,
         'quota.conversion_window_hours': 2,
         'quota.save_window_count': 300,
         'quota.history_window_count': 300,
@@ -299,7 +299,7 @@ async function seedVipTiers(prisma: PrismaClient) {
       isActive: true,
       configs: {
         'quota.personal_storage_mb': 200,
-        'quota.conversion_window_count': 100,
+        'quota.conversion_window_count': 200,
         'quota.conversion_window_hours': 2,
         'quota.save_window_count': 500,
         'quota.history_window_count': 500,

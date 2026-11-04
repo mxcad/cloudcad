@@ -161,6 +161,16 @@ class MockEventSource {
   send(status: string, hash = 'x'): void {
     this.onmessage?.({ data: JSON.stringify({ hash, status }) });
   }
+  /** 测试辅助：模拟服务端推一帧 FAILED 且带失败原因（error + errorCategory 透传） */
+  sendFailed(
+    hash: string,
+    errorCategory?: string,
+    error?: string
+  ): void {
+    this.onmessage?.({
+      data: JSON.stringify({ hash, status: 'FAILED', error, errorCategory }),
+    });
+  }
 }
 
 describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUpload）', () => {
@@ -270,7 +280,35 @@ describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUp
       .getState()
       .tasks.find((t) => t.source === 'local')!;
     expect(localTask.status).toBe('failed');
-    expect(localTask.error).toBe('该文件转换失败，请检查文件内容');
+    // 未分类（无 errorCategory）归「引擎/服务异常」桶
+    expect(localTask.error).toBe('转换服务异常，请稍后重试；多次失败请联系管理员');
+  });
+
+  it('SSE 通知 FAILED 带 errorCategory=content-error：提示「文件内容问题」而非「服务异常」', async () => {
+    mockCalculateFileHash.mockResolvedValue('hash123');
+    mockCheckFileExist.mockResolvedValue({ data: { exists: false } });
+    mockUploadMxCadFile.mockResolvedValue(undefined);
+
+    const uploadPromise = handlePublicUpload(makeFile('drawing.dwg'));
+    await vi.waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+
+    // 后端无节点 SSE 透传失败原因 + 性质分类：content-error = 文件内容问题
+    MockEventSource.instances[0].sendFailed(
+      'hash123',
+      'content-error',
+      'read file error'
+    );
+    await uploadPromise;
+
+    const localTask = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.source === 'local')!;
+    expect(localTask.status).toBe('failed');
+    expect(localTask.error).toBe(
+      '图纸文件内容异常，转换无法完成，请检查文件或重新导出后再试'
+    );
   });
 
   it('latest-wins：A 先转好但已被 B 取代 → A 只置 completed 不打开，B 转好才打开', async () => {

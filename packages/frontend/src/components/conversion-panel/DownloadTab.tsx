@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Loader2,
   CheckCircle2,
@@ -7,36 +7,36 @@ import {
   Download,
   RefreshCw,
   RotateCcw,
-} from 'lucide-react';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { t } from '@/languages';
-import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
-import { useBatchDownload } from '@/hooks/file-system/useBatchDownload';
-import type { BatchTask } from '@/stores/useBatchDownloadStore';
-import { formatDateTime, getRelativeTime } from '@/utils/dateUtils';
-import { useCappedList } from './useCappedList';
+} from "lucide-react";
+import { Tooltip } from "@/components/ui";
+import { t } from "@/languages";
+import { useBatchDownloadStore } from "@/stores/useBatchDownloadStore";
+import { useBatchDownload } from "@/hooks/file-system/useBatchDownload";
+import type { BatchTask } from "@/stores/useBatchDownloadStore";
+import { formatDateTime, getRelativeTime } from "@/utils/dateUtils";
+import { useCappedList } from "./useCappedList";
 
 /**
  * 下载任务状态标签映射
  */
-const STATUS_LABELS: Record<BatchTask['status'], string> = {
-  PENDING: '排队中',
-  PROCESSING: '处理中',
-  COMPLETED: '完成',
-  FAILED: '失败',
-  CANCELLED: '已取消',
+const STATUS_LABELS: Record<BatchTask["status"], string> = {
+  PENDING: "排队中",
+  PROCESSING: "处理中",
+  COMPLETED: "完成",
+  FAILED: "失败",
+  CANCELLED: "已取消",
 };
 
 /**
  * 下载任务状态图标
  */
-function getStatusIcon(status: BatchTask['status']) {
-  const isActive = status === 'PENDING' || status === 'PROCESSING';
-  const isCompleted = status === 'COMPLETED';
+function getStatusIcon(status: BatchTask["status"]) {
+  const isActive = status === "PENDING" || status === "PROCESSING";
+  const isCompleted = status === "COMPLETED";
 
   if (isActive) return <Loader2 size={14} className="conv-icon spin" />;
   if (isCompleted) return <CheckCircle2 size={14} className="conv-icon" />;
-  if (status === 'FAILED')
+  if (status === "FAILED")
     return <AlertCircle size={14} className="conv-icon" />;
   return <XCircle size={14} className="conv-icon" />;
 }
@@ -44,37 +44,37 @@ function getStatusIcon(status: BatchTask['status']) {
 /**
  * 下载任务状态行类名
  */
-function getStatusClassName(status: BatchTask['status']): string {
-  const isActive = status === 'PENDING' || status === 'PROCESSING';
-  const isCompleted = status === 'COMPLETED';
+function getStatusClassName(status: BatchTask["status"]): string {
+  const isActive = status === "PENDING" || status === "PROCESSING";
+  const isCompleted = status === "COMPLETED";
 
-  if (isActive) return 'processing';
-  if (isCompleted) return 'completed';
-  if (status === 'FAILED') return 'failed';
-  return 'cancelled';
+  if (isActive) return "processing";
+  if (isCompleted) return "completed";
+  if (status === "FAILED") return "failed";
+  return "cancelled";
 }
 
 /**
  * 获取任务显示名称
  */
 function getTaskDisplayName(task: BatchTask): string {
-  if (task.mode === 'zip') {
-    return t('ZIP打包 ({count}个文件)', { count: String(task.totalCount) });
+  if (task.mode === "zip") {
+    return t("ZIP打包 ({count}个文件)", { count: String(task.totalCount) });
   }
   const names = task.itemNames;
   if (names && names.length > 0) {
     // 多文件 individual 任务：显示首文件 + 剩余数（「file1 +N」），避免只看到第一个文件
-    const first = names[0] ?? '';
+    const first = names[0] ?? "";
     if (names.length === 1) return first;
     return `${first} +${names.length - 1}`;
   }
-  return t('逐个下载 ({count}个文件)', { count: String(task.totalCount) });
+  return t("逐个下载 ({count}个文件)", { count: String(task.totalCount) });
 }
 
 /** individual 任务全部文件名（tooltip 用，逗号分隔） */
 function getTaskNamesTooltip(task: BatchTask): string | undefined {
   if (task.itemNames && task.itemNames.length > 0) {
-    return task.itemNames.join(', ');
+    return task.itemNames.join(", ");
   }
   return undefined;
 }
@@ -99,8 +99,8 @@ const DownloadTaskRow: React.FC<DownloadTaskRowProps> = ({
   onRetry,
   onRetryFailed,
 }) => {
-  const isActive = task.status === 'PENDING' || task.status === 'PROCESSING';
-  const isCompleted = task.status === 'COMPLETED';
+  const isActive = task.status === "PENDING" || task.status === "PROCESSING";
+  const isCompleted = task.status === "COMPLETED";
   const statusLabel = STATUS_LABELS[task.status];
   const statusClassName = getStatusClassName(task.status);
   const displayName = getTaskDisplayName(task);
@@ -120,14 +120,14 @@ const DownloadTaskRow: React.FC<DownloadTaskRowProps> = ({
           </span>
           <span className="conversion-row-status">
             <span className="conv-badge conv-badge-download">
-              {task.mode === 'individual' ? t('下载') : t('ZIP')}
+              {task.mode === "individual" ? t("下载") : t("ZIP")}
             </span>
             {statusLabel}
             {isActive && (
               <>
-                {task.mode === 'zip'
+                {task.mode === "zip"
                   ? ` ${task.completedCount}/${task.totalCount}`
-                  : ` ${task.completedCount}/${task.totalCount} ${t('个文件')}`}
+                  : ` ${task.completedCount}/${task.totalCount} ${t("个文件")}`}
               </>
             )}
             {/* 相对时间：与转换 tab 同款弱化样式，提示任务创建时刻 */}
@@ -136,7 +136,7 @@ const DownloadTaskRow: React.FC<DownloadTaskRowProps> = ({
                 className="conversion-row-time"
                 title={formatDateTime(task.createdAt)}
               >
-                {' · '}
+                {" · "}
                 {getRelativeTime(task.createdAt)}
               </span>
             )}
@@ -146,48 +146,43 @@ const DownloadTaskRow: React.FC<DownloadTaskRowProps> = ({
       <div className="conversion-row-actions">
         {isCompleted && (
           <Tooltip
-            content={task.mode === 'individual' ? t('下载') : t('下载ZIP')}
+            content={task.mode === "individual" ? t("下载") : t("下载ZIP")}
           >
             <button
-              aria-label={task.mode === 'individual' ? t('下载') : t('下载ZIP')}
+              aria-label={task.mode === "individual" ? t("下载") : t("下载ZIP")}
               onClick={() => onDownload(task)}
             >
               <Download size={13} />
             </button>
           </Tooltip>
         )}
-        {isActive && task.status === 'PENDING' && (
-          <Tooltip content={t('取消')}>
+        {isActive && task.status === "PENDING" && (
+          <Tooltip content={t("取消")}>
             <button
-              aria-label={t('取消')}
+              aria-label={t("取消")}
               onClick={() => onCancel(task.taskId)}
             >
               <XCircle size={13} />
             </button>
           </Tooltip>
         )}
-        {task.status === 'FAILED' && (
-          <Tooltip content={t('重试')}>
-            <button
-              aria-label={t('重试')}
-              onClick={() => onRetry(task.taskId)}
-            >
+        {task.status === "FAILED" && (
+          <Tooltip content={t("重试")}>
+            <button aria-label={t("重试")} onClick={() => onRetry(task.taskId)}>
               <RefreshCw size={13} />
             </button>
           </Tooltip>
         )}
-        {task.status === 'FAILED' &&
-          task.errors &&
-          task.errors.length > 0 && (
-          <Tooltip content={t('仅重试失败项')}>
+        {task.status === "FAILED" && task.errors && task.errors.length > 0 && (
+          <Tooltip content={t("仅重试失败项")}>
             <button
-              aria-label={t('仅重试失败项')}
+              aria-label={t("仅重试失败项")}
               onClick={() => onRetryFailed(task.taskId)}
             >
               <RotateCcw size={13} />
             </button>
           </Tooltip>
-          )}
+        )}
       </div>
     </div>
   );
@@ -232,11 +227,11 @@ export const DownloadTab: React.FC<DownloadTabProps> = ({
   const { visible, hiddenCount, loadMore } = useCappedList(
     filteredTasks,
     search,
-    (task) => task.status === 'PENDING' || task.status === 'PROCESSING'
+    (task) => task.status === "PENDING" || task.status === "PROCESSING",
   );
 
   const handleDownload = (task: BatchTask) => {
-    if (task.mode === 'individual') {
+    if (task.mode === "individual") {
       downloadAllItems(task);
     } else {
       downloadZip(task);
@@ -244,10 +239,10 @@ export const DownloadTab: React.FC<DownloadTabProps> = ({
   };
 
   if (downloadTasks.length === 0) {
-    return <div className="conversion-empty">{t('暂无下载任务')}</div>;
+    return <div className="conversion-empty">{t("暂无下载任务")}</div>;
   }
   if (filteredTasks.length === 0) {
-    return <div className="conversion-empty">{t('无匹配结果')}</div>;
+    return <div className="conversion-empty">{t("无匹配结果")}</div>;
   }
 
   return (
@@ -264,7 +259,7 @@ export const DownloadTab: React.FC<DownloadTabProps> = ({
       ))}
       {hiddenCount > 0 && (
         <button className="conversion-load-more" onClick={loadMore}>
-          {t('加载更多（剩余 {count} 项）', { count: String(hiddenCount) })}
+          {t("加载更多（剩余 {count} 项）", { count: String(hiddenCount) })}
         </button>
       )}
     </>

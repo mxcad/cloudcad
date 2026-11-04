@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   User,
   Mail,
@@ -13,16 +13,16 @@ import {
   X,
   ChevronRight,
   Key,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
-import { usePermission } from '../../hooks/usePermission';
-import { useProfileUpdate } from './hooks/useProfileUpdate';
-import { Input } from '@/components/ui/Input';
-import { useAuth } from '../../contexts/AuthContext';
-import { t } from '@/languages';
-import { formatDateTime } from '../../utils/dateUtils';
-import styles from './Profile.module.css';
+} from "lucide-react";
+import { Button, Tag, Input } from "@/components/ui";
+
+import { usePermission } from "../../hooks/usePermission";
+import { useProfileUpdate } from "./hooks/useProfileUpdate";
+
+import { useAuth } from "../../contexts/AuthContext";
+import { t } from "@/languages";
+import { formatDateTime } from "../../utils/dateUtils";
+import styles from "./Profile.module.css";
 
 const ICON_CLASS_MAP: Record<string, string | undefined> = {
   primary: styles.infoIconWrapperPrimary,
@@ -46,7 +46,7 @@ interface ProfileInfoTabProps {
     wechatId?: string | { [key: string]: unknown } | null;
     createdAt?: string;
   } | null;
-  onNavigateTab?: (tab: 'password' | 'email' | 'phone' | 'wechat') => void;
+  onNavigateTab?: (tab: "password" | "email" | "phone" | "wechat") => void;
   mailEnabled?: boolean;
   smsEnabled?: boolean;
   wechatEnabled?: boolean;
@@ -68,14 +68,14 @@ const InfoCard: React.FC<InfoCardProps> = ({
   children,
 }) => (
   <div
-    className={`${styles.infoCard} ${onClick ? styles.infoCardClickable : ''}`}
-    role={onClick ? 'button' : undefined}
+    className={`${styles.infoCard} ${onClick ? styles.infoCardClickable : ""}`}
+    role={onClick ? "button" : undefined}
     tabIndex={onClick ? 0 : undefined}
     onClick={onClick}
     onKeyDown={
       onClick
         ? (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               onClick();
             }
@@ -84,7 +84,7 @@ const InfoCard: React.FC<InfoCardProps> = ({
     }
   >
     <div
-      className={`${styles.infoIconWrapper} ${ICON_CLASS_MAP[iconClass] ?? ''}`}
+      className={`${styles.infoIconWrapper} ${ICON_CLASS_MAP[iconClass] ?? ""}`}
     >
       {icon}
     </div>
@@ -108,8 +108,8 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
   const { updateProfile, loading } = useProfileUpdate();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    username: user?.username || '',
-    nickname: user?.nickname || '',
+    username: user?.username || "",
+    nickname: user?.nickname || "",
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -117,15 +117,15 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
   useEffect(() => {
     if (!isEditing) {
       setFormData({
-        username: user?.username || '',
-        nickname: user?.nickname || '',
+        username: user?.username || "",
+        nickname: user?.nickname || "",
       });
     }
   }, [user, isEditing]);
 
   // 绝对日期口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，与移动端共用）；空/无效保留 '-'
   const formatDate = (dateStr?: string) =>
-    dateStr ? formatDateTime(dateStr) || '-' : '-';
+    dateStr ? formatDateTime(dateStr) || "-" : "-";
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -144,7 +144,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
         username: formData.username,
         nickname: formData.nickname,
       });
-      setSuccess(t('个人信息更新成功'));
+      setSuccess(t("个人信息更新成功"));
       await refreshUser();
       setIsEditing(false);
     } catch (err) {
@@ -152,7 +152,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          t('更新失败')
+          t("更新失败"),
       );
     }
   };
@@ -174,27 +174,29 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
 
       {!isEditing ? (
         <>
-          <h2 className={`text-xl font-semibold mb-4 ${styles.textTextPrimary}`}>
-            {t('个人信息')}
+          <h2
+            className={`text-xl font-semibold mb-4 ${styles.textTextPrimary}`}
+          >
+            {t("个人信息")}
           </h2>
 
           <div className={styles.infoGrid}>
             <InfoCard
               icon={<User size={20} />}
               iconClass="primary"
-              label={t('用户名')}
+              label={t("用户名")}
               onClick={() => setIsEditing(true)}
             >
-              <span>{user?.username || '-'}</span>
+              <span>{user?.username || "-"}</span>
             </InfoCard>
 
             <InfoCard
               icon={<User size={20} />}
               iconClass="accent"
-              label={t('昵称')}
+              label={t("昵称")}
               onClick={() => setIsEditing(true)}
             >
-              <span>{user?.nickname || '-'}</span>
+              <span>{user?.nickname || "-"}</span>
             </InfoCard>
 
             {/* 邮箱/手机/微信卡片由运行时开关门控：服务未启用时整个能力（含既有绑定资料）不展示 */}
@@ -202,12 +204,12 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               <InfoCard
                 icon={<Mail size={20} />}
                 iconClass="info"
-                label={t('邮箱地址')}
-                onClick={() => onNavigateTab?.('email')}
+                label={t("邮箱地址")}
+                onClick={() => onNavigateTab?.("email")}
               >
                 <span className={styles.withStatus}>
-                  {typeof user?.email === 'string' ? user.email : t('未绑定')}
-                  {typeof user?.email === 'string' && (
+                  {typeof user?.email === "string" ? user.email : t("未绑定")}
+                  {typeof user?.email === "string" && (
                     <CheckCircle
                       size={14}
                       className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
@@ -221,12 +223,12 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               <InfoCard
                 icon={<Phone size={20} />}
                 iconClass="success"
-                label={t('手机号')}
-                onClick={() => onNavigateTab?.('phone')}
+                label={t("手机号")}
+                onClick={() => onNavigateTab?.("phone")}
               >
                 <span className={styles.withStatus}>
-                  {typeof user?.phone === 'string' ? user.phone : t('未绑定')}
-                  {typeof user?.phone === 'string' && user?.phoneVerified && (
+                  {typeof user?.phone === "string" ? user.phone : t("未绑定")}
+                  {typeof user?.phone === "string" && user?.phoneVerified && (
                     <CheckCircle
                       size={14}
                       className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
@@ -240,11 +242,11 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               <InfoCard
                 icon={<MessageCircle size={20} />}
                 iconClass="purple"
-                label={t('微信')}
-                onClick={() => onNavigateTab?.('wechat')}
+                label={t("微信")}
+                onClick={() => onNavigateTab?.("wechat")}
               >
                 <span className={styles.withStatus}>
-                  {user?.wechatId ? t('已绑定') : t('未绑定')}
+                  {user?.wechatId ? t("已绑定") : t("未绑定")}
                   {user?.wechatId ? (
                     <CheckCircle
                       size={14}
@@ -264,9 +266,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               icon={<Key size={20} />}
               iconClass="warning"
               label={
-                user?.hasPassword === false ? t('设置密码') : t('修改密码')
+                user?.hasPassword === false ? t("设置密码") : t("修改密码")
               }
-              onClick={() => onNavigateTab?.('password')}
+              onClick={() => onNavigateTab?.("password")}
             >
               <span>••••••••</span>
             </InfoCard>
@@ -274,32 +276,32 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
             <InfoCard
               icon={<Shield size={20} />}
               iconClass="success"
-              label={t('账户角色')}
+              label={t("账户角色")}
             >
               <Tag variant="primary">
-                {isAdmin() ? t('系统管理员') : t('普通用户')}
+                {isAdmin() ? t("系统管理员") : t("普通用户")}
               </Tag>
             </InfoCard>
 
             <InfoCard
               icon={<Activity size={20} />}
               iconClass="warning"
-              label={t('账户状态')}
+              label={t("账户状态")}
             >
               <Tag
                 variant={
-                  user?.status === 'ACTIVE'
-                    ? 'success'
-                    : user?.status === 'INACTIVE'
-                      ? 'warning'
-                      : 'error'
+                  user?.status === "ACTIVE"
+                    ? "success"
+                    : user?.status === "INACTIVE"
+                      ? "warning"
+                      : "error"
                 }
               >
-                {user?.status === 'ACTIVE'
-                  ? t('正常')
-                  : user?.status === 'INACTIVE'
-                    ? t('未激活')
-                    : t('已禁用')}
+                {user?.status === "ACTIVE"
+                  ? t("正常")
+                  : user?.status === "INACTIVE"
+                    ? t("未激活")
+                    : t("已禁用")}
               </Tag>
             </InfoCard>
 
@@ -307,7 +309,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               <InfoCard
                 icon={<Calendar size={20} />}
                 iconClass="info"
-                label={t('创建时间')}
+                label={t("创建时间")}
               >
                 <span>{formatDate(user.createdAt)}</span>
               </InfoCard>
@@ -318,7 +320,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
         <div className={styles.editProfileForm}>
           <div className="flex justify-between items-center mb-4">
             <h2 className={`text-xl font-semibold ${styles.textTextPrimary}`}>
-              {t('编辑个人信息')}
+              {t("编辑个人信息")}
             </h2>
             <Button
               variant="secondary"
@@ -326,46 +328,46 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               onClick={() => {
                 setIsEditing(false);
                 setFormData({
-                  username: user?.username || '',
-                  nickname: user?.nickname || '',
+                  username: user?.username || "",
+                  nickname: user?.nickname || "",
                 });
                 setError(null);
                 setSuccess(null);
               }}
             >
-              <span>{t('取消')}</span>
+              <span>{t("取消")}</span>
             </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>{t('用户名')}</label>
+              <label className={styles.inputLabel}>{t("用户名")}</label>
               <div className={styles.inputWrapper}>
                 <Input
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder={t('请输入用户名')}
+                  placeholder={t("请输入用户名")}
                   minLength={3}
                   maxLength={20}
                   required
                 />
               </div>
               <p className={`text-sm mt-1 ${styles.textTextMuted}`}>
-                {t('用户名一月内最多修改3次')}
+                {t("用户名一月内最多修改3次")}
               </p>
             </div>
 
             <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>{t('昵称')}</label>
+              <label className={styles.inputLabel}>{t("昵称")}</label>
               <div className={styles.inputWrapper}>
                 <Input
                   type="text"
                   name="nickname"
                   value={formData.nickname}
                   onChange={handleInputChange}
-                  placeholder={t('请输入昵称')}
+                  placeholder={t("请输入昵称")}
                   maxLength={50}
                 />
               </div>
@@ -379,9 +381,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
                 icon={Save}
               >
                 {loading ? (
-                  <span>{t('保存中...')}</span>
+                  <span>{t("保存中...")}</span>
                 ) : (
-                  <span>{t('保存')}</span>
+                  <span>{t("保存")}</span>
                 )}
               </Button>
             </div>

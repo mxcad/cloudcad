@@ -1527,6 +1527,37 @@ export const handlers = [
     return HttpResponse.json(responseJson, init);
   }),
   http.post(
+    `${baseURL}/api/v1/admin/feedback/batch-delete`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getFeedbackAdminControllerBatchRemove200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/feedback/batch-delete`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
     `${baseURL}/api/v1/admin/security-attempts/blacklist`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -6310,35 +6341,6 @@ export const handlers = [
     }
   ),
   http.post(
-    `${baseURL}/api/v1/admin/feedback/rewards/:id/revoke`,
-    async ({ request }) => {
-      const shouldEchoRequestBody = false;
-      let requestJson = null;
-      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
-        try {
-          requestJson = await request.clone().json();
-        } catch (e) {
-          requestJson = null;
-        }
-      }
-
-      const resultArray = [
-        [await getFeedbackAdminControllerRevoke200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
-
-      const [body, init] =
-        resultArray[
-          next(`post /api/v1/admin/feedback/rewards/:id/revoke`) %
-            resultArray.length
-        ];
-      const responseJson =
-        requestJson && body && typeof body === 'object' && !Array.isArray(body)
-          ? { ...body, ...requestJson }
-          : body;
-      return HttpResponse.json(responseJson, init);
-    }
-  ),
-  http.post(
     `${baseURL}/api/v1/file-system/projects/:projectId/members/batch`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -8603,6 +8605,32 @@ export const handlers = [
     const [body, init] =
       resultArray[
         next(`delete /api/v1/admin/backups/:name`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.delete(`${baseURL}/api/v1/admin/feedback/:id`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('delete')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [[undefined, { status: 200 }]] as [
+      any,
+      { status: number },
+    ][];
+
+    const [body, init] =
+      resultArray[
+        next(`delete /api/v1/admin/feedback/:id`) % resultArray.length
       ];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
@@ -17448,43 +17476,17 @@ export function getFeedbackAdminControllerIssue200Response() {
   };
 }
 
-export function getFeedbackAdminControllerRevoke200Response() {
+export function getFeedbackAdminControllerBatchRemove200Response() {
   return {
-    id: faker.string.uuid(),
-    feedbackId: faker.string.uuid(),
-    feedbackCode: faker.lorem.words(),
-    feedbackTitle: faker.lorem.words(),
-    feedbackType: faker.helpers.arrayElement([
-      'BUG',
-      'SUGGESTION',
-      'COMPLAINT',
-      'OTHER',
-    ]),
-    submitter: {
-      id: faker.string.uuid(),
-      username: faker.person.fullName(),
-      nickname: faker.person.fullName(),
-      email: faker.internet.email(),
-    },
-    userId: faker.string.uuid(),
-    user: {
-      id: faker.string.uuid(),
-      username: faker.person.fullName(),
-      nickname: faker.person.fullName(),
-      email: faker.internet.email(),
-    },
-    vipTierLevel: faker.number.int(),
-    durationDays: faker.number.int(),
-    status: faker.helpers.arrayElement([
-      'NONE',
-      'PENDING',
-      'ISSUED',
-      'REVOKED',
-    ]),
-    issuedById: faker.string.uuid(),
-    issuedAt: faker.lorem.words(),
-    remark: faker.lorem.words(),
-    createdAt: faker.lorem.words(),
+    deleted: faker.number.int(),
+    notFoundIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
   };
 }
 

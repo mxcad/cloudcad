@@ -21,8 +21,12 @@ describe('FeedbackService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
     feedbackReward: {
+      findMany: jest.fn(),
+    },
+    feedbackAttachment: {
       findMany: jest.fn(),
     },
     $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn(mockPrisma)),
@@ -41,6 +45,7 @@ describe('FeedbackService', () => {
     assertCountLimits: jest.fn(),
     bindInTx: jest.fn(),
     toDto: jest.fn(),
+    adminDelete: jest.fn(),
   };
 
   const mockPermissionService = {
@@ -339,6 +344,72 @@ describe('FeedbackService', () => {
       await service.adminUpdateStatus('fb-1', FeedbackStatus.REJECTED, '重复建议', 'admin-1');
       const data = mockPrisma.feedback.update.mock.calls[0][0].data;
       expect(data.rejectReason).toBe('重复建议');
+    });
+  });
+
+  describe('adminDelete / adminDeleteMany (删除反馈记录)', () => {
+    it('should delete single feedback and clear its attachments (物理文件+记录)', async () => {
+      mockPrisma.feedback.findUnique.mockResolvedValue({
+        id: 'fb-1',
+        status: 'PENDING',
+        rewardStatus: 'NONE',
+      });
+      mockPrisma.feedbackAttachment.findMany.mockResolvedValue([
+        { id: 'att-1', type: 'IMAGE', kind: 'FILE' },
+        { id: 'att-2', type: 'DRAWING', kind: 'REFERENCE' },
+      ]);
+      mockPrisma.feedback.delete.mockResolvedValue({ id: 'fb-1' });
+
+      const res = await service.adminDelete('fb-1', 'admin-1');
+      expect(res).toEqual({ success: true });
+      // 附件逐条经附件服务删除（物理文件清理 + 记录 + 审计）
+      expect(mockAttachmentService.adminDelete).toHaveBeenCalledWith(
+        'att-1',
+        'admin-1',
+        { type: 'IMAGE', kind: 'FILE' }
+      );
+      expect(mockAttachmentService.adminDelete).toHaveBeenCalledWith(
+        'att-2',
+        'admin-1',
+        { type: 'DRAWING', kind: 'REFERENCE' }
+      );
+      expect(mockPrisma.feedback.delete).toHaveBeenCalledWith({ where: { id: 'fb-1' } });
+    });
+
+    it('should throw NotFound when feedback missing (single delete)', async () => {
+      mockPrisma.feedback.findUnique.mockResolvedValue(null);
+      await expect(service.adminDelete('fb-x', 'admin-1')).rejects.toThrow(
+        NotFoundException
+      );
+      expect(mockPrisma.feedback.delete).not.toHaveBeenCalled();
+    });
+
+    it('should batch delete, skip missing ids, count deleted', async () => {
+      mockPrisma.feedback.findMany.mockResolvedValueOnce([
+        {
+          id: 'fb-1',
+          status: 'PENDING',
+          rewardStatus: 'NONE',
+          _count: { attachments: 2 },
+        },
+      ]);
+      mockPrisma.feedback.findUnique.mockResolvedValueOnce({
+        id: 'fb-1',
+        status: 'PENDING',
+        rewardStatus: 'NONE',
+      });
+      mockPrisma.feedbackAttachment.findMany.mockResolvedValue([]);
+      mockPrisma.feedback.delete.mockResolvedValue({ id: 'fb-1' });
+
+      const res = await service.adminDeleteMany(['fb-1', 'missing'], 'admin-1');
+      expect(res).toEqual({ deleted: 1, notFoundIds: ['missing'] });
+      expect(mockPrisma.feedback.delete).toHaveBeenCalledWith({ where: { id: 'fb-1' } });
+    });
+
+    it('should short-circuit empty ids', async () => {
+      const res = await service.adminDeleteMany([], 'admin-1');
+      expect(res).toEqual({ deleted: 0, notFoundIds: [] });
+      expect(mockPrisma.feedback.findMany).not.toHaveBeenCalled();
     });
   });
 

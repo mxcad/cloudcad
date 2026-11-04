@@ -5,18 +5,15 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { ConversionResult } from '../interfaces/file-conversion.interface';
 import { AsyncConversionService } from '../conversion/async-conversion.service';
-import { UploadGhostService } from '../conversion/upload-ghost.service';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import {
   CONVERSION_FILE_CHANNEL,
-  type ConversionFileSseEvent,
 } from '../conversion/conversion-task-sse.constants';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
@@ -26,35 +23,28 @@ import { UploadUtilityService } from './upload-utility.service';
 import {
   cachedArtifactFileName,
   isArtifactReady,
-  isArtifactReadyByHash,
 } from '../utils/conversion-artifact';
 import { buildIngestConversionOptions } from '../utils/ingest-conversion-options';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
-import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import {
   RestrictionEngine,
   NO_OP_CONVERSION_RESERVATION,
   type ConversionQuotaReservation,
 } from '../../vip/restriction-engine.service';
-import { DatabaseService } from '../../database/database.service';
 import { FileStatus, NodeType } from '@cloudcad/db';
 import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import { FileNodeMaterializer } from './file-node-materializer.service';
-import { AuditLogService } from '../../audit/audit-log.service';
-import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import * as path from 'path';
+// 评审候选 6：巨缝收敛——配额门控 / 无节点转换 / 失败清算三个 stage 各自成服务
+import { QuotaGuardService } from './quota-guard.service';
+import { NoNodeConversionService } from './no-node-conversion.service';
+import { FailureSettlementService } from './failure-settlement.service';
 
 /** 落盘（存储分配 / 复制）失败的统一错误文案：materialize 返回 null 不携带原因 */
 const MATERIALIZE_FAILED_ERROR = '落盘失败（存储分配或文件复制未成功）';
 
 /** 无节点（游客 / 公开图纸）转换状态 */
 export type NoNodeConversionStatus = 'PROCESSING' | 'COMPLETED' | 'FAILED';
-
-/**
- * 在途无节点转换状态表保留时长：终态（COMPLETED/FAILED）条目保留 5 分钟，
- * 供晚连接的 SSE 客户端读取当前状态（处理"订阅前已转完"竞态），过期惰性清理。
- */
-const NO_NODE_STATUS_TTL_MS = 5 * 60 * 1000;
 
 /**
  * 摄入源：传输层差异（整包 / 分片）在此收敛为判别联合
@@ -132,14 +122,6 @@ export class DrawingIngestService {
     string,
     Promise<{ ret: MxUploadReturn }>
   > = new Map();
-  /**
-   * 在途无节点（游客 / 公开图纸）转换状态表：hash → 状态 + 时间戳。
-   * 供按文件 SSE 建连时查当前状态（处理"订阅前已转完"竞态），终态条目按 TTL 惰性清理。
-   */
-  private readonly noNodeConversionStatus: Map<
-    string,
-    { status: NoNodeConversionStatus; updatedAt: number }
-  > = new Map();
   private readonly mxcadUploadPath: string;
 
   constructor(
@@ -147,18 +129,19 @@ export class DrawingIngestService {
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileTreeService: FileTreeService,
     private readonly nodeTrashService: NodeTrashService,
-    private readonly uploadGhostService: UploadGhostService,
     private readonly cacheManager: CacheManagerService,
     private readonly fileConversionService: FileConversionService,
     private readonly uploadUtilityService: UploadUtilityService,
-    private readonly nodeMutationGuard: NodeMutationGuard,
     private readonly restrictionEngine: RestrictionEngine,
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
     private readonly materializer: FileNodeMaterializer,
     private readonly asyncConversionService: AsyncConversionService,
-    private readonly auditLogService: AuditLogService,
-    private readonly eventEmitter: EventEmitter2,
-    private readonly prisma: DatabaseService
+    // 评审候选 6：三个 stage 服务收编原先直接注入的 5 个底层依赖
+    // （nodeMutationGuard → quotaGuard；eventEmitter → noNodeConversion；
+    //   auditLogService/prisma/uploadGhostService → failureSettlement）
+    private readonly quotaGuard: QuotaGuardService,
+    private readonly noNodeConversion: NoNodeConversionService,
+    private readonly failureSettlement: FailureSettlementService
   ) {
     this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
   }
@@ -184,142 +167,6 @@ export class DrawingIngestService {
     return this.nodeStatusTransitioner.transition(nodeId, from, to);
   }
 
-  /**
-   * 终态失败审计：失败瞬间写，节点保留窗口到期会被清理，审计是失败原因的唯一
-   * 持久记录（节点上无 error 字段，引擎原始 message 只存在于本处 + 日志）。
-   *
-   * 复用 AuditAction.FILE_UPLOAD：AuditLogService 对高频读组只过滤「成功」记录，
-   * success=false 一定落库，正好承载「上传了但转换/落盘失败」的追溯需求。
-   * 埋点失败不阻塞后台清理流程。
-   */
-  private async logUploadFailure(args: {
-    context: FileSystemNodeContext;
-    nodeId: string;
-    name: string;
-    fileHash: string;
-    size: number;
-    error: string;
-    transient?: boolean;
-    /** 失败性质分类（仅 conversion 阶段有意义）：存完整粒度供运维按失败类型告警 */
-    errorCategory?: ConversionFailureCategory;
-    stage: 'conversion' | 'materialize';
-  }): Promise<void> {
-    try {
-      await this.auditLogService.log({
-        action: AuditAction.FILE_UPLOAD,
-        resourceType: ResourceType.FILE,
-        resourceId: args.nodeId,
-        userId: args.context?.userId ?? 'unknown',
-        success: false,
-        errorMessage: args.error,
-        resourceName: args.name,
-        params: {
-          fileName: args.name,
-          hash: args.fileHash,
-          size: args.size,
-          failureStage: args.stage,
-          transient: args.transient ?? null,
-          errorCategory: args.errorCategory ?? null,
-        },
-      });
-    } catch (error) {
-      this.logger.warn(
-        `[DrawingIngest] 上传失败审计埋点失败（业务不阻塞）: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  }
-
-  /**
-   * 失败节点清理：转换 / 落盘未成功的节点**不留存**（产品要求：没有转换成功
-   * 都不保留 node 数据库记录）。读节点当前态——存在、未删、非 COMPLETED
-   * （落盘成功后才抛的异常，文件已真实落盘）且是上传幽灵（path=null，判定与
-   * 处置规则见 UploadGhostService 单一出口）→ 硬删；其余情况 no-op，避免误删
-   * 真实文件。
-   */
-  private async purgeFailedNode(nodeId: string): Promise<void> {
-    try {
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { fileStatus: true, deletedAt: true, path: true },
-      });
-      if (!node || node.deletedAt) return;
-      if (node.fileStatus === FileStatus.COMPLETED) return;
-      if (!this.uploadGhostService.isGhost(node)) return;
-      if (await this.uploadGhostService.purgeGhostNode(nodeId)) {
-        this.logger.log(`[DrawingIngest.purge] 失败节点已删除: ${nodeId}`);
-      }
-    } catch (error) {
-      this.logger.warn(
-        `[DrawingIngest.purge] 失败节点删除失败（不阻塞）: ${nodeId} (${
-          error instanceof Error ? error.message : String(error)
-        })`
-      );
-    }
-  }
-
-  /**
-   * 后台转换失败清算（节点路径共用）：释放转换额度 → 写失败审计 → 删除未成功节点
-   * → 执行调用方清理（分片临时目录 / 合并缓存）。
-   *
-   * 每步独立容错：任一步抛错只记日志、不阻断后续步骤——失败审计与删节点是失败诊断
-   * 的唯一可见面，绝不能因额度释放异常而丢失。整包（cad）与分片（chunk）两条节点
-   * 路径共用；无节点路径（SSE 状态机，无 node/审计/删节点）形态不同，不在此列。
-   *
-   * `reservation` 由调用方按「转换是否真正完成」决定：转换失败→传上传时占到的句柄
-   * （额度应退还）；落盘失败（转换已成功）→传 NO_OP_CONVERSION_RESERVATION（额度已实际
-   * 消耗，不退）。句柄自身区分「占过 / 未占」，故调用方无需再跟踪布尔标记。
-   */
-  private async settleNodeFailure(opts: {
-    context: FileSystemNodeContext;
-    source: IngestSource;
-    reservation: ConversionQuotaReservation;
-    nodeId: string;
-    audit: {
-      name: string;
-      fileHash: string;
-      size: number;
-      error: string;
-      transient?: boolean;
-      errorCategory?: ConversionFailureCategory;
-      stage: 'conversion' | 'materialize';
-    };
-    cleanup?: () => Promise<void>;
-  }): Promise<void> {
-    const step = async (
-      label: string,
-      run: () => Promise<unknown>
-    ): Promise<void> => {
-      try {
-        await run();
-      } catch (err) {
-        this.logger.error(
-          `[DrawingIngest.settle] ${label}失败（不阻断后续清算）: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      }
-    };
-    await step('释放转换额度', () => opts.reservation.release());
-    await step('写失败审计', () =>
-      this.logUploadFailure({
-        context: opts.context,
-        nodeId: opts.nodeId,
-        name: opts.audit.name,
-        fileHash: opts.audit.fileHash,
-        size: opts.audit.size,
-        error: opts.audit.error,
-        transient: opts.audit.transient,
-        errorCategory: opts.audit.errorCategory,
-        stage: opts.audit.stage,
-      })
-    );
-    await step('删除未成功节点', () => this.purgeFailedNode(opts.nodeId));
-    if (opts.cleanup) {
-      await step('清理临时资源', opts.cleanup);
-    }
-  }
 
   /**
    * 唯一摄入入口：整包 / 分片上传 + 秒传 + 格式转换 + 状态机流转 + 存储分配
@@ -358,7 +205,7 @@ export class DrawingIngestService {
     const checkPromise = (async () => {
       // 上传前配额预检（ADR-0037 时机前移）：权威断言仍在摄入时按真实文件大小
       // 复核（防客户端上报值偏小绕过），此处仅提前拦截超限请求
-      await this.assertQuotaBeforeUpload(target);
+      await this.quotaGuard.assertQuotaBeforeUpload(target);
       return this.performFileExistenceCheck(
         name,
         fileHash,
@@ -389,19 +236,8 @@ export class DrawingIngestService {
    * 本项目预检只是提前拦截，不替代权威检查。
    */
   async assertQuotaBeforeUpload(target: IngestTarget): Promise<void> {
-    await this.checkQuota(this.targetToContext(target), target.fileSize);
-  }
-
-  private async checkQuota(
-    context: FileSystemNodeContext,
-    fileSize?: number
-  ): Promise<void> {
-    if (!context?.userId || !context?.nodeId) return;
-    if (!fileSize || fileSize <= 0) return;
-    await this.nodeMutationGuard.assertByteQuota(
-      { node: { id: context.nodeId }, incrementBytes: fileSize },
-      context.userId
-    );
+    // 评审候选 6：配额门控收敛到 QuotaGuardService（nodeMutationGuard 唯一依赖）
+    await this.quotaGuard.assertQuotaBeforeUpload(target);
   }
 
   /**
@@ -449,9 +285,9 @@ export class DrawingIngestService {
         const parentId = await this.materializer.resolveParentId(context.nodeId);
         if (!parentId) return { ret: MxUploadReturn.kConvertFileError };
 
-        await this.nodeMutationGuard.assertByteQuota(
-          { node: { id: parentId }, incrementBytes: size },
-          context.userId
+        await this.quotaGuard.checkQuota(
+          { ...context, nodeId: parentId },
+          size
         );
 
         const result = await this.materializer.materialize({
@@ -481,7 +317,7 @@ export class DrawingIngestService {
       this.logger.log(`检测到 MXWeb 文件，直接复制到节点目录: ${name}`);
       try {
         const fileSize = await this.fileSystemService.getFileSize(filePath);
-        await this.checkQuota(context, fileSize);
+        await this.quotaGuard.checkQuota(context, fileSize);
 
         if (context && context.userId && context.nodeId) {
           const parentId = await this.materializer.resolveParentId(
@@ -523,7 +359,7 @@ export class DrawingIngestService {
     this.logger.log(`检测到非CAD文件，直接拷贝到本地存储: ${name}`);
     try {
       const fileSize = await this.fileSystemService.getFileSize(filePath);
-      await this.checkQuota(context, fileSize);
+      await this.quotaGuard.checkQuota(context, fileSize);
 
       if (context && context.userId && context.nodeId) {
         const parentId = await this.materializer.resolveParentId(
@@ -577,7 +413,7 @@ export class DrawingIngestService {
     this.logger.log(`检测到CAD文件，执行转换流程: ${name}`);
     // 字节配额断言增量取服务器侧真实文件大小，防止客户端上报值偏小绕过配额
     const realSize = await this.fileSystemService.getFileSize(filePath);
-    await this.checkQuota(context, realSize);
+    await this.quotaGuard.checkQuota(context, realSize);
     // ADR-0043：转换频率限制只在转换执行点占位——主体分派（userId / IP 窗口）
     // 唯一收口在 RestrictionEngine；句柄自己记得是否占过，失败点按句柄释放
     const reservation = await this.restrictionEngine.reserveConversionReservation(
@@ -706,7 +542,7 @@ export class DrawingIngestService {
     await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
     // 异步转换（fire-and-forget）：上传请求立即返回，转换后台跑，完成后 emit 到
     // CONVERSION_FILE_CHANNEL(hash) 通知前端（latest-wins）。
-    this.runBackgroundNoNodeConversion({
+    this.noNodeConversion.runBackgroundNoNodeConversion({
       filepath: filePath,
       fileHash: hash,
       fileName: name,
@@ -861,7 +697,7 @@ export class DrawingIngestService {
           if (finalNodeId === null) {
             // 落盘失败：未转换成功，不留存节点。真实原因先写审计再删节点。
             // 转换已成功（额度已实际消耗），传 NO_OP 句柄表示不退转换额度。
-            await this.settleNodeFailure({
+            await this.failureSettlement.settleNodeFailure({
               context,
               source,
               reservation: NO_OP_CONVERSION_RESERVATION,
@@ -892,7 +728,7 @@ export class DrawingIngestService {
           // 转换失败：未转换成功，不留存节点。transient=true（超时/引擎未启动/
           // 输出无法解析）属环境性可重试失败，transient=false 是内容性永久失败，
           // 两者都不保留 node 记录；引擎原始 message 同时记日志 + 审计。
-          await this.settleNodeFailure({
+          await this.failureSettlement.settleNodeFailure({
             context,
             source,
             reservation,
@@ -923,7 +759,7 @@ export class DrawingIngestService {
         // 审计独立于节点删除成败：删节点也不丢失败原因。
         // 异常可能发生在落盘前（PROCESSING → 删）或落盘后（COMPLETED → 保留）：
         // purgeFailedNode 内部按当前态 + path 判断，已 COMPLETED / path 已就位不删。
-        await this.settleNodeFailure({
+        await this.failureSettlement.settleNodeFailure({
           context,
           source,
           reservation,
@@ -1012,7 +848,7 @@ export class DrawingIngestService {
         if (!isOk) {
           // 转换失败：未转换成功，不留存节点（同后台单文件上传）。
           // tmpDir 与合并缓存照旧清理。
-          await this.settleNodeFailure({
+          await this.failureSettlement.settleNodeFailure({
             context,
             source,
             reservation,
@@ -1060,7 +896,7 @@ export class DrawingIngestService {
           // 落盘失败：未转换成功，不留存节点（同转换失败）。COMPLETED 必须等
           // 落盘成功后才置：未落盘的节点 path=null，提前置 COMPLETED 会让前端
           // 拿它去打开一个不存在的文件。
-          await this.settleNodeFailure({
+          await this.failureSettlement.settleNodeFailure({
             context,
             source,
             reservation,
@@ -1100,7 +936,7 @@ export class DrawingIngestService {
         // 审计独立于节点删除成败：删节点也不丢失败原因。
         // 异常可能发生在落盘前（PROCESSING → 删）或落盘后（COMPLETED → 保留）：
         // purgeFailedNode 内部按当前态 + path 判断，已 COMPLETED / path 已就位不删。
-        await this.settleNodeFailure({
+        await this.failureSettlement.settleNodeFailure({
           context,
           source,
           reservation,
@@ -1120,177 +956,22 @@ export class DrawingIngestService {
 
   /**
    * 查询在途无节点转换的当前状态（供按文件 SSE 建连时推当前状态，处理"订阅前已转完"竞态）。
-   * 惰性清理：终态条目超 TTL 即删，视为无记录。PROCESSING 不清理（转换进行中）。
+   * 评审候选 6：状态表收敛到 NoNodeConversionService。
    */
   getNoNodeConversionStatus(
     hash: string
   ): NoNodeConversionStatus | undefined {
-    const entry = this.noNodeConversionStatus.get(hash);
-    if (!entry) return undefined;
-    if (
-      entry.status !== 'PROCESSING' &&
-      Date.now() - entry.updatedAt > NO_NODE_STATUS_TTL_MS
-    ) {
-      this.noNodeConversionStatus.delete(hash);
-      return undefined;
-    }
-    return entry.status;
+    return this.noNodeConversion.getNoNodeConversionStatus(hash);
   }
 
   /**
-   * 无节点转换当前状态（供按文件 SSE 建连推当前状态）：优先在途表；无记录
-   * （服务重启 / 完成后 TTL 过期）按 mxweb 是否就位兜底——就位 = COMPLETED，
-   * 未就位 = PROCESSING（视为进行中，等完成事件；前端有超时兜底）。
+   * 无节点转换当前状态（供按文件 SSE 建连推当前状态）。
+   * 评审候选 6：收敛到 NoNodeConversionService。
    */
   async getNoNodeFileState(
     hash: string
   ): Promise<NoNodeConversionStatus> {
-    const status = this.getNoNodeConversionStatus(hash);
-    if (status) return status;
-    if (await this.isNoNodeMxwebInPlace(hash)) return 'COMPLETED';
-    return 'PROCESSING';
-  }
-
-  /** 该 hash 的 mxweb 是否已在 uploads 目录就位（与 public-file findMxwebFile 同判据：<hash>.<ext>.mxweb） */
-  private async isNoNodeMxwebInPlace(hash: string): Promise<boolean> {
-    return isArtifactReadyByHash(this.mxcadUploadPath, hash);
-  }
-
-  /**
-   * 后台无节点转换（游客 / 公开图纸打开）：fire-and-forget，不阻塞上传/合并请求。
-   *
-   * 与 runBackgroundChunkConversion / runBackgroundCadConversion 同模式，区别是不建
-   * DB 节点、不落盘（mxweb 留在 uploads 目录供 public-file/access 预览）。完成（成功/
-   * 失败）后 emit 到 CONVERSION_FILE_CHANNEL(hash)，前端按文件 SSE 收到即打开（latest-
-   * wins：只打开最后打开的那个文件）。任何异常都不向上抛出（后台任务，避免 unhandledRejection）。
-   *
-   * 返回后台任务 Promise：调用方 fire-and-forget 忽略返回值，测试可 await 它等待完成再断言。
-   */
-  private runBackgroundNoNodeConversion(args: {
-    filepath: string;
-    fileHash: string;
-    fileName: string;
-    fileSize: number;
-    context: FileSystemNodeContext;
-    source: { ip?: string };
-    /** 「无缓存打开」：强制重转，绕过转换产物就位短路（同名覆盖） */
-    forceConvert?: boolean;
-    /** 分片场景的 chunk 临时目录（合并后清理）；整包场景为 undefined */
-    tmpDir?: string;
-    /** 分片场景的合并缓存 key（合并后清理）；整包场景为 undefined */
-    mergeKey?: string;
-    reservation: ConversionQuotaReservation;
-  }): Promise<void> {
-    const {
-      filepath,
-      fileHash: hash,
-      fileName,
-      context,
-      source,
-      forceConvert,
-      tmpDir,
-      mergeKey,
-      reservation,
-    } = args;
-
-    this.noNodeConversionStatus.set(hash, {
-      status: 'PROCESSING',
-      updatedAt: Date.now(),
-    });
-
-    return (async () => {
-      const setStatus = (status: NoNodeConversionStatus) => {
-        this.noNodeConversionStatus.set(hash, {
-          status,
-          updatedAt: Date.now(),
-        });
-      };
-      const emitDone = (status: 'COMPLETED' | 'FAILED') => {
-        try {
-          this.eventEmitter.emit(CONVERSION_FILE_CHANNEL(hash), {
-            hash,
-            status,
-          } satisfies ConversionFileSseEvent);
-        } catch (err) {
-          this.logger.warn(
-            `[DrawingIngest.noNode] SSE emit 失败（业务不阻塞）: ${
-              err instanceof Error ? err.message : String(err)
-            }`
-          );
-        }
-      };
-      const cleanup = async () => {
-        if (tmpDir) {
-          await this.fileSystemService.deleteDirectory(tmpDir).catch(() => {});
-        }
-        if (mergeKey) {
-          this.cacheManager.delete('file-upload', mergeKey);
-        }
-      };
-      try {
-        // .mxweb 无需转换（边界：分片上传 mxweb），直接标记完成通知前端
-        const isMxwebFile =
-          path.extname(fileName).toLowerCase() === '.mxweb';
-        if (isMxwebFile) {
-          setStatus('COMPLETED');
-          emitDone('COMPLETED');
-          await cleanup();
-          this.logger.log(
-            `[DrawingIngest.noNode] .mxweb 文件，跳过转换: ${fileName} (${hash})`
-          );
-          return;
-        }
-        const result = await this.fileConversionService.convertFile(
-          buildIngestConversionOptions({
-            srcPath: filepath,
-            fileHash: hash,
-            forceConvert,
-            // 无节点（游客/公开图纸）转换：用文件 hash 兜底做落盘目录标识，
-            // 失败现场仍落盘（否则未登录用户转换失败丢原因）
-            debugNodeId: hash,
-          })
-        );
-        if (result.isOk) {
-          setStatus('COMPLETED');
-          emitDone('COMPLETED');
-          await cleanup();
-          this.logger.log(
-            `[DrawingIngest.noNode] 无节点转换完成: ${fileName} (${hash})`
-          );
-        } else {
-          setStatus('FAILED');
-          emitDone('FAILED');
-          await reservation.release();
-          await cleanup();
-          this.logger.warn(
-            `[DrawingIngest.noNode] 无节点转换失败: ${fileName} (${hash}) ` +
-              `（transient=${result.transient ?? 'unknown'}，${
-                result.error || '未知错误'
-              }）`
-          );
-        }
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        this.logger.error(
-          `[DrawingIngest.noNode] 无节点转换异常: ${errMsg}`,
-          error instanceof Error ? error.stack : undefined
-        );
-        setStatus('FAILED');
-        emitDone('FAILED');
-        try {
-          await reservation.release();
-          await cleanup();
-        } catch (cleanupErr) {
-          this.logger.error(
-            `[DrawingIngest.noNode] 失败清理异常: ${
-              cleanupErr instanceof Error
-                ? cleanupErr.message
-                : String(cleanupErr)
-            }`
-          );
-        }
-      }
-    })();
+    return this.noNodeConversion.getNoNodeFileState(hash);
   }
 
   /**
@@ -1466,7 +1147,7 @@ export class DrawingIngestService {
           // 增量取合并后的真实文件大小，防止客户端上报值偏小绕过配额。
           const realFileSize =
             await this.fileSystemService.getFileSize(filepath);
-          await this.checkQuota(context, realFileSize);
+          await this.quotaGuard.checkQuota(context, realFileSize);
 
           const conflict = await this.resolveConflict(
             parentId,
@@ -1534,7 +1215,7 @@ export class DrawingIngestService {
         // 无节点场景（游客 / 公开图纸打开）：异步转换（fire-and-forget），合并请求立即返回。
         // 后台转换 + chunk 临时目录/合并缓存清理，完成后 emit 到 CONVERSION_FILE_CHANNEL
         // 通知前端（latest-wins）。转换失败时后台按句柄释放已占位的转换额度。
-        this.runBackgroundNoNodeConversion({
+        this.noNodeConversion.runBackgroundNoNodeConversion({
           filepath,
           fileHash: fileMd5,
           fileName,
@@ -1653,7 +1334,7 @@ export class DrawingIngestService {
         // 增量取本地转换产物的真实大小，防止客户端上报值偏小绕过配额。
         const realFileSize =
           await this.fileSystemService.getFileSize(localPath);
-        await this.checkQuota(context, realFileSize);
+        await this.quotaGuard.checkQuota(context, realFileSize);
 
         const conflict = await this.resolveConflict(
           parentId,

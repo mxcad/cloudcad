@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-} from 'recharts';
+} from "recharts";
 import {
   ListChecks,
   TrendingUp,
@@ -17,17 +17,17 @@ import {
   Gauge,
   Clock,
   ListOrdered,
-} from 'lucide-react';
-import { t } from '@/languages';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import { Tag } from '@/components/ui';
-import type { MonitorTaskItemDto } from '@/api-sdk';
+} from "lucide-react";
+import { t } from "@/languages";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import { Tag } from "@/components/ui";
+import type { MonitorTaskItemDto } from "@/api-sdk";
 import type {
   ConversionQueueState,
   ConversionWorkerLevel,
   ConversionHistoryPoint,
-} from '../types';
-import styles from '../SystemMonitorPage.module.css';
+} from "../types";
+import styles from "../SystemMonitorPage.module.css";
 
 export interface ConversionQueueTabProps {
   state: ConversionQueueState | null;
@@ -42,11 +42,19 @@ export interface ConversionQueueTabProps {
   tasksError: string | null;
 }
 
-const MODE_LABELS: Record<string, string> = {
-  'process-pool': t('进程内执行'),
-  'conversion-service': t('独立转换服务'),
-  'cloud-faas': t('云函数'),
-};
+// 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新
+function getModeLabel(mode: string): string {
+  switch (mode) {
+    case "process-pool":
+      return t("进程内执行");
+    case "conversion-service":
+      return t("独立转换服务");
+    case "cloud-faas":
+      return t("云函数");
+    default:
+      return mode;
+  }
+}
 
 /** 趋势图降采样：24h × 30s = 2880 点，图表最多保留 ~300 点 */
 function downsample<T>(points: T[], maxPoints = 300): T[] {
@@ -61,18 +69,18 @@ function downsample<T>(points: T[], maxPoints = 300): T[] {
 }
 
 function formatMs(ms: number | null): string {
-  if (ms === null) return '-';
+  if (ms === null) return "-";
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function formatClock(epochMs: number | null): string {
-  if (epochMs === null) return '-';
+  if (epochMs === null) return "-";
   return new Date(epochMs).toLocaleTimeString();
 }
 
 function formatTaskTime(iso: string): string {
-  return iso ? formatDateTimeWithSeconds(iso) : '-';
+  return iso ? formatDateTimeWithSeconds(iso) : "-";
 }
 
 /**
@@ -82,7 +90,7 @@ function formatTaskTime(iso: string): string {
 function estimateDrainMs(
   pending: number | null,
   processing: number | null,
-  p50Ms: number | null
+  p50Ms: number | null,
 ): number | null {
   if (pending == null || pending <= 0) return null;
   if (p50Ms == null || p50Ms <= 0) return null;
@@ -106,7 +114,7 @@ function formatDrain(ms: number): string {
 }
 
 function toChartPoints(
-  history: ConversionHistoryPoint[]
+  history: ConversionHistoryPoint[],
 ): Array<{ time: string; queueDepth: number | null; running: number | null }> {
   return downsample(history).map((p) => ({
     time: formatClock(p.t),
@@ -126,7 +134,7 @@ const WorkerLevelCard: React.FC<{ worker: ConversionWorkerLevel }> = ({
         <div className={styles.serviceTitleArea}>
           <h3>{worker.label}</h3>
           <p>
-            {t('并发 {current}/{baseline}', {
+            {t("并发 {current}/{baseline}", {
               current: String(worker.currentMax),
               baseline: String(worker.maxConcurrent),
             })}
@@ -134,34 +142,34 @@ const WorkerLevelCard: React.FC<{ worker: ConversionWorkerLevel }> = ({
         </div>
         {scaledUp ? (
           <Tag variant="warning" size="sm">
-            {t('已自动扩容')}
+            {t("已自动扩容")}
           </Tag>
         ) : (
           <Tag variant="neutral" size="sm">
-            {t('基准容量')}
+            {t("基准容量")}
           </Tag>
         )}
       </div>
       <div className={styles.queueStatsGrid}>
         <div className={styles.queueStatItem}>
           <span className={styles.queueStatValue}>{worker.running}</span>
-          <span className={styles.queueStatLabel}>{t('运行中')}</span>
+          <span className={styles.queueStatLabel}>{t("运行中")}</span>
         </div>
         <div className={styles.queueStatItem}>
           <span className={styles.queueStatValue}>{worker.waiting}</span>
-          <span className={styles.queueStatLabel}>{t('等待中')}</span>
+          <span className={styles.queueStatLabel}>{t("等待中")}</span>
         </div>
         <div className={styles.queueStatItem}>
           <span className={styles.queueStatValue}>
-            {worker.autoScale ? t('开启') : t('关闭')}
+            {worker.autoScale ? t("开启") : t("关闭")}
           </span>
-          <span className={styles.queueStatLabel}>{t('自动扩容')}</span>
+          <span className={styles.queueStatLabel}>{t("自动扩容")}</span>
         </div>
         <div className={styles.queueStatItem}>
           <span className={styles.queueStatValue}>
             {formatClock(worker.backlogSince)}
           </span>
-          <span className={styles.queueStatLabel}>{t('积压起始')}</span>
+          <span className={styles.queueStatLabel}>{t("积压起始")}</span>
         </div>
       </div>
     </div>
@@ -186,7 +194,7 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
 }) => {
   const chartPoints = useMemo(
     () => (state ? toChartPoints(state.history) : []),
-    [state]
+    [state],
   );
 
   if (error) {
@@ -199,7 +207,7 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
           className={styles.refreshButton}
           onClick={onRefresh}
         >
-          {t('重试')}
+          {t("重试")}
         </button>
       </div>
     );
@@ -208,33 +216,33 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
   if (!state) {
     return (
       <div className={styles.chartEmpty}>
-        {loading ? t('加载中...') : t('暂无数据')}
+        {loading ? t("加载中...") : t("暂无数据")}
       </div>
     );
   }
 
-  const modeLabel = MODE_LABELS[state.mode] ?? state.mode;
+  const modeLabel = getModeLabel(state.mode);
 
   // 状态判定：拉取失败 > 队列积压 > 有排队 > 正常
   const backlogged =
-    state.mode === 'process-pool'
+    state.mode === "process-pool"
       ? state.queueLength !== null &&
         state.maxConcurrent !== null &&
         state.queueLength >= state.maxConcurrent
-      : state.mode === 'conversion-service'
+      : state.mode === "conversion-service"
         ? (state.tasksPending ?? 0) > 0
         : false;
   const statusTag = state.conversionServiceError ? (
     <Tag variant="error" size="sm">
-      {t('服务不可用')}
+      {t("服务不可用")}
     </Tag>
   ) : backlogged ? (
     <Tag variant="warning" size="sm">
-      {t('队列积压')}
+      {t("队列积压")}
     </Tag>
   ) : (
     <Tag variant="success" size="sm">
-      {t('正常')}
+      {t("正常")}
     </Tag>
   );
 
@@ -242,7 +250,7 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
     <>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2>{t('转换队列状态')}</h2>
+          <h2>{t("转换队列状态")}</h2>
           <div className={styles.sectionHeaderRight}>
             <Tag variant="neutral" size="sm">
               {modeLabel}
@@ -255,12 +263,12 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
           <div className={styles.configUnavailableBanner}>
             <AlertTriangle size={18} />
             <span>
-              {t('转换服务统计拉取失败')}: {state.conversionServiceError}
+              {t("转换服务统计拉取失败")}: {state.conversionServiceError}
             </span>
           </div>
         )}
 
-        {state.mode === 'process-pool' && (
+        {state.mode === "process-pool" && (
           <div className={styles.queueCard}>
             <div className={styles.serviceHeader}>
               <div
@@ -269,57 +277,57 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                 <ListChecks size={22} />
               </div>
               <div className={styles.serviceTitleArea}>
-                <h3>{t('进程内转换队列')}</h3>
-                <p>{t('后端进程内限流器实时状态')}</p>
+                <h3>{t("进程内转换队列")}</h3>
+                <p>{t("后端进程内限流器实时状态")}</p>
               </div>
             </div>
             <div className={styles.queueStatsGrid}>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
-                  {state.queueLength ?? '-'}
+                  {state.queueLength ?? "-"}
                 </span>
-                <span className={styles.queueStatLabel}>{t('队列深度')}</span>
+                <span className={styles.queueStatLabel}>{t("队列深度")}</span>
               </div>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
-                  {state.runningCount ?? '-'}
-                  {' / '}
-                  {state.maxConcurrent ?? '-'}
+                  {state.runningCount ?? "-"}
+                  {" / "}
+                  {state.maxConcurrent ?? "-"}
                 </span>
                 <span className={styles.queueStatLabel}>
-                  {t('运行中 / 并发上限')}
+                  {t("运行中 / 并发上限")}
                 </span>
               </div>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
-                  {t('{n} 分钟', {
+                  {t("{n} 分钟", {
                     n: String(
                       state.timeoutMs !== null
                         ? Math.round(state.timeoutMs / 60000)
-                        : '-'
+                        : "-",
                     ),
                   })}
                 </span>
-                <span className={styles.queueStatLabel}>{t('超时阈值')}</span>
+                <span className={styles.queueStatLabel}>{t("超时阈值")}</span>
               </div>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
                   {formatMs(state.p50DurationMs)}
                 </span>
-                <span className={styles.queueStatLabel}>{t('耗时 P50')}</span>
+                <span className={styles.queueStatLabel}>{t("耗时 P50")}</span>
               </div>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
                   {formatMs(state.p95DurationMs)}
                 </span>
-                <span className={styles.queueStatLabel}>{t('耗时 P95')}</span>
+                <span className={styles.queueStatLabel}>{t("耗时 P95")}</span>
               </div>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
                   {formatMs(state.p50WaitMs)}
                 </span>
                 <span className={styles.queueStatLabel}>
-                  {t('排队等待 P50')}
+                  {t("排队等待 P50")}
                 </span>
               </div>
               <div className={styles.queueStatItem}>
@@ -327,20 +335,20 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                   {formatMs(state.p95WaitMs)}
                 </span>
                 <span className={styles.queueStatLabel}>
-                  {t('排队等待 P95')}
+                  {t("排队等待 P95")}
                 </span>
               </div>
               <div className={styles.queueStatItem}>
                 <span className={styles.queueStatValue}>
                   {state.durationSampleCount}
                 </span>
-                <span className={styles.queueStatLabel}>{t('耗时样本数')}</span>
+                <span className={styles.queueStatLabel}>{t("耗时样本数")}</span>
               </div>
             </div>
           </div>
         )}
 
-        {state.mode === 'conversion-service' && (
+        {state.mode === "conversion-service" && (
           <>
             <div className={styles.queueCard}>
               <div className={styles.serviceHeader}>
@@ -350,46 +358,46 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                   <ListChecks size={22} />
                 </div>
                 <div className={styles.serviceTitleArea}>
-                  <h3>{t('转换服务任务')}</h3>
-                  <p>{t('独立转换服务实时状态')}</p>
+                  <h3>{t("转换服务任务")}</h3>
+                  <p>{t("独立转换服务实时状态")}</p>
                 </div>
               </div>
               <div className={styles.queueStatsGrid}>
                 <div className={styles.queueStatItem}>
                   <span className={styles.queueStatValue}>
-                    {state.tasksPending ?? '-'}
+                    {state.tasksPending ?? "-"}
                   </span>
-                  <span className={styles.queueStatLabel}>{t('排队中')}</span>
+                  <span className={styles.queueStatLabel}>{t("排队中")}</span>
                 </div>
                 <div className={styles.queueStatItem}>
                   <span className={styles.queueStatValue}>
-                    {state.tasksProcessing ?? '-'}
+                    {state.tasksProcessing ?? "-"}
                   </span>
-                  <span className={styles.queueStatLabel}>{t('运行中')}</span>
+                  <span className={styles.queueStatLabel}>{t("运行中")}</span>
                 </div>
                 <div className={styles.queueStatItem}>
                   <span className={styles.queueStatValue}>
-                    {state.tasksCompleted ?? '-'}
+                    {state.tasksCompleted ?? "-"}
                   </span>
-                  <span className={styles.queueStatLabel}>{t('已完成')}</span>
+                  <span className={styles.queueStatLabel}>{t("已完成")}</span>
                 </div>
                 <div className={styles.queueStatItem}>
                   <span className={styles.queueStatValue}>
-                    {state.tasksFailed ?? '-'}
+                    {state.tasksFailed ?? "-"}
                   </span>
-                  <span className={styles.queueStatLabel}>{t('失败')}</span>
+                  <span className={styles.queueStatLabel}>{t("失败")}</span>
                 </div>
                 <div className={styles.queueStatItem}>
                   <span className={styles.queueStatValue}>
                     {formatMs(state.p50TaskMs)}
                   </span>
-                  <span className={styles.queueStatLabel}>{t('耗时 P50')}</span>
+                  <span className={styles.queueStatLabel}>{t("耗时 P50")}</span>
                 </div>
                 <div className={styles.queueStatItem}>
                   <span className={styles.queueStatValue}>
                     {formatMs(state.p95TaskMs)}
                   </span>
-                  <span className={styles.queueStatLabel}>{t('耗时 P95')}</span>
+                  <span className={styles.queueStatLabel}>{t("耗时 P95")}</span>
                 </div>
               </div>
             </div>
@@ -398,17 +406,20 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
               const drainMs = estimateDrainMs(
                 state.tasksPending,
                 state.tasksProcessing,
-                state.p50TaskMs
+                state.p50TaskMs,
               );
               if (drainMs == null) return null;
               return (
                 <div className={styles.etaLine}>
                   <Clock size={14} aria-hidden />
                   <span>
-                    {t('排队 {n} 个 · 预计约 {eta} 清空（按 P50 耗时 × 并发估算）', {
-                      n: String(state.tasksPending ?? 0),
-                      eta: formatDrain(drainMs),
-                    })}
+                    {t(
+                      "排队 {n} 个 · 预计约 {eta} 清空（按 P50 耗时 × 并发估算）",
+                      {
+                        n: String(state.tasksPending ?? 0),
+                        eta: formatDrain(drainMs),
+                      },
+                    )}
                   </span>
                 </div>
               );
@@ -424,13 +435,13 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
           </>
         )}
 
-        {state.mode === 'cloud-faas' && (
+        {state.mode === "cloud-faas" && (
           <div className={styles.infoCard}>
             <CloudOff size={18} />
             <div className={styles.infoContent}>
-              <span className={styles.infoLabel}>{t('云函数模式')}</span>
+              <span className={styles.infoLabel}>{t("云函数模式")}</span>
               <span className={styles.infoValue}>
-                {t('云函数由云厂商托管调度，无队列概念，本 Tab 不适用')}
+                {t("云函数由云厂商托管调度，无队列概念，本 Tab 不适用")}
               </span>
             </div>
           </div>
@@ -439,11 +450,11 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2>{t('任务明细')}</h2>
+          <h2>{t("任务明细")}</h2>
           <div className={styles.sectionHeaderRight}>
             <ListOrdered size={16} aria-hidden />
             <span className={styles.infoLabel}>
-              {t('conversion-service 模式任务列表（process-pool 模式无明细）')}
+              {t("conversion-service 模式任务列表（process-pool 模式无明细）")}
             </span>
           </div>
         </div>
@@ -454,9 +465,9 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
             <span>{tasksError}</span>
           </div>
         ) : tasksLoading && tasks.length === 0 ? (
-          <div className={styles.chartEmpty}>{t('加载中...')}</div>
+          <div className={styles.chartEmpty}>{t("加载中...")}</div>
         ) : tasks.length === 0 ? (
-          <div className={styles.chartEmpty}>{t('暂无任务明细')}</div>
+          <div className={styles.chartEmpty}>{t("暂无任务明细")}</div>
         ) : (
           <div className={styles.taskList}>
             {tasks.map((task) => (
@@ -466,29 +477,27 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                 </span>
                 <Tag
                   variant={
-                    task.status === 'completed'
-                      ? 'success'
-                      : task.status === 'failed'
-                        ? 'error'
-                        : task.status === 'cancelled'
-                          ? 'neutral'
-                          : 'warning'
+                    task.status === "completed"
+                      ? "success"
+                      : task.status === "failed"
+                        ? "error"
+                        : task.status === "cancelled"
+                          ? "neutral"
+                          : "warning"
                   }
                   size="sm"
                 >
-                  {task.status === 'completed'
-                    ? t('已完成')
-                    : task.status === 'failed'
-                      ? t('失败')
-                      : task.status === 'cancelled'
-                        ? t('已取消')
-                        : task.status === 'processing'
-                          ? t('处理中')
-                          : t('排队中')}
+                  {task.status === "completed"
+                    ? t("已完成")
+                    : task.status === "failed"
+                      ? t("失败")
+                      : task.status === "cancelled"
+                        ? t("已取消")
+                        : task.status === "processing"
+                          ? t("处理中")
+                          : t("排队中")}
                 </Tag>
-                <span className={styles.taskProgress}>
-                  {task.progress}%
-                </span>
+                <span className={styles.taskProgress}>{task.progress}%</span>
                 {task.error && (
                   <span className={styles.taskError} title={task.error}>
                     {truncateKey(task.error)}
@@ -505,11 +514,11 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2>{t('近 24 小时趋势')}</h2>
+          <h2>{t("近 24 小时趋势")}</h2>
           <div className={styles.sectionHeaderRight}>
             <Gauge size={16} />
             <span className={styles.infoLabel}>
-              {t('30 秒采样 · 服务重启后重新累积')}
+              {t("30 秒采样 · 服务重启后重新累积")}
             </span>
           </div>
         </div>
@@ -519,10 +528,10 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
             <div className={styles.chartTitleArea}>
               <TrendingUp size={18} className={styles.chartTitleIcon} />
               <div>
-                <h3>{t('队列深度与运行中任务')}</h3>
+                <h3>{t("队列深度与运行中任务")}</h3>
                 <p>
                   {t(
-                    '扩容决策参考：排队持续变长且并发顶到上限时，考虑增加转换实例'
+                    "扩容决策参考：排队持续变长且并发顶到上限时，考虑增加转换实例",
                   )}
                 </p>
               </div>
@@ -531,7 +540,7 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
           <div className={styles.chartBody}>
             {chartPoints.length === 0 ? (
               <div className={styles.chartEmpty}>
-                {t('暂无历史数据（服务启动后每 30 秒采样一次）')}
+                {t("暂无历史数据（服务启动后每 30 秒采样一次）")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
@@ -561,19 +570,19 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                   />
                   <Tooltip
                     contentStyle={{
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-default)",
                       borderRadius: 8,
                       fontSize: 12,
                     }}
-                    labelStyle={{ color: 'var(--text-primary)' }}
-                    itemStyle={{ color: 'var(--text-secondary)' }}
+                    labelStyle={{ color: "var(--text-primary)" }}
+                    itemStyle={{ color: "var(--text-secondary)" }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Line
                     type="monotone"
                     dataKey="queueDepth"
-                    name={t('队列深度')}
+                    name={t("队列深度")}
                     stroke="var(--primary-500)"
                     strokeWidth={2}
                     dot={false}
@@ -582,7 +591,7 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                   <Line
                     type="monotone"
                     dataKey="running"
-                    name={t('运行中')}
+                    name={t("运行中")}
                     stroke="var(--accent-500)"
                     strokeWidth={2}
                     dot={false}

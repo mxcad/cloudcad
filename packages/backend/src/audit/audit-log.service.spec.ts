@@ -27,6 +27,9 @@ describe("AuditLogService", () => {
 			deleteMany: jest.fn(),
 			groupBy: jest.fn(),
 		},
+		userActivity: {
+			create: jest.fn(),
+		},
 		fileSystemNode: {
 			findUnique: jest.fn(),
 		},
@@ -87,7 +90,9 @@ describe("AuditLogService", () => {
 			});
 		});
 
-		it("should skip high-frequency read action success records (#207)", async () => {
+		it("should skip high-frequency read action success records but demote to user_activity (#207/ADR-0086)", async () => {
+			mockPrisma.userActivity.create.mockResolvedValue({ id: "act-1" });
+
 			await service.log({
 				action: AuditAction.USER_LOGIN,
 				resourceType: ResourceType.USER,
@@ -97,9 +102,14 @@ describe("AuditLogService", () => {
 			});
 
 			expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
+			expect(mockPrisma.userActivity.create).toHaveBeenCalledWith({
+				data: { userId: "admin" },
+			});
 		});
 
-		it("should skip FILE_DOWNLOAD success records (#207)", async () => {
+		it("should demote FILE_DOWNLOAD success records to user_activity (ADR-0086)", async () => {
+			mockPrisma.userActivity.create.mockResolvedValue({ id: "act-1" });
+
 			await service.log({
 				action: AuditAction.FILE_DOWNLOAD,
 				resourceType: ResourceType.FILE,
@@ -109,6 +119,36 @@ describe("AuditLogService", () => {
 			});
 
 			expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
+			expect(mockPrisma.userActivity.create).toHaveBeenCalledWith({
+				data: { userId: "admin" },
+			});
+		});
+
+		it("should not write user_activity when userId is unknown (ADR-0086)", async () => {
+			await service.log({
+				action: AuditAction.USER_LOGIN,
+				resourceType: ResourceType.USER,
+				resourceId: "user-1",
+				userId: "unknown",
+				success: true,
+			});
+
+			expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
+			expect(mockPrisma.userActivity.create).not.toHaveBeenCalled();
+		});
+
+		it("should not throw when user_activity write fails (fail-open, ADR-0086)", async () => {
+			mockPrisma.userActivity.create.mockRejectedValue(new Error("DB error"));
+
+			await expect(
+				service.log({
+					action: AuditAction.USER_LOGIN,
+					resourceType: ResourceType.USER,
+					resourceId: "user-1",
+					userId: "admin",
+					success: true,
+				})
+			).resolves.toBeUndefined();
 		});
 
 		it("should keep high-frequency read action failure records (#207)", async () => {

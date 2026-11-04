@@ -21,6 +21,11 @@ overrides:
   nodemailer@8: ^9.0.1
   uuid@9: ^11.1.1
 
+patchedDependencies:
+  '@voerkai18n/cli@3.0.12':
+    hash: xpik52vkfgrkvelvanlomdzxhm
+    path: patches/@voerkai18n__cli@3.0.12.patch
+
 importers:
 
   .:
@@ -572,7 +577,7 @@ importers:
         version: 4.1.9(vitest@4.1.9)
       '@voerkai18n/cli':
         specifier: 3.0.12
-        version: 3.0.12
+        version: 3.0.12(patch_hash=xpik52vkfgrkvelvanlomdzxhm)
       '@voerkai18n/plugins':
         specifier: 3.0.12
         version: 3.0.12(@voerkai18n/runtime@3.0.12)(esbuild@0.28.1)(rollup@3.30.0)(vite@6.4.3(@types/node@22.20.0)(jiti@2.7.0)(lightningcss@1.32.0)(sass@1.101.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(lightningcss@1.32.0)(postcss@8.5.26))
@@ -720,7 +725,7 @@ importers:
         version: 3.1.0(vite@4.5.14(@types/node@22.20.0)(lightningcss@1.32.0)(sass@1.101.0)(terser@5.14.2))(vue@3.5.39(typescript@5.9.3))
       '@voerkai18n/cli':
         specifier: 3.0.12
-        version: 3.0.12
+        version: 3.0.12(patch_hash=xpik52vkfgrkvelvanlomdzxhm)
       '@voerkai18n/plugins':
         specifier: 3.0.12
         version: 3.0.12(@voerkai18n/runtime@3.0.22)(esbuild@0.28.1)(rollup@3.30.0)(vite@4.5.14(@types/node@22.20.0)(lightningcss@1.32.0)(sass@1.101.0)(terser@5.14.2))(webpack@5.106.2(esbuild@0.28.1)(lightningcss@1.32.0)(postcss@8.5.26))
@@ -15809,7 +15814,7 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
-  '@voerkai18n/cli@3.0.12':
+  '@voerkai18n/cli@3.0.12(patch_hash=xpik52vkfgrkvelvanlomdzxhm)':
     dependencies:
       '@voerkai18n/formatters': 3.0.22(@voerkai18n/runtime@3.0.22)
       '@voerkai18n/runtime': 3.0.22

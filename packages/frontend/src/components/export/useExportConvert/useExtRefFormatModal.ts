@@ -4,22 +4,22 @@
  * 外部参照图纸下载的 DownloadFormatModal：state 与
  * handleExternalRefDownload / handleExtRefFormatDownload。
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 import {
   mxcadFileAccessControllerGetFileDownloadExternalRef,
   publicFileControllerDownloadExternalRef,
-} from '@/api-sdk';
-import { triggerBlobDownload } from '@/utils/download';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { t } from '@/languages';
+} from "@/api-sdk";
+import { triggerBlobDownload } from "@/utils/download";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { t } from "@/languages";
 import type {
   DownloadFormat,
   PdfOptions,
   DwgOptions,
-} from '@/types/download-format';
-import type { ExternalReferenceFile } from '@/types/filesystem';
-import type { ToastType } from '@/components/ui/Toast';
-import type { ExtRefFormatState } from '../types';
+} from "@/types/download-format";
+import type { ExternalReferenceFile } from "@/types/filesystem";
+import type { ToastType } from "@/components/ui";
+import type { ExtRefFormatState } from "../types";
 
 export interface ExtRefFormatModalOptions {
   fileId: string | null;
@@ -43,27 +43,27 @@ export function useExtRefFormatModal({
       setDownloadingExtRefFile(file);
       setShowExtRefFormatModal(true);
     },
-    []
+    [],
   );
 
   const handleExtRefFormatDownload = useCallback(
     async (
       format: DownloadFormat,
       pdfOptions?: PdfOptions,
-      dwgOptions?: DwgOptions
+      dwgOptions?: DwgOptions,
     ) => {
       const extRefFile = downloadingExtRefFile;
       if (!extRefFile) return;
       setExtRefDownloading(true);
       try {
         const query: Record<string, string> = { format };
-        if (format === 'pdf' && pdfOptions) {
+        if (format === "pdf" && pdfOptions) {
           if (pdfOptions.width) query.width = pdfOptions.width;
           if (pdfOptions.height) query.height = pdfOptions.height;
           if (pdfOptions.colorPolicy)
             query.colorPolicy = pdfOptions.colorPolicy;
         }
-        if ((format === 'dwg' || format === 'dxf') && dwgOptions) {
+        if ((format === "dwg" || format === "dxf") && dwgOptions) {
           query.dwgVersion = String(dwgOptions.dwgVersion);
         }
         // 登录态：走私有端点（nodeId）；游客态：走公开端点（fileHash）。
@@ -90,17 +90,17 @@ export function useExtRefFormatModal({
           blobData instanceof Blob
             ? blobData
             : new Blob([blobData as BlobPart]);
-        const nameWithoutExt = extRefFile.name.replace(/\.[^.]+$/, '');
+        const nameWithoutExt = extRefFile.name.replace(/\.[^.]+$/, "");
         triggerBlobDownload(blob, `${nameWithoutExt}.${format}`);
       } catch (error) {
-        showToast(getErrorMessage(error), 'error');
+        showToast(getErrorMessage(error), "error");
       } finally {
         setExtRefDownloading(false);
         setShowExtRefFormatModal(false);
         setDownloadingExtRefFile(null);
       }
     },
-    [fileId, currentFileHash, downloadingExtRefFile, showToast]
+    [fileId, currentFileHash, downloadingExtRefFile, showToast],
   );
 
   const state: ExtRefFormatState = {

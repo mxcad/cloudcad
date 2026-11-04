@@ -7,15 +7,15 @@ import {
   Users,
   Sparkles,
   Loader2,
-} from 'lucide-react';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
+} from "lucide-react";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
 import {
   passwordComplexityMessage,
   passwordTooShortMessage,
   usePasswordPolicy,
-} from '@/lib/passwordPolicy';
-import { validatePasswordPolicy } from '@cloudcad/platform';
+} from "@/lib/passwordPolicy";
+import { validatePasswordPolicy } from "@cloudcad/platform";
 import React, {
   useState,
   useEffect,
@@ -23,39 +23,40 @@ import React, {
   useCallback,
   lazy,
   Suspense,
-} from 'react';
-import { Button, Tab, Tabs, Tag } from '@/components/ui';
-import { Modal } from '@/components/ui/Modal';
-import { usePermission } from '@/hooks/usePermission';
-import { useAuth } from '@/contexts/AuthContext';
-import { useConfirmAction } from '@/hooks/useConfirmAction';
-import { SystemPermission } from '@/constants/permissions';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useFileBrowserSelection } from '@/hooks/file-browser';
-import { useSelectionShortcuts } from '@/hooks/common/useSelectionShortcuts';
-import { useAccumulatedPagination } from '@/hooks/common/useAccumulatedPagination';
-import { BatchActionBar } from '@/components/common/BatchActionBar';
-import { globalShowToast } from '@/utils/notificationEvents';
-import type { CreateUserDto, UserResponseDto, UpdateUserDto } from '@/api-sdk';
-import { vipControllerGetActiveTiers } from '@/api-sdk';
-import { FREE_TIER_LEVEL } from '@/constants/vip';
-import type { SelectOption } from '@/components/ui/Select';
-import { useUserCRUD } from './hooks/useUserCRUD';
-import { useUserSearch } from './hooks/useUserSearch';
-import { UserTable, type UserTableUser } from './UserTable';
-import { UserSearchBar } from './UserSearchBar';
-import { CreateUserModal } from './UserModals/CreateUserModal';
-import { EditUserModal } from './UserModals/EditUserModal';
-import { isAdminDemotion } from './utils/userAdminPrivilege';
-import { MembershipManageModal } from './UserModals/MembershipManageModal';
-import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
-import styles from './UserManagement.module.css';
+} from "react";
+import { Button, Tab, Tabs, Tag } from "@/components/ui";
+import { Modal } from "@/components/ui";
+import type { SelectOption } from "@/components/ui";
+import { usePermission } from "@/hooks/usePermission";
+import { useAuth } from "@/contexts/AuthContext";
+import { useConfirmAction } from "@/hooks/useConfirmAction";
+import { SystemPermission } from "@/constants/permissions";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useFileBrowserSelection } from "@/hooks/file-browser";
+import { useSelectionShortcuts } from "@/hooks/common/useSelectionShortcuts";
+import { useAccumulatedPagination } from "@/hooks/common/useAccumulatedPagination";
+import { BatchActionBar } from "@/components/common/BatchActionBar";
+import { globalShowToast } from "@/utils/notificationEvents";
+import type { CreateUserDto, UserResponseDto, UpdateUserDto } from "@/api-sdk";
+import { vipControllerGetActiveTiers } from "@/api-sdk";
+import { FREE_TIER_LEVEL } from "@/constants/vip";
+
+import { useUserCRUD } from "./hooks/useUserCRUD";
+import { useUserSearch } from "./hooks/useUserSearch";
+import { UserTable, type UserTableUser } from "./UserTable";
+import { UserSearchBar } from "./UserSearchBar";
+import { CreateUserModal } from "./UserModals/CreateUserModal";
+import { EditUserModal } from "./UserModals/EditUserModal";
+import { isAdminDemotion } from "./utils/userAdminPrivilege";
+import { MembershipManageModal } from "./UserModals/MembershipManageModal";
+import { DeleteUserConfirm } from "./UserModals/DeleteUserConfirm";
+import styles from "./UserManagement.module.css";
 
 // 运营统计嵌入本页 Tab（独立路由 /admin/stats 仍保留深链可用）
-const AdminStatsPage = lazy(() => import('../AdminStatsPage'));
+const AdminStatsPage = lazy(() => import("../AdminStatsPage"));
 
 export const UserManagement = () => {
-  useDocumentTitle(t('用户管理'));
+  useDocumentTitle(t("用户管理"));
   const { hasPermission } = usePermission();
   const { user: currentUser } = useAuth();
   const showConfirm = useConfirmAction();
@@ -84,7 +85,7 @@ export const UserManagement = () => {
 
   // VIP 等级列表（动态获取上架等级，用于筛选下拉框）
   const [tierOptions, setTierOptions] = useState<SelectOption[]>([
-    { value: '', label: t('所有会员') },
+    { value: "", label: t("所有会员") },
   ]);
   useEffect(() => {
     let cancelled = false;
@@ -93,17 +94,17 @@ export const UserManagement = () => {
         if (cancelled || result.error) return;
         const tiers = (result.data ?? []) as { level: number; name: string }[];
         const options: SelectOption[] = [
-          { value: '', label: t('所有会员') },
+          { value: "", label: t("所有会员") },
           ...tiers
-            .filter((tier) => typeof tier.level === 'number')
+            .filter((tier) => typeof tier.level === "number")
             .map((tier) => ({
               value: String(tier.level),
               label:
                 tier.level === FREE_TIER_LEVEL
-                  ? t('免费用户')
-                  : t('VIP{level}', { level: String(tier.level) }),
+                  ? t("免费用户")
+                  : t("VIP{level}", { level: String(tier.level) }),
             })),
-          { value: 'expired', label: t('已过期') },
+          { value: "expired", label: t("已过期") },
         ];
         setTierOptions(options);
       })
@@ -118,7 +119,7 @@ export const UserManagement = () => {
       search: searchQuery || undefined,
       roleId: roleFilter || undefined,
       tierLevel: tierFilter || undefined,
-      status: userTab === 'deleted' ? 'DELETED' : undefined,
+      status: userTab === "deleted" ? "DELETED" : undefined,
       sortBy,
       sortOrder,
       page: currentPage,
@@ -133,7 +134,7 @@ export const UserManagement = () => {
       sortOrder,
       currentPage,
       pageSize,
-    ]
+    ],
   );
 
   const {
@@ -157,21 +158,21 @@ export const UserManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserResponseDto | null>(null);
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    phone: '',
-    password: '',
-    roleId: '',
-    nickname: '',
-    avatar: '',
-    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+    username: "",
+    email: "",
+    phone: "",
+    password: "",
+    roleId: "",
+    nickname: "",
+    avatar: "",
+    status: "ACTIVE" as "ACTIVE" | "INACTIVE" | "SUSPENDED",
   });
   const [formErrors, setFormErrors] = useState({
-    username: '',
-    email: '',
-    password: '',
-    phone: '',
-    nickname: '',
+    username: "",
+    email: "",
+    password: "",
+    phone: "",
+    nickname: "",
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // 创建/编辑弹窗内展示的提交错误（重名等后端消息），与列表加载错误 error 分离
@@ -182,11 +183,13 @@ export const UserManagement = () => {
   const [deleteImmediately, setDeleteImmediately] = useState(false);
   // BUG-ADMIN-004：删除目标为当前用户自己或管理员账户时非空（前端前置阻断原因，
   // 后端 isAdminUser 硬保护已有，此处提前告知并禁用确认，避免点了确认才报错）
-  const [deleteBlockReason, setDeleteBlockReason] = useState<string | null>(null);
+  const [deleteBlockReason, setDeleteBlockReason] = useState<string | null>(
+    null,
+  );
 
   const [membershipModalOpen, setMembershipModalOpen] = useState(false);
   const [membershipUser, setMembershipUser] = useState<UserTableUser | null>(
-    null
+    null,
   );
   const [membershipError, setMembershipError] = useState<string | null>(null);
 
@@ -211,7 +214,7 @@ export const UserManagement = () => {
   // 跨页滚动后表头全选/Ctrl+A 作用于全部已加载页，勾选状态与行为不脱节
   const selectableUsers = useMemo(
     () => viewUsers.map((u) => ({ id: u.id })),
-    [viewUsers]
+    [viewUsers],
   );
   const {
     selectedNodes,
@@ -219,7 +222,7 @@ export const UserManagement = () => {
     handleSelectAll,
     clearSelection,
     selectMany,
-  } = useFileBrowserSelection({ nodes: selectableUsers, multiple: 'always' });
+  } = useFileBrowserSelection({ nodes: selectableUsers, multiple: "always" });
   const selectedCount = selectedNodes.size;
 
   // 每页条数变化：重置到第一页并清空选择（分页合并 resetKey 已含 pageSize 整体替换）
@@ -230,7 +233,7 @@ export const UserManagement = () => {
       setCurrentPage(1);
       setPageSize(newSize);
     },
-    [pageSize, clearSelection, setCurrentPage, setPageSize]
+    [pageSize, clearSelection, setCurrentPage, setPageSize],
   );
 
   // 批量操作状态
@@ -263,7 +266,7 @@ export const UserManagement = () => {
     const ids = Array.from(selectedNodes);
     let successCount = 0;
     let failCount = 0;
-    let firstError = '';
+    let firstError = "";
     for (const id of ids) {
       try {
         await deleteUser(id, false);
@@ -276,16 +279,16 @@ export const UserManagement = () => {
     if (successCount > 0) {
       showSuccess(
         successCount > 1
-          ? t('已注销 {count} 个用户', { count: String(successCount) })
-          : t('用户删除成功')
+          ? t("已注销 {count} 个用户", { count: String(successCount) })
+          : t("用户删除成功"),
       );
     }
     if (failCount > 0) {
       globalShowToast(
         firstError
-          ? `${t('{count} 个用户注销失败', { count: String(failCount) })}：${firstError}`
-          : t('{count} 个用户注销失败', { count: String(failCount) }),
-        'error'
+          ? `${t("{count} 个用户注销失败", { count: String(failCount) })}：${firstError}`
+          : t("{count} 个用户注销失败", { count: String(failCount) }),
+        "error",
       );
     }
     setBatchDeleting(false);
@@ -301,7 +304,7 @@ export const UserManagement = () => {
     const ids = Array.from(selectedNodes);
     let successCount = 0;
     let failCount = 0;
-    let firstError = '';
+    let firstError = "";
     for (const id of ids) {
       try {
         await restoreUser(id);
@@ -314,16 +317,16 @@ export const UserManagement = () => {
     if (successCount > 0) {
       showSuccess(
         successCount > 1
-          ? t('已恢复 {count} 个用户', { count: String(successCount) })
-          : t('用户已恢复')
+          ? t("已恢复 {count} 个用户", { count: String(successCount) })
+          : t("用户已恢复"),
       );
     }
     if (failCount > 0) {
       globalShowToast(
         firstError
-          ? `${t('{count} 个用户恢复失败', { count: String(failCount) })}：${firstError}`
-          : t('{count} 个用户恢复失败', { count: String(failCount) }),
-        'error'
+          ? `${t("{count} 个用户恢复失败", { count: String(failCount) })}：${firstError}`
+          : t("{count} 个用户恢复失败", { count: String(failCount) }),
+        "error",
       );
     }
     setBatchRestoring(false);
@@ -333,14 +336,14 @@ export const UserManagement = () => {
 
   // 多选快捷键：ESC 清空 / Ctrl+A 全选 / Delete 批量注销（仅活跃 tab + 删除权限）
   const canDeletePermission = hasPermission(
-    SystemPermission.SYSTEM_USER_DELETE
+    SystemPermission.SYSTEM_USER_DELETE,
   );
   useSelectionShortcuts({
     enabled: !loading,
     onClearSelection: clearSelection,
     onSelectAll: handleSelectAll,
     onDeleteSelected:
-      userTab === 'active' && canDeletePermission ? openBatchDelete : undefined,
+      userTab === "active" && canDeletePermission ? openBatchDelete : undefined,
     canDelete: selectedCount > 0,
   });
 
@@ -377,28 +380,28 @@ export const UserManagement = () => {
 
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setFormErrors((prev) => ({ ...prev, [field]: '' }));
+    setFormErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleOpenCreate = () => {
     setEditingUser(null);
-    const defaultRole = roles.find((r) => r.name === 'USER');
+    const defaultRole = roles.find((r) => r.name === "USER");
     setFormData({
-      username: '',
-      email: '',
-      phone: '',
-      password: '',
-      roleId: defaultRole?.id || '',
-      nickname: '',
-      avatar: '',
-      status: 'ACTIVE',
+      username: "",
+      email: "",
+      phone: "",
+      password: "",
+      roleId: defaultRole?.id || "",
+      nickname: "",
+      avatar: "",
+      status: "ACTIVE",
     });
     setFormErrors({
-      username: '',
-      email: '',
-      password: '',
-      phone: '',
-      nickname: '',
+      username: "",
+      email: "",
+      password: "",
+      phone: "",
+      nickname: "",
     });
     setSubmitError(null);
     setIsModalOpen(true);
@@ -408,20 +411,20 @@ export const UserManagement = () => {
     setEditingUser(user as UserResponseDto);
     setFormData({
       username: user.username,
-      email: user.email || '',
-      phone: user.phone || '',
-      password: '',
-      roleId: user.role?.id || '',
-      nickname: user.nickname || '',
-      avatar: user.avatar || '',
-      status: (user.status as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') || 'ACTIVE',
+      email: user.email || "",
+      phone: user.phone || "",
+      password: "",
+      roleId: user.role?.id || "",
+      nickname: user.nickname || "",
+      avatar: user.avatar || "",
+      status: (user.status as "ACTIVE" | "INACTIVE" | "SUSPENDED") || "ACTIVE",
     });
     setFormErrors({
-      username: '',
-      email: '',
-      password: '',
-      phone: '',
-      nickname: '',
+      username: "",
+      email: "",
+      password: "",
+      phone: "",
+      nickname: "",
     });
     setSubmitError(null);
     setIsModalOpen(true);
@@ -429,46 +432,46 @@ export const UserManagement = () => {
 
   const validateForm = (): boolean => {
     const errors = {
-      username: '',
-      email: '',
-      password: '',
-      phone: '',
-      nickname: '',
+      username: "",
+      email: "",
+      password: "",
+      phone: "",
+      nickname: "",
     };
     if (!formData.username) {
-      errors.username = t('用户名不能为空');
+      errors.username = t("用户名不能为空");
     } else if (formData.username.length < 3) {
-      errors.username = t('用户名至少3个字符');
+      errors.username = t("用户名至少3个字符");
     } else if (formData.username.length > 20) {
-      errors.username = t('用户名最多20个字符');
+      errors.username = t("用户名最多20个字符");
     }
     // 与后端 create 对齐：requireEmailVerification 开启时创建必填邮箱（编辑可选）
     if (!editingUser && requireEmailVerification && !formData.email) {
-      errors.email = t('邮箱不能为空');
+      errors.email = t("邮箱不能为空");
     } else if (
       formData.email &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
     ) {
-      errors.email = t('邮箱格式不正确');
+      errors.email = t("邮箱格式不正确");
     }
     if (!editingUser && !formData.password) {
-      errors.password = t('密码不能为空');
+      errors.password = t("密码不能为空");
     } else if (formData.password) {
       // 预检与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发）：
       // 创建必填、编辑可选（留空不改），非空即按策略校验
       const check = validatePasswordPolicy(formData.password, policy);
       if (!check.valid) {
         errors.password =
-          check.reason === 'too_short'
+          check.reason === "too_short"
             ? passwordTooShortMessage(policy.minLength)
             : passwordComplexityMessage(policy.minCategories);
       }
     }
     if (formData.phone && !/^1[3-9]\d{9}$/.test(formData.phone)) {
-      errors.phone = t('请输入正确的手机号');
+      errors.phone = t("请输入正确的手机号");
     }
     if (formData.nickname && formData.nickname.length > 50) {
-      errors.nickname = t('昵称最多50个字符');
+      errors.nickname = t("昵称最多50个字符");
     }
     setFormErrors(errors);
     return (
@@ -481,7 +484,8 @@ export const UserManagement = () => {
   };
 
   /** 编辑的是操作者自己的行：角色/账户状态不可改（自我降权会把账户锁死） */
-  const isSelf = !!editingUser && !!currentUser && editingUser.id === currentUser.id;
+  const isSelf =
+    !!editingUser && !!currentUser && editingUser.id === currentUser.id;
 
   const doSubmitUserUpdate = async () => {
     if (!editingUser) return;
@@ -497,7 +501,7 @@ export const UserManagement = () => {
     if (formData.avatar) updateData.avatar = formData.avatar;
     if (formData.password) updateData.password = formData.password;
     await updateUser(editingUser.id, updateData as UpdateUserDto);
-    showSuccess(t('用户更新成功'));
+    showSuccess(t("用户更新成功"));
     setIsModalOpen(false);
     await loadUsers();
   };
@@ -519,19 +523,19 @@ export const UserManagement = () => {
         roles.find((r) => r.id === formData.roleId)?.name || formData.roleId;
       if (
         isAdminDemotion({
-          currentRoleId: editingUser.role?.id || '',
+          currentRoleId: editingUser.role?.id || "",
           nextRoleId: formData.roleId,
           roles: roles as Array<{ id: string; permissions?: string[] }>,
-          currentStatus: editingUser.status || '',
-          nextStatus: formData.status || '',
+          currentStatus: editingUser.status || "",
+          nextStatus: formData.status || "",
         })
       ) {
         showConfirm(
-          t('确认移除用户管理权限'),
-          `${t('该用户将被取消「')}${roleName}${t('」的用户管理权限，取消后无法再管理用户。请确认已存在其他管理员账号，否则将无人可管理用户。')}`,
+          t("确认移除用户管理权限"),
+          `${t("该用户将被取消「")}${roleName}${t("」的用户管理权限，取消后无法再管理用户。请确认已存在其他管理员账号，否则将无人可管理用户。")}`,
           doSubmitUserUpdate,
-          'warning',
-          t('确认')
+          "warning",
+          t("确认"),
         );
         return;
       }
@@ -551,7 +555,7 @@ export const UserManagement = () => {
         if (formData.nickname) createData.nickname = formData.nickname;
         if (formData.phone) createData.phone = formData.phone;
         await createUser(createData as CreateUserDto);
-        showSuccess(t('用户创建成功'));
+        showSuccess(t("用户创建成功"));
       }
       setIsModalOpen(false);
       await loadUsers();
@@ -560,7 +564,7 @@ export const UserManagement = () => {
       // 不再混入列表加载错误 —— 否则列表非空时错误渲染到表格底部失败条、弹窗内无任何提示
       setSubmitError(
         getErrorMessage(err) ||
-          (editingUser ? t('更新用户失败') : t('创建用户失败'))
+          (editingUser ? t("更新用户失败") : t("创建用户失败")),
       );
     }
   };
@@ -570,13 +574,13 @@ export const UserManagement = () => {
     // 后端 isAdminUser 硬保护（不能删除管理员账户）已存在；此处提前告知避免"点了确认才报错"。
     const target = viewUsers.find((u) => u.id === id);
     const isSelf = !!target && !!currentUser && target.id === currentUser.id;
-    const isAdminTarget = target?.role?.name === 'ADMIN';
+    const isAdminTarget = target?.role?.name === "ADMIN";
     setDeleteBlockReason(
       isSelf
-        ? t('不能删除自己')
+        ? t("不能删除自己")
         : isAdminTarget
-          ? t('不能删除管理员账户')
-          : null
+          ? t("不能删除管理员账户")
+          : null,
     );
     setUserToDelete(id);
     setDeleteConfirmOpen(true);
@@ -587,7 +591,7 @@ export const UserManagement = () => {
     try {
       await deleteUser(userToDelete, deleteImmediately);
       showSuccess(
-        deleteImmediately ? t('用户立即注销成功') : t('用户删除成功')
+        deleteImmediately ? t("用户立即注销成功") : t("用户删除成功"),
       );
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
@@ -596,7 +600,7 @@ export const UserManagement = () => {
       await loadUsers();
     } catch (err) {
       // 删除失败：toast 提示，弹窗保持打开以便用户重试或取消
-      globalShowToast(getErrorMessage(err) || t('删除用户失败'), 'error');
+      globalShowToast(getErrorMessage(err) || t("删除用户失败"), "error");
     }
   };
 
@@ -610,10 +614,10 @@ export const UserManagement = () => {
   const handleRestore = async (id: string) => {
     try {
       await restoreUser(id);
-      showSuccess(t('用户已恢复'));
+      showSuccess(t("用户已恢复"));
       await loadUsers();
     } catch (err) {
-      globalShowToast(getErrorMessage(err) || t('恢复用户失败'), 'error');
+      globalShowToast(getErrorMessage(err) || t("恢复用户失败"), "error");
     }
   };
 
@@ -632,14 +636,14 @@ export const UserManagement = () => {
     setMembershipError(null);
     try {
       await updateUserMembership(membershipUser.id, data);
-      showSuccess(t('用户会员更新成功'));
+      showSuccess(t("用户会员更新成功"));
       setMembershipModalOpen(false);
       setMembershipUser(null);
       await loadUsers();
     } catch (err) {
       // SDK error 是普通对象（非 Error 实例），instanceof 判断恒不命中，
       // 必须用 getErrorMessage 提取后端消息
-      setMembershipError(getErrorMessage(err) || t('更新会员失败'));
+      setMembershipError(getErrorMessage(err) || t("更新会员失败"));
     }
   };
 
@@ -650,9 +654,9 @@ export const UserManagement = () => {
           <div className={styles.accessDeniedIcon}>
             <AlertCircle size={48} />
           </div>
-          <h2 className={styles.accessDeniedTitle}>{t('访问被拒绝')}</h2>
+          <h2 className={styles.accessDeniedTitle}>{t("访问被拒绝")}</h2>
           <p className={styles.accessDeniedText}>
-            {t('您没有权限访问此页面。')}
+            {t("您没有权限访问此页面。")}
           </p>
         </div>
       </div>
@@ -666,16 +670,16 @@ export const UserManagement = () => {
           <div className={styles.limitedAccessIcon}>
             <AlertCircle size={48} />
           </div>
-          <h2 className={styles.limitedAccessTitle}>{t('无法查看用户列表')}</h2>
+          <h2 className={styles.limitedAccessTitle}>{t("无法查看用户列表")}</h2>
           <div className={styles.permissionBadges}>
             {hasPermission(SystemPermission.SYSTEM_USER_CREATE) && (
-              <Tag variant="success">{t('创建用户')}</Tag>
+              <Tag variant="success">{t("创建用户")}</Tag>
             )}
             {hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
-              <Tag variant="primary">{t('更新用户')}</Tag>
+              <Tag variant="primary">{t("更新用户")}</Tag>
             )}
             {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
-              <Tag variant="error">{t('删除用户')}</Tag>
+              <Tag variant="error">{t("删除用户")}</Tag>
             )}
           </div>
         </div>
@@ -693,7 +697,7 @@ export const UserManagement = () => {
       )}
 
       {/* 首屏/查询无内容时的错误 banner（列表已有内容时由底部失败条提示，见 UserTable loadError） */}
-      {userTab !== 'stats' && error && viewUsers.length === 0 && (
+      {userTab !== "stats" && error && viewUsers.length === 0 && (
         <div className={styles.errorBanner}>
           <XCircle size={18} />
           <span>{error}</span>
@@ -704,7 +708,7 @@ export const UserManagement = () => {
             icon={RefreshCw}
             className={styles.errorRetryBtn}
           >
-            {t('重试')}
+            {t("重试")}
           </Button>
         </div>
       )}
@@ -715,9 +719,9 @@ export const UserManagement = () => {
             <Users size={24} />
           </div>
           <div>
-            <h1 className={styles.pageTitle}>{t('用户管理')}</h1>
+            <h1 className={styles.pageTitle}>{t("用户管理")}</h1>
             <p className={styles.pageSubtitle}>
-              {t('管理团队成员、分配角色及存储配额')}
+              {t("管理团队成员、分配角色及存储配额")}
             </p>
           </div>
         </div>
@@ -728,7 +732,7 @@ export const UserManagement = () => {
             className={styles.addUserBtn}
           >
             <UserPlus size={18} />
-            {t('添加用户')}
+            {t("添加用户")}
           </Button>
         )}
         {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
@@ -739,7 +743,7 @@ export const UserManagement = () => {
             className={styles.cleanupBtn}
           >
             <Sparkles size={18} />
-            {t('清理已注销用户')}
+            {t("清理已注销用户")}
           </Button>
         )}
       </div>
@@ -747,30 +751,30 @@ export const UserManagement = () => {
       {hasPermission(SystemPermission.SYSTEM_USER_READ) && (
         <Tabs>
           <Tab
-            active={userTab === 'active'}
+            active={userTab === "active"}
             onClick={() => {
-              setUserTab('active');
+              setUserTab("active");
               setCurrentPage(1);
             }}
           >
-            {t('活跃用户')}
+            {t("活跃用户")}
           </Tab>
           <Tab
-            active={userTab === 'deleted'}
+            active={userTab === "deleted"}
             onClick={() => {
-              setUserTab('deleted');
+              setUserTab("deleted");
               setCurrentPage(1);
             }}
           >
-            {t('已注销')}
+            {t("已注销")}
           </Tab>
-          <Tab active={userTab === 'stats'} onClick={() => setUserTab('stats')}>
-            {t('运营统计')}
+          <Tab active={userTab === "stats"} onClick={() => setUserTab("stats")}>
+            {t("运营统计")}
           </Tab>
         </Tabs>
       )}
 
-      {userTab === 'stats' ? (
+      {userTab === "stats" ? (
         <div className={styles.statsPanel}>
           <Suspense fallback={null}>
             <AdminStatsPage embedded />
@@ -818,7 +822,7 @@ export const UserManagement = () => {
                 canEdit={hasPermission(SystemPermission.SYSTEM_USER_UPDATE)}
                 canDelete={canDeletePermission}
                 canManageMembership={hasPermission(
-                  SystemPermission.SYSTEM_USER_MEMBERSHIP_MANAGE
+                  SystemPermission.SYSTEM_USER_MEMBERSHIP_MANAGE,
                 )}
                 selectedIds={selectedNodes}
                 onToggleSelect={handleNodeSelect}
@@ -855,11 +859,11 @@ export const UserManagement = () => {
                       count={selectedCount}
                       onClear={clearSelection}
                       actions={
-                        userTab === 'deleted'
+                        userTab === "deleted"
                           ? [
                               {
-                                key: 'restore',
-                                label: t('批量恢复'),
+                                key: "restore",
+                                label: t("批量恢复"),
                                 loading: batchRestoring,
                                 onClick: () => void handleBatchRestore(),
                               },
@@ -867,9 +871,9 @@ export const UserManagement = () => {
                           : canDeletePermission
                             ? [
                                 {
-                                  key: 'delete',
-                                  label: t('批量注销'),
-                                  variant: 'danger',
+                                  key: "delete",
+                                  label: t("批量注销"),
+                                  variant: "danger",
                                   loading: batchDeleting,
                                   onClick: openBatchDelete,
                                 },
@@ -933,7 +937,7 @@ export const UserManagement = () => {
               }
             : undefined
         }
-        userName={membershipUser?.nickname || membershipUser?.username || ''}
+        userName={membershipUser?.nickname || membershipUser?.username || ""}
       />
 
       <DeleteUserConfirm
@@ -952,7 +956,7 @@ export const UserManagement = () => {
       <Modal
         isOpen={cleanupModalOpen}
         onClose={() => setCleanupModalOpen(false)}
-        title={t('确认清理')}
+        title={t("确认清理")}
         className="max-w-sm"
         footer={
           <div className={styles.modalFooter}>
@@ -961,20 +965,20 @@ export const UserManagement = () => {
               onClick={() => setCleanupModalOpen(false)}
               disabled={cleanupLoading}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               onClick={async () => {
                 setCleanupLoading(true);
                 try {
                   const result = await triggerCleanup(0);
-                  showSuccess(result?.message || t('清理完成'));
+                  showSuccess(result?.message || t("清理完成"));
                   setCleanupModalOpen(false);
                   await loadUsers();
                 } catch (err) {
                   globalShowToast(
-                    getErrorMessage(err) || t('操作失败，请重试'),
-                    'error'
+                    getErrorMessage(err) || t("操作失败，请重试"),
+                    "error",
                   );
                 } finally {
                   setCleanupLoading(false);
@@ -987,17 +991,17 @@ export const UserManagement = () => {
               {cleanupLoading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  {t('清理中...')}
+                  {t("清理中...")}
                 </>
               ) : (
-                t('确认清理')
+                t("确认清理")
               )}
             </Button>
           </div>
         }
       >
         <p className={styles.cleanupConfirmText}>
-          {t('确定要清理所有已注销的用户吗？此操作不可恢复。')}
+          {t("确定要清理所有已注销的用户吗？此操作不可恢复。")}
         </p>
       </Modal>
     </div>

@@ -23,6 +23,10 @@ describe('AdminStatsService', () => {
     return params;
   };
 
+  /** 提取第 N 次 $queryRaw 调用的 SQL 文本（拼接 tagged template 片段） */
+  const querySql = (callIndex = 0): string =>
+    (mockPrisma.$queryRaw.mock.calls[callIndex][0] as TemplateStringsArray).join('');
+
   describe('getDailyRegistrations', () => {
     it('缺省返回最近 30 个自然日（东八区切日），UTC 边界为东八区零点', async () => {
       jest
@@ -255,6 +259,11 @@ describe('AdminStatsService', () => {
       // 序列下界 = 区间起点（2026-07-27 零点 CST = UTC 2026-07-26T16:00Z）再前扩 29 天
       expect(queryParams(2)[0]).toEqual(new Date('2026-06-27T16:00:00.000Z'));
       expect(queryParams(2)[1]).toEqual(new Date('2026-08-25T16:00:00.000Z'));
+      // 活跃口径 = audit_logs ∪ user_activity（ADR-0086：成功高频操作降级表）
+      expect(querySql(0)).toContain('user_activity');
+      expect(querySql(0)).toContain('UNION');
+      expect(querySql(1)).toContain('user_activity');
+      expect(querySql(2)).toContain('user_activity');
 
       expect(result.dau).toBe(18);
       expect(result.mau).toBe(97);

@@ -29,7 +29,10 @@ export type RuntimeConfigValue =
   | RuntimeConfigJsonValue;
 
 /**
- * 运行时配置分类（按用户任务划分，#498）
+ * 运行时配置分类（按用户任务划分，#498）。
+ *
+ * 词表单一事实源在 @cloudcad/contracts（runtime-config/taxonomy）：本类型只是别名，
+ * 后端定义表与前端展示元数据表共用同一联合类型，新增/删除分类三处同步、编译期可查。
  */
 // 页面分组。按「一次进入一个分类即可找齐完成该任务所需的全部配置」划分：
 // brand 品牌与客服 / account 账号与登录 / file 文件与导出 / billing 配额与计费 /
@@ -40,17 +43,13 @@ export type RuntimeConfigValue =
 // 客服并入 brand）；按模块划分的 mail / sms / wechat / user / system / storage 六类
 // 已并入 account / alert / maintenance / file（#498），从联合类型里删掉，
 // 避免类型上仍存在空壳分类。
-export type RuntimeConfigCategory =
-  | 'brand'
-  | 'account'
-  | 'file'
-  | 'billing'
-  | 'alert'
-  | 'security'
-  | 'audit'
-  | 'maintenance'
-  | 'backup'
-  | 'collaboration';
+export type { RuntimeConfigCategory } from '@cloudcad/contracts';
+
+import type {
+  RuntimeConfigCategory,
+  RuntimeConfigSubgroup,
+  RuntimeConfigChannel,
+} from '@cloudcad/contracts';
 
 /**
  * 配置项显示层级：决定在前端管理页的可见档位。
@@ -124,8 +123,9 @@ export interface RuntimeConfigDefinition {
    * 子分组标识（#498）：项数多的大类内部按子分组渲染小节标题，
    * 运维不用在一个二三十项的分类里翻找。标识是稳定 slug，
    * 展示文案由前端 i18n 提供（后端只回标识）。
+   * 取值须在 @cloudcad/contracts 的 RUNTIME_CONFIG_SUBGROUPS 词表内（编译期检查）。
    */
-  subgroup?: string;
+  subgroup?: RuntimeConfigSubgroup;
   description: string;
   defaultValue: RuntimeConfigValue;
   isPublic: boolean;
@@ -199,8 +199,9 @@ export interface RuntimeConfigDefinition {
    *   （开关本身变化不算——凭据没变，验证仍有效）。
    *
    * 通道名须与通道测试动作（`ChannelTestAction.channel`）注册名一致。
+   * 取值须在 @cloudcad/contracts 的 RUNTIME_CONFIG_CHANNELS 词表内（编译期检查）。
    */
-  channel?: string;
+  channel?: RuntimeConfigChannel;
 
   /**
    * 通道开关标记（ADR-0082 D4）：本 key 是哪个通道的开/关开关（如 `mailEnabled`
@@ -210,8 +211,9 @@ export interface RuntimeConfigDefinition {
    *
    * 与 `channel` 分开标记：布尔配置项（如 SMTP TLS 开关）是配置项不是开关，
    * 置 `true` 不应触发开启门禁。
+   * 取值须在 @cloudcad/contracts 的 RUNTIME_CONFIG_CHANNELS 词表内（编译期检查）。
    */
-  channelSwitch?: string;
+  channelSwitch?: RuntimeConfigChannel;
 }
 
 /**

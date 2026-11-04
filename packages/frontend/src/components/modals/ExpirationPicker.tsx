@@ -1,13 +1,13 @@
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button, Input } from "@/components/ui";
+
 import {
   ExpirationOption,
   SHARE_CUSTOM_DAYS_MAX,
   SHARE_CUSTOM_DAYS_MIN,
   clampCustomDays,
   getExpirationLabels,
-} from '@/constants/share';
-import { t } from '@/languages';
+} from "@/constants/share";
+import { t } from "@/languages";
 
 interface ExpirationPickerProps {
   expiration: ExpirationOption;
@@ -31,16 +31,16 @@ export function ExpirationPicker({
     <>
       <div
         style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '6px',
-          width: '100%',
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "6px",
+          width: "100%",
         }}
       >
         {(Object.keys(labels) as ExpirationOption[]).map((key) => (
           <Button
             key={key}
-            variant={expiration === key ? 'primary' : 'outline'}
+            variant={expiration === key ? "primary" : "outline"}
             size="xs"
             onClick={() => onExpirationChange(key)}
           >
@@ -48,16 +48,16 @@ export function ExpirationPicker({
           </Button>
         ))}
       </div>
-      {expiration === 'custom' && (
+      {expiration === "custom" && (
         <div
           style={{
-            marginTop: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
+            marginTop: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
           }}
         >
-          <div style={{ width: '60px' }}>
+          <div style={{ width: "60px" }}>
             <Input
               type="number"
               min={SHARE_CUSTOM_DAYS_MIN}
@@ -65,17 +65,19 @@ export function ExpirationPicker({
               size="sm"
               value={customDays}
               onChange={(e) =>
-                onCustomDaysChange(clampCustomDays(parseInt(e.target.value, 10)))
+                onCustomDaysChange(
+                  clampCustomDays(parseInt(e.target.value, 10)),
+                )
               }
             />
           </div>
           <span
             style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-tertiary)',
+              fontSize: "var(--text-xs)",
+              color: "var(--text-tertiary)",
             }}
           >
-            {t('天后过期')}
+            {t("天后过期")}
           </span>
         </div>
       )}

@@ -60,11 +60,12 @@ function makeRes(): any {
     json: jest.fn().mockReturnThis(),
     setHeader: jest.fn().mockReturnThis(),
     end: jest.fn().mockReturnThis(),
+    once: jest.fn().mockReturnThis(),
   };
 }
 
 function makeStream(): any {
-  return { on: jest.fn().mockReturnThis(), pipe: jest.fn() };
+  return { on: jest.fn().mockReturnThis(), pipe: jest.fn(), destroy: jest.fn() };
 }
 
 beforeEach(() => {

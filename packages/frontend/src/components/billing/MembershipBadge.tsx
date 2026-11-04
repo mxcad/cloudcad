@@ -1,14 +1,16 @@
 import { useMembership } from '@/hooks/useMembership';
 import { t } from '@/languages';
 import { formatDate } from '@/utils/dateUtils';
+import { fillTemplate } from '@/utils/i18nFill';
 
 function formatRemaining(days: number): string {
   // 永久会员 daysRemaining 为 Infinity，直接返回"永久有效"，避免 Infinity 月份
   if (!Number.isFinite(days)) return t('永久有效');
   const m = Math.floor(days / 30);
   const d = days % 30;
+  // 双占位符走 fillTemplate：flexvars 正则会把 "X months Y days" 桥接成乱码
   if (m > 0 && d > 0)
-    return t('剩余 {months} 个月 {days} 天', {
+    return fillTemplate('剩余 {months} 个月 {days} 天', {
       months: String(m),
       days: String(d),
     });
@@ -25,9 +27,17 @@ export default function MembershipBadge() {
   const expireDate = membership.expiresAt
     ? formatDate(membership.expiresAt)
     : '';
+  const remainText = formatRemaining(membership.daysRemaining);
   const title = !Number.isFinite(membership.daysRemaining)
-    ? `VIP${membership.tierLevel} · ${t('永久有效')}`
-    : `VIP${membership.tierLevel} · 有效期至 ${expireDate} · ${formatRemaining(membership.daysRemaining)}`;
+    ? t('VIP{level} · {remain}', {
+        level: String(membership.tierLevel),
+        remain: remainText,
+      })
+    : t('VIP{level} · 有效期至 {date} · {remain}', {
+        level: String(membership.tierLevel),
+        date: expireDate,
+        remain: remainText,
+      });
 
   return (
     <span

@@ -279,7 +279,10 @@ export const useFileSystemNavigation = ({
             : new Blob([blobData as BlobPart]);
         triggerBlobDownload(blob, finalFileName);
 
-        showToast(t(`文件下载成功（${format.toUpperCase()} 格式）`), 'success');
+        showToast(
+          t('文件下载成功（{format} 格式）', { format: format.toUpperCase() }),
+          'success'
+        );
 
         setShowDownloadFormatModal(false);
         setDownloadingNode(null);

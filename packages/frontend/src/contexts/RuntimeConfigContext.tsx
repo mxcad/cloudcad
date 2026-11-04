@@ -102,58 +102,103 @@ interface RuntimeConfigContextType {
   loading: boolean;
 }
 
-// 兜底值全部来自 @cloudcad/contracts 的 RUNTIME_CONFIG_DEFAULTS（与后端 defaultValue 同一事实源），
-// 口令策略两键刻意用 RUNTIME_CONFIG_FAIL_SAFE（secure 基线 10/3，接口失败回退到更严侧）。
-const DEFAULT_CONFIG: PublicRuntimeConfig = {
-  mailEnabled: RUNTIME_CONFIG_DEFAULTS.mailEnabled,
-  requireEmailVerification: RUNTIME_CONFIG_DEFAULTS.requireEmailVerification,
-  smsEnabled: RUNTIME_CONFIG_DEFAULTS.smsEnabled,
-  requirePhoneVerification: RUNTIME_CONFIG_DEFAULTS.requirePhoneVerification,
-  supportEmail: RUNTIME_CONFIG_DEFAULTS.supportEmail,
-  supportPhone: RUNTIME_CONFIG_DEFAULTS.supportPhone,
-  supportHours: RUNTIME_CONFIG_DEFAULTS.supportHours,
-  docsUrl: RUNTIME_CONFIG_DEFAULTS.docsUrl,
-  brandTitle: RUNTIME_CONFIG_DEFAULTS.brandTitle,
-  brandSubtitle: RUNTIME_CONFIG_DEFAULTS.brandSubtitle,
-  brandTagline: RUNTIME_CONFIG_DEFAULTS.brandTagline,
-  brandLogo: RUNTIME_CONFIG_DEFAULTS.brandLogo,
-  brandEditorTitle: RUNTIME_CONFIG_DEFAULTS.brandEditorTitle,
-  brandCopyrightLine: RUNTIME_CONFIG_DEFAULTS.brandCopyrightLine,
-  brandCopyrightYear: RUNTIME_CONFIG_DEFAULTS.brandCopyrightYear,
-  brandCopyrightHolder: RUNTIME_CONFIG_DEFAULTS.brandCopyrightHolder,
-  brandLegalProductName: RUNTIME_CONFIG_DEFAULTS.brandLegalProductName,
-  brandLegalProductShortName: RUNTIME_CONFIG_DEFAULTS.brandLegalProductShortName,
-  allowRegister: RUNTIME_CONFIG_DEFAULTS.allowRegister,
-  registerGiftEnabled: RUNTIME_CONFIG_DEFAULTS.registerGiftEnabled,
-  registerGiftMonths: RUNTIME_CONFIG_DEFAULTS.registerGiftMonths,
-  wechatEnabled: RUNTIME_CONFIG_DEFAULTS.wechatEnabled,
-  wechatAutoRegister: RUNTIME_CONFIG_DEFAULTS.wechatAutoRegister,
-  maxFileSize: RUNTIME_CONFIG_DEFAULTS.maxFileSize,
-  collaborationEnabled: RUNTIME_CONFIG_DEFAULTS.collaborationEnabled,
-  collaborationDomains: RUNTIME_CONFIG_DEFAULTS.collaborationDomains,
-  batchDownloadEnabled: RUNTIME_CONFIG_DEFAULTS.batchDownloadEnabled,
-  freeExportDownloadEnabled: RUNTIME_CONFIG_DEFAULTS.freeExportDownloadEnabled,
-  membershipEnabled: RUNTIME_CONFIG_DEFAULTS.membershipEnabled,
-  userCancelGraceDays: RUNTIME_CONFIG_DEFAULTS.userCancelGraceDays,
-  securityMode: RUNTIME_CONFIG_DEFAULTS.securityMode,
-  // 刻意 fail-safe（接口失败回退到 secure 基线），见 contracts RUNTIME_CONFIG_FAIL_SAFE
-  passwordPolicyMinLength: RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinLength,
-  passwordPolicyMinCategories: RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinCategories,
-  brandProfile: {},
-  // 反馈配置（缺键回落后端默认值，见 contracts RUNTIME_CONFIG_DEFAULTS feedback.*）
-  feedbackAnonymousEnabled: RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousEnabled,
-  feedbackAnonymousDailyLimit: RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousDailyLimit,
-  feedbackUserDailyLimit: RUNTIME_CONFIG_DEFAULTS.feedbackUserDailyLimit,
-  feedbackMinContentLength: RUNTIME_CONFIG_DEFAULTS.feedbackMinContentLength,
-  feedbackMaxContentLength: RUNTIME_CONFIG_DEFAULTS.feedbackMaxContentLength,
-  feedbackMaxImageSize: RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageSize,
-  feedbackMaxDrawingSize: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingSize,
-  feedbackMaxDocumentSize: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentSize,
-  feedbackMaxImageCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageCount,
-  feedbackMaxDrawingCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingCount,
-  feedbackMaxDocumentCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentCount,
-  feedbackMaxAttachmentCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxAttachmentCount,
+/**
+ * 公开配置字段描述符 —— 「后端键 → 前端平铺键 → 类型收敛」的唯一事实源。
+ *
+ * 收敛自原先三张平行表（`PublicRuntimeConfig` 类型 / `DEFAULT_CONFIG` / `mapPublicConfig`）：
+ * 现在类型仍是接口（seam），但默认值与映射都从本注册表派生，新增一个公开键只改这一处
+ * （外加 contracts 的 RUNTIME_CONFIG_DEFAULTS 与后端 constants），不再三处重复。
+ *
+ * 注意保留的历史差异（勿「统一」掉）：
+ * - `mailEnabled/smsEnabled/requireEmailVerification/requirePhoneVerification` 是 `Boolean(v)`
+ *   **不带** `?? 默认`——接口返回缺键时收敛为 false，而非出厂默认（历史行为）。
+ * - 口令策略两键回落到 `RUNTIME_CONFIG_FAIL_SAFE`（secure 基线），非出厂默认。
+ * - 反馈键在后端是点分形（`feedback.minContentLength`），此处 `backendKey` 承担映射。
+ */
+type PublicConfigField = {
+  key: keyof PublicRuntimeConfig;
+  /** 后端返回的键名；缺省 = 前端平铺键 */
+  backendKey?: string;
+  /** 类型收敛（`value` 可能为字符串/数组脏值），`fallback` 由字段声明 */
+  coerce: (value: unknown, fallback: unknown) => unknown;
+  /** 接口失败/缺键时的回退值 */
+  fallback: unknown;
 };
+
+const PUBLIC_CONFIG_FIELDS = [
+  // 布尔（不带默认回退，历史行为）：Boolean(缺键) = false
+  { key: 'mailEnabled', coerce: (v: unknown) => Boolean(v), fallback: RUNTIME_CONFIG_DEFAULTS.mailEnabled },
+  { key: 'requireEmailVerification', coerce: (v: unknown) => Boolean(v), fallback: RUNTIME_CONFIG_DEFAULTS.requireEmailVerification },
+  { key: 'smsEnabled', coerce: (v: unknown) => Boolean(v), fallback: RUNTIME_CONFIG_DEFAULTS.smsEnabled },
+  { key: 'requirePhoneVerification', coerce: (v: unknown) => Boolean(v), fallback: RUNTIME_CONFIG_DEFAULTS.requirePhoneVerification },
+  // 字符串（带默认回退）
+  { key: 'supportEmail', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.supportEmail },
+  { key: 'supportPhone', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.supportPhone },
+  { key: 'supportHours', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.supportHours },
+  { key: 'docsUrl', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.docsUrl },
+  { key: 'brandTitle', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandTitle },
+  { key: 'brandSubtitle', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandSubtitle },
+  { key: 'brandTagline', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandTagline },
+  { key: 'brandLogo', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandLogo },
+  // 编辑器专属标题面：缺键（旧后端未上线）回落空串 = 使用编辑器 ini 自带值
+  { key: 'brandEditorTitle', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandEditorTitle },
+  { key: 'brandCopyrightLine', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandCopyrightLine },
+  { key: 'brandCopyrightYear', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandCopyrightYear },
+  { key: 'brandCopyrightHolder', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandCopyrightHolder },
+  { key: 'brandLegalProductName', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandLegalProductName },
+  { key: 'brandLegalProductShortName', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.brandLegalProductShortName },
+  // 布尔（带默认回退）
+  { key: 'allowRegister', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.allowRegister },
+  // 缺键回落开启（与后端默认一致）：旧后端未公开该键时注册页仍展示营销吸引点
+  { key: 'registerGiftEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.registerGiftEnabled },
+  { key: 'registerGiftMonths', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.registerGiftMonths },
+  { key: 'wechatEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.wechatEnabled },
+  { key: 'wechatAutoRegister', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.wechatAutoRegister },
+  { key: 'maxFileSize', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.maxFileSize },
+  { key: 'collaborationEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.collaborationEnabled },
+  { key: 'collaborationDomains', coerce: (v: unknown, fb: unknown) => String(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.collaborationDomains },
+  { key: 'batchDownloadEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.batchDownloadEnabled },
+  // 缺键回落开启（同 membershipEnabled）：配置拉取结果缺键不能把免费导出静默关掉
+  { key: 'freeExportDownloadEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.freeExportDownloadEnabled },
+  // 缺键（旧后端未上线此键）回落开启：配置拉取结果缺键不能把会员中心整块藏掉
+  { key: 'membershipEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.membershipEnabled },
+  { key: 'userCancelGraceDays', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.userCancelGraceDays },
+  // 枚举
+  { key: 'securityMode', coerce: (v: unknown, fb: unknown) => (v === 'secure' ? 'secure' : fb), fallback: RUNTIME_CONFIG_DEFAULTS.securityMode },
+  // 口令策略：旧后端未公开该两键（isPublic 未回填）时回落刻意 fail-safe（secure 基线）
+  { key: 'passwordPolicyMinLength', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinLength },
+  { key: 'passwordPolicyMinCategories', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinCategories },
+  // 品牌档案对象
+  { key: 'brandProfile', coerce: (v: unknown) => toBrandConfig(v), fallback: {} },
+  // 反馈配置：后端键为点分形，前端类型为平铺形，backendKey 承担映射；缺键回落后端默认值
+  { key: 'feedbackAnonymousEnabled', backendKey: 'feedback.anonymousEnabled', coerce: (v: unknown, fb: unknown) => Boolean(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousEnabled },
+  { key: 'feedbackAnonymousDailyLimit', backendKey: 'feedback.anonymousDailyLimit', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousDailyLimit },
+  { key: 'feedbackUserDailyLimit', backendKey: 'feedback.userDailyLimit', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackUserDailyLimit },
+  { key: 'feedbackMinContentLength', backendKey: 'feedback.minContentLength', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMinContentLength },
+  { key: 'feedbackMaxContentLength', backendKey: 'feedback.maxContentLength', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxContentLength },
+  { key: 'feedbackMaxImageSize', backendKey: 'feedback.maxImageSize', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageSize },
+  { key: 'feedbackMaxDrawingSize', backendKey: 'feedback.maxDrawingSize', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingSize },
+  { key: 'feedbackMaxDocumentSize', backendKey: 'feedback.maxDocumentSize', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentSize },
+  { key: 'feedbackMaxImageCount', backendKey: 'feedback.maxImageCount', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageCount },
+  { key: 'feedbackMaxDrawingCount', backendKey: 'feedback.maxDrawingCount', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingCount },
+  { key: 'feedbackMaxDocumentCount', backendKey: 'feedback.maxDocumentCount', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentCount },
+  { key: 'feedbackMaxAttachmentCount', backendKey: 'feedback.maxAttachmentCount', coerce: (v: unknown, fb: unknown) => Number(v ?? fb), fallback: RUNTIME_CONFIG_DEFAULTS.feedbackMaxAttachmentCount },
+] as const satisfies readonly {
+  key: keyof PublicRuntimeConfig;
+  backendKey?: string;
+  coerce: (value: unknown, fallback: unknown) => unknown;
+  fallback: unknown;
+}[];
+
+// 编译期穷尽检查：注册表必须覆盖 PublicRuntimeConfig 的全部键，缺一个即编译错。
+type FieldKey = (typeof PUBLIC_CONFIG_FIELDS)[number]['key'];
+type _ExhaustiveCheck = Exclude<keyof PublicRuntimeConfig, FieldKey> extends never
+  ? 'OK'
+  : 'MISSING';
+const _exhaustive: _ExhaustiveCheck = 'OK';
+
+// 迭代用宽化视图（字面数组的元素类型过窄，backendKey 只在部分成员声明）
+const PUBLIC_CONFIG_FIELD_LIST: readonly PublicConfigField[] = PUBLIC_CONFIG_FIELDS;
 
 const RuntimeConfigContext = createContext<
   RuntimeConfigContextType | undefined
@@ -183,64 +228,21 @@ function toBrandConfig(value: unknown): RuntimeBrandConfig {
     : {};
 }
 
+// 兜底值全部来自注册表（fallback 由各字段声明，引用 contracts 的 RUNTIME_CONFIG_DEFAULTS / FAIL_SAFE）
+const DEFAULT_CONFIG = PUBLIC_CONFIG_FIELD_LIST.reduce((acc, field) => {
+  (acc as Record<string, unknown>)[field.key] = field.fallback;
+  return acc;
+}, {} as PublicRuntimeConfig);
+
 function mapPublicConfig(
   data: Record<string, PublicConfigValue>
 ): PublicRuntimeConfig {
-  return {
-    mailEnabled: Boolean(data.mailEnabled),
-    requireEmailVerification: Boolean(data.requireEmailVerification),
-    smsEnabled: Boolean(data.smsEnabled),
-    requirePhoneVerification: Boolean(data.requirePhoneVerification),
-    supportEmail: String(data.supportEmail ?? RUNTIME_CONFIG_DEFAULTS.supportEmail),
-    supportPhone: String(data.supportPhone ?? RUNTIME_CONFIG_DEFAULTS.supportPhone),
-    supportHours: String(data.supportHours ?? RUNTIME_CONFIG_DEFAULTS.supportHours),
-    docsUrl: String(data.docsUrl ?? RUNTIME_CONFIG_DEFAULTS.docsUrl),
-    brandTitle: String(data.brandTitle ?? RUNTIME_CONFIG_DEFAULTS.brandTitle),
-    brandSubtitle: String(data.brandSubtitle ?? RUNTIME_CONFIG_DEFAULTS.brandSubtitle),
-    brandTagline: String(data.brandTagline ?? RUNTIME_CONFIG_DEFAULTS.brandTagline),
-    brandLogo: String(data.brandLogo ?? RUNTIME_CONFIG_DEFAULTS.brandLogo),
-    // 编辑器专属标题面：缺键（旧后端未上线）回落空串 = 使用编辑器 ini 自带值
-    brandEditorTitle: String(data.brandEditorTitle ?? RUNTIME_CONFIG_DEFAULTS.brandEditorTitle),
-    brandCopyrightLine: String(data.brandCopyrightLine ?? RUNTIME_CONFIG_DEFAULTS.brandCopyrightLine),
-    brandCopyrightYear: String(data.brandCopyrightYear ?? RUNTIME_CONFIG_DEFAULTS.brandCopyrightYear),
-    brandCopyrightHolder: String(data.brandCopyrightHolder ?? RUNTIME_CONFIG_DEFAULTS.brandCopyrightHolder),
-    brandLegalProductName: String(data.brandLegalProductName ?? RUNTIME_CONFIG_DEFAULTS.brandLegalProductName),
-    brandLegalProductShortName: String(data.brandLegalProductShortName ?? RUNTIME_CONFIG_DEFAULTS.brandLegalProductShortName),
-    allowRegister: Boolean(data.allowRegister ?? RUNTIME_CONFIG_DEFAULTS.allowRegister),
-    // 缺键回落开启（与后端默认一致）：旧后端未公开该键时注册页仍展示营销吸引点
-    registerGiftEnabled: Boolean(data.registerGiftEnabled ?? RUNTIME_CONFIG_DEFAULTS.registerGiftEnabled),
-    registerGiftMonths: Number(data.registerGiftMonths ?? RUNTIME_CONFIG_DEFAULTS.registerGiftMonths),
-    wechatEnabled: Boolean(data.wechatEnabled ?? RUNTIME_CONFIG_DEFAULTS.wechatEnabled),
-    wechatAutoRegister: Boolean(data.wechatAutoRegister ?? RUNTIME_CONFIG_DEFAULTS.wechatAutoRegister),
-    maxFileSize: Number(data.maxFileSize ?? RUNTIME_CONFIG_DEFAULTS.maxFileSize),
-    collaborationEnabled: Boolean(data.collaborationEnabled ?? RUNTIME_CONFIG_DEFAULTS.collaborationEnabled),
-    collaborationDomains: String(data.collaborationDomains ?? RUNTIME_CONFIG_DEFAULTS.collaborationDomains),
-    batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? RUNTIME_CONFIG_DEFAULTS.batchDownloadEnabled),
-    // 缺键回落开启（同 membershipEnabled）：配置拉取结果缺键不能把免费导出静默关掉
-    freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? RUNTIME_CONFIG_DEFAULTS.freeExportDownloadEnabled),
-    // 缺键（旧后端未上线此键）回落开启：配置拉取结果缺键不能把会员中心整块藏掉
-    membershipEnabled: Boolean(data.membershipEnabled ?? RUNTIME_CONFIG_DEFAULTS.membershipEnabled),
-    userCancelGraceDays: Number(data.userCancelGraceDays ?? RUNTIME_CONFIG_DEFAULTS.userCancelGraceDays),
-    securityMode: data.securityMode === 'secure' ? 'secure' : RUNTIME_CONFIG_DEFAULTS.securityMode,
-    // 旧后端未公开该两键（isPublic 未回填）时回落刻意 fail-safe（secure 基线）
-    passwordPolicyMinLength: Number(data.passwordPolicyMinLength ?? RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinLength),
-    passwordPolicyMinCategories: Number(data.passwordPolicyMinCategories ?? RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinCategories),
-    brandProfile: toBrandConfig(data.brandProfile),
-    // 反馈配置：后端键为点分形（feedback.minContentLength），前端类型为平铺形，此处做映射；
-    // 缺键回落后端默认值（见 contracts RUNTIME_CONFIG_DEFAULTS feedback.*）
-    feedbackAnonymousEnabled: Boolean(data['feedback.anonymousEnabled'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousEnabled),
-    feedbackAnonymousDailyLimit: Number(data['feedback.anonymousDailyLimit'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousDailyLimit),
-    feedbackUserDailyLimit: Number(data['feedback.userDailyLimit'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackUserDailyLimit),
-    feedbackMinContentLength: Number(data['feedback.minContentLength'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMinContentLength),
-    feedbackMaxContentLength: Number(data['feedback.maxContentLength'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxContentLength),
-    feedbackMaxImageSize: Number(data['feedback.maxImageSize'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageSize),
-    feedbackMaxDrawingSize: Number(data['feedback.maxDrawingSize'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingSize),
-    feedbackMaxDocumentSize: Number(data['feedback.maxDocumentSize'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentSize),
-    feedbackMaxImageCount: Number(data['feedback.maxImageCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageCount),
-    feedbackMaxDrawingCount: Number(data['feedback.maxDrawingCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingCount),
-    feedbackMaxDocumentCount: Number(data['feedback.maxDocumentCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentCount),
-    feedbackMaxAttachmentCount: Number(data['feedback.maxAttachmentCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxAttachmentCount),
-  };
+  const out = {} as Record<string, unknown>;
+  for (const field of PUBLIC_CONFIG_FIELD_LIST) {
+    const raw = data[field.backendKey ?? field.key];
+    out[field.key] = field.coerce(raw, field.fallback);
+  }
+  return out as PublicRuntimeConfig;
 }
 
 async function fetchPublicConfigs(): Promise<PublicRuntimeConfig> {
@@ -251,6 +253,13 @@ async function fetchPublicConfigs(): Promise<PublicRuntimeConfig> {
   // 上层 useEffect 能记录真实失败原因（UI 仍按设计回退 DEFAULT_CONFIG）
   const data = (result.data ?? {}) as Record<string, PublicConfigValue>;
   return mapPublicConfig(data);
+}
+
+/** 把公开配置的 maxFileSize（MB）同步进 mxcadUploadUtils 模块缓存（单一同步点，非 React 消费者经 fetchMaxFileSizeFromBackend 读取） */
+function useSyncMaxFileSize(maxFileSize: number): void {
+  React.useEffect(() => {
+    setUploadMaxFileSize(maxFileSize);
+  }, [maxFileSize]);
 }
 
 export const RuntimeConfigProvider: React.FC<RuntimeConfigProviderProps> = ({
@@ -269,11 +278,8 @@ export const RuntimeConfigProvider: React.FC<RuntimeConfigProviderProps> = ({
     }
   }, [error]);
 
-  // 同步 maxFileSize 到 mxcadUploadUtils 模块变量（非 React 消费者如 mxcadManager 依赖此值）
   const config = data ?? DEFAULT_CONFIG;
-  React.useEffect(() => {
-    setUploadMaxFileSize(config.maxFileSize);
-  }, [config.maxFileSize]);
+  useSyncMaxFileSize(config.maxFileSize);
 
   return (
     <RuntimeConfigContext.Provider

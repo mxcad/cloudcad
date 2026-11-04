@@ -104,6 +104,17 @@ export {
 } from './files/ext-ref-naming';
 // 运行时配置公开键出厂默认值（单一事实源：backend 定义表 + PC/移动端兜底共用，ADR-0082）
 export { RUNTIME_CONFIG_DEFAULTS, RUNTIME_CONFIG_FAIL_SAFE } from './runtime-config/defaults';
+// 运行时配置分类/子分组/通道词表（单一事实源：backend 定义表 + 前端展示元数据共用）
+export {
+  RUNTIME_CONFIG_CATEGORIES,
+  RUNTIME_CONFIG_SUBGROUPS,
+  RUNTIME_CONFIG_CHANNELS,
+} from './runtime-config/taxonomy';
+export type {
+  RuntimeConfigCategory,
+  RuntimeConfigSubgroup,
+  RuntimeConfigChannel,
+} from './runtime-config/taxonomy';
 
 // Conversion engine contract (types + values，ADR-0064 / ADR-0069)
 export {

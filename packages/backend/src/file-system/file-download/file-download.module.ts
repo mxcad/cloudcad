@@ -15,6 +15,8 @@ import { FileTreeModule } from '../file-tree/file-tree.module';
 import { AuthModule } from '../../auth/auth.module';
 import { AuditLogModule } from '../../audit/audit-log.module';
 import { FileDownloadExportService } from './file-download-export.service';
+import { FileDownloadExportConversionService } from './file-download-export-conversion.service';
+import { FileDownloadArchiveService } from './file-download-archive.service';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 
 /**
@@ -25,7 +27,12 @@ import { FileDownloadHandlerService } from './file-download-handler.service';
  */
 @Module({
   imports: [ConfigModule, DatabaseModule, StorageModule, CommonModule, StorageManagementModule, FilePermissionModule, AuthModule.forRoot(), FileTreeModule, AuditLogModule],
-  providers: [FileDownloadExportService, FileDownloadHandlerService],
+  providers: [
+    FileDownloadExportService,
+    FileDownloadExportConversionService,
+    FileDownloadArchiveService,
+    FileDownloadHandlerService,
+  ],
   exports: [FileDownloadExportService, FileDownloadHandlerService],
 })
 export class FileDownloadModule {}

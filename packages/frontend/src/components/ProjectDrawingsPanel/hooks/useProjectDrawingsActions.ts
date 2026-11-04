@@ -14,6 +14,7 @@ import { useLibraryOperations } from '@/hooks/library/useLibraryOperations';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { handleError, getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
+import { fillTemplate } from '@/utils/i18nFill';
 import { FileSystemNode } from '@/types/filesystem';
 import type { UseFileBrowserActionsReturn } from '@/hooks/file-browser';
 import type { UseFileBrowserModalsReturn } from '@/hooks/file-browser';
@@ -257,7 +258,10 @@ export function useProjectDrawingsActions({
         });
         pushAction({
           type: 'rename',
-          description: t(`重命名: ${oldName} → ${folderName.trim()}`),
+          description: fillTemplate('重命名: {old} → {new}', {
+            old: oldName,
+            new: folderName.trim(),
+          }),
           projectId: undoProjectId,
           execute: async () => {
             await libraryOperations.handleRename(nodeId, folderName.trim());

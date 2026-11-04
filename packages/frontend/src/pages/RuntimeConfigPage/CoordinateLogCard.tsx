@@ -12,20 +12,19 @@
  * 提示「需重启协同服务才对协同编辑生效」。
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Check, Copy } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from "react";
+import { AlertCircle, Check, Copy } from "lucide-react";
 import {
   adminControllerGetMxcadEngineConfig,
   adminControllerUpdateCoordinateLog,
-} from '@/api-sdk';
-import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Input } from '@/components/ui/Input';
-import { useCopy } from '@/hooks/useCopy';
-import { useNotification } from '@/contexts/NotificationContext';
-import { getErrorMessage, handleError } from '@/utils/errorHandler';
-import styles from './RuntimeConfigPage.module.css';
-import { t } from '@/languages';
+} from "@/api-sdk";
+import { Button, Checkbox, Input } from "@/components/ui";
+
+import { useCopy } from "@/hooks/useCopy";
+import { useNotification } from "@/contexts/NotificationContext";
+import { getErrorMessage, handleError } from "@/utils/errorHandler";
+import styles from "./RuntimeConfigPage.module.css";
+import { t } from "@/languages";
 
 interface CoordinateLogCardProps {
   /** 与页面其他行一致：无 SYSTEM_CONFIG_WRITE 时开关与保存只读 */
@@ -37,8 +36,8 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
 }) => {
   const { showToast } = useNotification();
   const { copiedMarker, copy } = useCopy({
-    successMessage: t('已复制'),
-    failMessage: t('复制失败，请手动复制'),
+    successMessage: t("已复制"),
+    failMessage: t("复制失败，请手动复制"),
   });
 
   /** null = 首次加载中 */
@@ -56,7 +55,7 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
       setEnabled(result.data.enabled);
       setLogPath(result.data.logPath);
     } catch (error: unknown) {
-      setLoadError(getErrorMessage(error) || t('获取协同日志配置失败'));
+      setLoadError(getErrorMessage(error) || t("获取协同日志配置失败"));
     }
   }, []);
 
@@ -75,28 +74,28 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
         setEnabled(result.data.enabled);
         if (result.data.logPath !== null) setLogPath(result.data.logPath);
         showToast(
-          t('协同日志开关已保存，需重启协同服务后才会对协同编辑生效。'),
-          'success'
+          t("协同日志开关已保存，需重启协同服务后才会对协同编辑生效。"),
+          "success",
         );
       } catch (error: unknown) {
-        handleError(error, t('保存协同日志开关失败'));
-        showToast(getErrorMessage(error) || t('保存协同日志开关失败'), 'error');
+        handleError(error, t("保存协同日志开关失败"));
+        showToast(getErrorMessage(error) || t("保存协同日志开关失败"), "error");
       } finally {
         setSaving(false);
       }
     },
-    [showToast]
+    [showToast],
   );
 
   const loading = enabled === null;
-  const copied = copiedMarker === 'coordinate-log';
+  const copied = copiedMarker === "coordinate-log";
 
   return (
     <div className={styles.configItem} data-testid="rc-coordinate-log">
       {/* 第一行：标题 + 开关（与页面布尔项同款 switchRow） */}
       <div className={styles.itemHeader}>
         <div className={styles.itemTitle}>
-          <span className={styles.configName}>{t('启用协同详细日志')}</span>
+          <span className={styles.configName}>{t("启用协同详细日志")}</span>
           <span className={styles.configKey}>coordinate_log_enable</span>
         </div>
         <div className={styles.itemActions}>
@@ -113,7 +112,7 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
               }}
             />
             <span className={styles.switchText}>
-              {loading ? t('加载中...') : enabled ? t('已开启') : t('已关闭')}
+              {loading ? t("加载中...") : enabled ? t("已开启") : t("已关闭")}
             </span>
           </div>
         </div>
@@ -125,7 +124,7 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
           <AlertCircle size={13} />
           <span>
             {t(
-              '开启后引擎将输出协同运行的详细诊断日志，用于排查协同问题。修改后需重启协同服务才会对协同编辑生效。'
+              "开启后引擎将输出协同运行的详细诊断日志，用于排查协同问题。修改后需重启协同服务才会对协同编辑生效。",
             )}
           </span>
         </div>
@@ -133,13 +132,13 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
         <div className={styles.controlRow} data-testid="rc-coordinate-log-path">
           <Input
             size="md"
-            value={logPath ?? ''}
+            value={logPath ?? ""}
             readOnly
-            aria-label={t('日志位置')}
+            aria-label={t("日志位置")}
             placeholder={
               loading
-                ? ''
-                : t('未能获取日志目录（引擎探测失败），请确认引擎已安装。')
+                ? ""
+                : t("未能获取日志目录（引擎探测失败），请确认引擎已安装。")
             }
           />
           <Button
@@ -148,11 +147,11 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
             icon={copied ? Check : Copy}
             disabled={logPath === null}
             onClick={() => {
-              if (logPath) void copy(logPath, 'coordinate-log');
+              if (logPath) void copy(logPath, "coordinate-log");
             }}
             data-testid="rc-coordinate-log-copy"
           >
-            {copied ? t('已复制') : t('复制')}
+            {copied ? t("已复制") : t("复制")}
           </Button>
         </div>
 
@@ -170,12 +169,12 @@ export const CoordinateLogCard: React.FC<CoordinateLogCardProps> = ({
                 void fetchConfig();
               }}
             >
-              {t('重试')}
+              {t("重试")}
             </Button>
           </div>
         )}
 
-        {!canManage && <span className={styles.readOnlyTag}>{t('只读')}</span>}
+        {!canManage && <span className={styles.readOnlyTag}>{t("只读")}</span>}
       </div>
     </div>
   );

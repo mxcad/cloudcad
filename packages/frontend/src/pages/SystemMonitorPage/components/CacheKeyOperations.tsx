@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyRound,
   Search,
@@ -6,7 +6,7 @@ import {
   RefreshCw,
   Ban,
   PlusCircle,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   cacheMonitorControllerCleanup,
   cacheMonitorControllerDeleteByPattern,
@@ -15,14 +15,14 @@ import {
   cacheMonitorControllerGetValue,
   cacheMonitorControllerRefresh,
   cacheMonitorControllerSetValue,
-} from '@/api-sdk';
-import type { CacheKeyCatalogEntryDto, CacheOperationDto } from '@/api-sdk';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { Autocomplete, Button, Input, Tag } from '@/components/ui';
-import type { AutocompleteItem } from '@/components/ui';
-import { useNotification } from '@/contexts/NotificationContext';
-import styles from '../SystemMonitorPage.module.css';
+} from "@/api-sdk";
+import type { CacheKeyCatalogEntryDto, CacheOperationDto } from "@/api-sdk";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { Autocomplete, Button, Input, Tag } from "@/components/ui";
+import type { AutocompleteItem } from "@/components/ui";
+import { useNotification } from "@/contexts/NotificationContext";
+import styles from "../SystemMonitorPage.module.css";
 
 export interface CacheKeyOperationsProps {
   isAdmin: boolean;
@@ -30,8 +30,8 @@ export interface CacheKeyOperationsProps {
 }
 
 function formatResult(value: unknown): string {
-  if (value === undefined || value === null) return t('（空）');
-  if (typeof value === 'string') return value;
+  if (value === undefined || value === null) return t("（空）");
+  if (typeof value === "string") return value;
   try {
     return JSON.stringify(value, null, 2);
   } catch {
@@ -54,15 +54,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   onChanged,
 }) => {
   const { showToast, showConfirm } = useNotification();
-  const [keyInput, setKeyInput] = useState('');
-  const [valueInput, setValueInput] = useState('');
-  const [ttlInput, setTtlInput] = useState('');
-  const [patternInput, setPatternInput] = useState('');
+  const [keyInput, setKeyInput] = useState("");
+  const [valueInput, setValueInput] = useState("");
+  const [ttlInput, setTtlInput] = useState("");
+  const [patternInput, setPatternInput] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [querying, setQuerying] = useState(false);
   const [mutating, setMutating] = useState(false);
   const [catalog, setCatalog] = useState<CacheKeyCatalogEntryDto[]>([]);
-  const [openMenu, setOpenMenu] = useState<'key' | 'pattern' | null>(null);
+  const [openMenu, setOpenMenu] = useState<"key" | "pattern" | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -83,15 +83,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     () => () => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
     },
-    []
+    [],
   );
 
   // 同一时间只允许一个下拉：聚焦哪个输入框就打开哪个，另一个随 state 收敛关闭
-  const openNow = (menu: 'key' | 'pattern') => () => setOpenMenu(menu);
+  const openNow = (menu: "key" | "pattern") => () => setOpenMenu(menu);
   // blur 延迟收起，避免点候选项时先 blur 把下拉关掉。延迟收起按「发起 blur 的
   // 菜单」判定——原先共用一把计时器且无条件关闭，后聚焦的 openNow 会把先前那次
   // 收起定时 clearTimeout 掉，两个下拉从此同时展开、先聚焦的永不收起
-  const closeLater = (menu: 'key' | 'pattern') => () => {
+  const closeLater = (menu: "key" | "pattern") => () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => {
       setOpenMenu((current) => (current === menu ? null : current));
@@ -103,9 +103,9 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     if (!q) return catalog;
     return catalog.filter((entry) =>
       [entry.pattern, entry.name, entry.example, entry.description]
-        .join(' ')
+        .join(" ")
         .toLowerCase()
-        .includes(q)
+        .includes(q),
     );
   };
 
@@ -119,8 +119,8 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
       key: entry.id,
       label: entry.pattern,
       entry,
-      restricted: entry.scope === 'infra',
-    })
+      restricted: entry.scope === "infra",
+    }),
   );
 
   const renderCatalogItem = (item: AutocompleteItem) => {
@@ -131,23 +131,23 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           <div className="flex items-center gap-2">
             <code
               className="truncate font-mono"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
               {entry.pattern}
             </code>
             {item.restricted ? (
               <Tag variant="warning" size="sm">
-                {t('不可删除')}
+                {t("不可删除")}
               </Tag>
             ) : (
               <Tag variant="neutral" size="sm">
-                {t('可删除')}
+                {t("可删除")}
               </Tag>
             )}
           </div>
           <p
             className="truncate text-xs"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
           >
             {entry.name}：{entry.description}
           </p>
@@ -159,7 +159,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const handleQuery = useCallback(async () => {
     const key = keyInput.trim();
     if (!key) {
-      showToast(t('请输入缓存 Key'), 'warning');
+      showToast(t("请输入缓存 Key"), "warning");
       return;
     }
     setQuerying(true);
@@ -172,7 +172,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
       setResult(formatResult(result.data));
     } catch (error) {
       setResult(null);
-      showToast(getErrorMessage(error) || t('查询缓存失败'), 'error');
+      showToast(getErrorMessage(error) || t("查询缓存失败"), "error");
     } finally {
       setQuerying(false);
     }
@@ -181,15 +181,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const handleSet = useCallback(async () => {
     const key = keyInput.trim();
     if (!key) {
-      showToast(t('请输入缓存 Key'), 'warning');
+      showToast(t("请输入缓存 Key"), "warning");
       return;
     }
     const confirmed = await showConfirm({
-      title: t('设置缓存'),
-      message: t('确定要设置缓存 {key} 吗？', { key }),
-      confirmText: t('确认设置'),
-      cancelText: t('取消'),
-      type: 'warning',
+      title: t("设置缓存"),
+      message: t("确定要设置缓存 {key} 吗？", { key }),
+      confirmText: t("确认设置"),
+      cancelText: t("取消"),
+      type: "warning",
     });
     if (!confirmed) return;
 
@@ -201,16 +201,16 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           key,
           // SDK 将后端 `value?: unknown` 生成为 object 类型（openapi-ts 限制），
           // 实际传输值为任意 JSON，此处做最小类型适配
-          value: valueInput as unknown as CacheOperationDto['value'],
+          value: valueInput as unknown as CacheOperationDto["value"],
           ttl: ttlInput.trim() ? Number(ttlInput.trim()) : undefined,
         },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则设置失败仍弹"缓存设置成功"（历史 bug）
-      showToast(t('缓存设置成功'), 'success');
+      showToast(t("缓存设置成功"), "success");
       onChanged();
     } catch (error) {
-      showToast(getErrorMessage(error) || t('设置缓存失败'), 'error');
+      showToast(getErrorMessage(error) || t("设置缓存失败"), "error");
     } finally {
       setMutating(false);
     }
@@ -219,15 +219,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const handleDelete = useCallback(async () => {
     const key = keyInput.trim();
     if (!key) {
-      showToast(t('请输入缓存 Key'), 'warning');
+      showToast(t("请输入缓存 Key"), "warning");
       return;
     }
     const confirmed = await showConfirm({
-      title: t('删除缓存'),
-      message: t('确定要删除缓存 {key} 吗？', { key }),
-      confirmText: t('确认删除'),
-      cancelText: t('取消'),
-      type: 'warning',
+      title: t("删除缓存"),
+      message: t("确定要删除缓存 {key} 吗？", { key }),
+      confirmText: t("确认删除"),
+      cancelText: t("取消"),
+      type: "warning",
     });
     if (!confirmed) return;
 
@@ -238,11 +238,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
         query: { key },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
-      showToast(t('缓存删除成功'), 'success');
+      showToast(t("缓存删除成功"), "success");
       setResult(null);
       onChanged();
     } catch (error) {
-      showToast(getErrorMessage(error) || t('删除缓存失败'), 'error');
+      showToast(getErrorMessage(error) || t("删除缓存失败"), "error");
     } finally {
       setMutating(false);
     }
@@ -251,15 +251,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const handleDeleteByPattern = useCallback(async () => {
     const pattern = patternInput.trim();
     if (!pattern) {
-      showToast(t('请输入匹配模式'), 'warning');
+      showToast(t("请输入匹配模式"), "warning");
       return;
     }
     const confirmed = await showConfirm({
-      title: t('按模式删除'),
-      message: t('确定要删除匹配 {pattern} 的所有缓存吗？', { pattern }),
-      confirmText: t('确认删除'),
-      cancelText: t('取消'),
-      type: 'warning',
+      title: t("按模式删除"),
+      message: t("确定要删除匹配 {pattern} 的所有缓存吗？", { pattern }),
+      confirmText: t("确认删除"),
+      cancelText: t("取消"),
+      type: "warning",
     });
     if (!confirmed) return;
 
@@ -274,15 +274,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
       const data = result.data as { truncated?: boolean } | undefined;
       if (data?.truncated) {
         showToast(
-          t('已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除'),
-          'warning'
+          t("已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除"),
+          "warning",
         );
       } else {
-        showToast(t('按模式删除成功'), 'success');
+        showToast(t("按模式删除成功"), "success");
       }
       onChanged();
     } catch (error) {
-      showToast(getErrorMessage(error) || t('按模式删除失败'), 'error');
+      showToast(getErrorMessage(error) || t("按模式删除失败"), "error");
     } finally {
       setMutating(false);
     }
@@ -291,7 +291,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const handleRefresh = useCallback(async () => {
     const key = keyInput.trim();
     if (!key) {
-      showToast(t('请输入缓存 Key'), 'warning');
+      showToast(t("请输入缓存 Key"), "warning");
       return;
     }
     setMutating(true);
@@ -305,15 +305,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
       const data = result.data;
       const success =
         data &&
-        typeof data === 'object' &&
-        'success' in data &&
+        typeof data === "object" &&
+        "success" in data &&
         data.success === true;
       showToast(
-        success ? t('缓存刷新成功') : t('缓存不存在，无法刷新'),
-        success ? 'success' : 'warning'
+        success ? t("缓存刷新成功") : t("缓存不存在，无法刷新"),
+        success ? "success" : "warning",
       );
     } catch (error) {
-      showToast(getErrorMessage(error) || t('刷新缓存失败'), 'error');
+      showToast(getErrorMessage(error) || t("刷新缓存失败"), "error");
     } finally {
       setMutating(false);
     }
@@ -321,13 +321,13 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
 
   const handleClearAll = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: t('重置监控统计'),
+      title: t("重置监控统计"),
       message: t(
-        '只重置后端进程内的 L1 内存缓存与命中统计。不会删除 Redis 中的数据，会话、限流计数、IP 黑名单与缓存版本一律不动，不影响任何用户的登录状态。需要清 Redis 请用「按模式删除」。'
+        "只重置后端进程内的 L1 内存缓存与命中统计。不会删除 Redis 中的数据，会话、限流计数、IP 黑名单与缓存版本一律不动，不影响任何用户的登录状态。需要清 Redis 请用「按模式删除」。",
       ),
-      confirmText: t('确认重置'),
-      cancelText: t('取消'),
-      type: 'warning',
+      confirmText: t("确认重置"),
+      cancelText: t("取消"),
+      type: "warning",
     });
     if (!confirmed) return;
 
@@ -335,15 +335,15 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     try {
       const result = await cacheMonitorControllerCleanup({
         throwOnError: true,
-        body: { level: 'ALL' },
+        body: { level: "ALL" },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则清空失败仍弹"缓存已清空"（破坏性操作，历史 bug）
-      showToast(t('已重置 L1 内存缓存与监控统计'), 'success');
+      showToast(t("已重置 L1 内存缓存与监控统计"), "success");
       setResult(null);
       onChanged();
     } catch (error) {
-      showToast(getErrorMessage(error) || t('重置监控统计失败'), 'error');
+      showToast(getErrorMessage(error) || t("重置监控统计失败"), "error");
     } finally {
       setMutating(false);
     }
@@ -356,22 +356,22 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           <KeyRound size={22} />
         </div>
         <div className={styles.serviceTitleArea}>
-          <h3>{t('缓存 Key 操作')}</h3>
-          <p>{t('查询、设置与删除缓存条目')}</p>
+          <h3>{t("缓存 Key 操作")}</h3>
+          <p>{t("查询、设置与删除缓存条目")}</p>
         </div>
         {isAdmin ? (
           <Tag variant="warning" size="sm">
-            {t('管理员模式')}
+            {t("管理员模式")}
           </Tag>
         ) : (
           <Tag variant="neutral" size="sm">
-            {t('只读')}
+            {t("只读")}
           </Tag>
         )}
       </div>
 
-      <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-        {t('L1 在后端进程内存，L2 在 Redis；按模式删除只作用于 Redis')}
+      <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+        {t("L1 在后端进程内存，L2 在 Redis；按模式删除只作用于 Redis")}
       </p>
 
       <div className={styles.keyOpsRow}>
@@ -379,16 +379,16 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           value={keyInput}
           onChange={(value) => setKeyInput(value)}
           items={keyItems}
-          open={openMenu === 'key' && keyItems.length > 0}
+          open={openMenu === "key" && keyItems.length > 0}
           renderItem={renderCatalogItem}
           onSelectItem={(item) => {
             const entry = item.entry as CacheKeyCatalogEntryDto;
             setKeyInput(entry.example);
             setOpenMenu(null);
           }}
-          placeholder={t('缓存 Key（点击选择或输入筛选）')}
-          onFocus={openNow('key')}
-          onBlur={closeLater('key')}
+          placeholder={t("缓存 Key（点击选择或输入筛选）")}
+          onFocus={openNow("key")}
+          onBlur={closeLater("key")}
           className={styles.keyOpsKeyInput}
           wrapperClassName={styles.keyOpsKeyWrapper}
         />
@@ -398,7 +398,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           loading={querying}
           icon={Search}
         >
-          {t('查询')}
+          {t("查询")}
         </Button>
         {isAdmin && (
           <>
@@ -408,7 +408,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               loading={mutating}
               icon={Trash2}
             >
-              {t('删除')}
+              {t("删除")}
             </Button>
             <Button
               variant="secondary"
@@ -416,7 +416,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               loading={mutating}
               icon={RefreshCw}
             >
-              {t('刷新')}
+              {t("刷新")}
             </Button>
           </>
         )}
@@ -428,14 +428,14 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
         <>
           <div className={styles.keyOpsRow}>
             <Input
-              placeholder={t('缓存值')}
+              placeholder={t("缓存值")}
               value={valueInput}
               onChange={(e) => setValueInput(e.target.value)}
               className={styles.keyOpsKeyInput}
               wrapperClassName={styles.keyOpsKeyWrapper}
             />
             <Input
-              placeholder={t('TTL（秒）')}
+              placeholder={t("TTL（秒）")}
               value={ttlInput}
               onChange={(e) => setTtlInput(e.target.value)}
               className={styles.keyOpsTtlInput}
@@ -447,7 +447,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               loading={mutating}
               icon={PlusCircle}
             >
-              {t('设置')}
+              {t("设置")}
             </Button>
           </div>
 
@@ -456,23 +456,23 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               value={patternInput}
               onChange={(value) => setPatternInput(value)}
               items={patternItems}
-              open={openMenu === 'pattern' && patternItems.length > 0}
+              open={openMenu === "pattern" && patternItems.length > 0}
               renderItem={renderCatalogItem}
               onSelectItem={(item) => {
                 const entry = item.entry as CacheKeyCatalogEntryDto;
-                if (entry.scope === 'infra') {
+                if (entry.scope === "infra") {
                   showToast(
-                    `${t('该键属于基础设施，不允许删除')}：${entry.removalEffect}`,
-                    'warning'
+                    `${t("该键属于基础设施，不允许删除")}：${entry.removalEffect}`,
+                    "warning",
                   );
                   return;
                 }
                 setPatternInput(entry.pattern);
                 setOpenMenu(null);
               }}
-              placeholder={t('匹配模式（点击选择或输入筛选）')}
-              onFocus={openNow('pattern')}
-              onBlur={closeLater('pattern')}
+              placeholder={t("匹配模式（点击选择或输入筛选）")}
+              onFocus={openNow("pattern")}
+              onBlur={closeLater("pattern")}
               className={styles.keyOpsKeyInput}
               wrapperClassName={styles.keyOpsKeyWrapper}
             />
@@ -482,7 +482,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               loading={mutating}
               icon={Ban}
             >
-              {t('按模式删除')}
+              {t("按模式删除")}
             </Button>
             <Button
               variant="danger"
@@ -490,7 +490,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               loading={mutating}
               icon={Trash2}
             >
-              {t('重置监控统计')}
+              {t("重置监控统计")}
             </Button>
           </div>
         </>

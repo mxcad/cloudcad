@@ -12,6 +12,7 @@
 
 import { useRef, useCallback } from 'react';
 import { t } from '@/languages';
+import { fillTemplate } from '@/utils/i18nFill';
 import { calculateFileHash } from '../utils/hashUtils';
 import { CAD_EXTENSIONS } from '../utils/fileUtils';
 import {
@@ -151,7 +152,12 @@ export const useMxCadUploadNative = () => {
               : error instanceof Error
                 ? error.message
                 : String(error);
-          config.onError?.(t(`文件 ${file.name} 上传失败: ${errorMessage}`));
+          config.onError?.(
+            fillTemplate('文件 {name} 上传失败: {error}', {
+              name: file.name,
+              error: errorMessage,
+            })
+          );
         }
       }
 

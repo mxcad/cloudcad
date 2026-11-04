@@ -13,13 +13,13 @@
 /**
  * 通道状态区块（ADR-0082 #496）：每个已注册通道一张卡片，呈现
  * 配置完整度（缺失键清单）+ 验证状态（上次验证时间/操作者）+ 验证按钮。
- * 验证对话框按通道渲染（CHANNEL_TEST_META）：mail/sms 可填接收方，
+ * 验证对话框按通道渲染（channelTestMeta）：mail/sms 可填接收方，
  * wechat/payment/webhook 只做无副作用探测、不渲染接收方输入框；
  * 门禁拒绝/验证失败以后端返回的文案 toast 呈现，失败时对话框保留错误文案
  * 与后端归因的出错配置键（problemKeys，可点击定位到对应配置项）。
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import {
   CornerUpRight,
   Mail,
@@ -29,22 +29,20 @@ import {
   Smartphone,
   Webhook,
   Wallet,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import styles from './RuntimeConfigPage.module.css';
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Button, Tag, Input, Modal } from "@/components/ui";
+
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import styles from "./RuntimeConfigPage.module.css";
 import {
-  CHANNEL_LABEL,
   channelTestMeta,
+  getChannelLabel,
   missingKeyHints,
   type MissingKeyHint,
-} from './meta';
-import type { ChannelStatus, ChannelTestResult, ConfigItem } from './types';
-import { t } from '@/languages';
+} from "./meta";
+import type { ChannelStatus, ChannelTestResult, ConfigItem } from "./types";
+import { t } from "@/languages";
 
 interface ChannelStatusCardProps {
   channels: ChannelStatus[];
@@ -117,19 +115,19 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
     ? (channels.find((c) => c.channel === testTarget) ?? null)
     : null;
   const testChannelLabel = testChannel
-    ? (CHANNEL_LABEL[testChannel.channel] ?? testChannel.channel)
-    : '';
+    ? (getChannelLabel(testChannel.channel) || testChannel.channel)
+    : "";
   /** 当前对话框的通道能力（接收方/说明按通道而定） */
-  const testMeta = channelTestMeta(testTarget ?? '');
+  const testMeta = channelTestMeta(testTarget ?? "");
   /** 对话框通道缺失键的可行动提示（中文说明 + 格式示例） */
   const testHints = useMemo(
     () => missingKeyHints(testChannel?.missingKeys ?? [], configsByKey),
-    [testChannel, configsByKey]
+    [testChannel, configsByKey],
   );
   /** 测试失败时出错配置键的可行动提示（点击定位后关闭对话框） */
   const problemHints = useMemo(
     () => missingKeyHints(testResult?.problemKeys ?? [], configsByKey),
-    [testResult, configsByKey]
+    [testResult, configsByKey],
   );
 
   return (
@@ -146,21 +144,21 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
             <div className={styles.channelHeader}>
               <Icon size={16} className={styles.channelIcon} />
               <span className={styles.channelTitle}>
-                {CHANNEL_LABEL[channel.channel] ?? channel.channel}
+                {getChannelLabel(channel.channel) || channel.channel}
               </span>
               <span className={styles.channelKey}>{channel.channel}</span>
             </div>
 
             <div className={styles.channelStatusRow}>
-              <Tag variant={channel.configComplete ? 'success' : 'warning'}>
-                {channel.configComplete ? t('配置完整') : t('配置不完整')}
+              <Tag variant={channel.configComplete ? "success" : "warning"}>
+                {channel.configComplete ? t("配置完整") : t("配置不完整")}
               </Tag>
-              <Tag variant={channel.verified ? 'success' : 'neutral'}>
-                {channel.verified ? t('已验证') : t('未验证')}
+              <Tag variant={channel.verified ? "success" : "neutral"}>
+                {channel.verified ? t("已验证") : t("未验证")}
               </Tag>
               {channel.verified && channel.verifiedAt && (
                 <span className={styles.channelVerifiedInfo}>
-                  {t('上次验证：{time}', {
+                  {t("上次验证：{time}", {
                     time: formatDateTimeWithSeconds(channel.verifiedAt),
                   })}
                   {channel.testedBy ? ` · ${channel.testedBy}` : null}
@@ -176,7 +174,7 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
                   onClick={() => onOpenTest(channel.channel)}
                   data-testid="rc-channel-test"
                 >
-                  {t('验证')}
+                  {t("验证")}
                 </Button>
               </div>
             </div>
@@ -188,7 +186,7 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
                 data-testid="rc-missing-keys"
               >
                 <div className={styles.missingKeysTitle}>
-                  {t('补全以下配置项后即可验证，点击可定位到该项')}
+                  {t("补全以下配置项后即可验证，点击可定位到该项")}
                 </div>
                 <ul className={styles.missingKeysList}>
                   {missingKeyHints(channel.missingKeys, configsByKey).map(
@@ -200,7 +198,7 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
                           onClick={() => onFocusConfig(hint.key)}
                         />
                       </li>
-                    )
+                    ),
                   )}
                 </ul>
               </div>
@@ -216,8 +214,8 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
         size="sm"
         title={
           testChannel
-            ? t('验证{channel}通道', { channel: testChannelLabel })
-            : t('验证通道')
+            ? t("验证{channel}通道", { channel: testChannelLabel })
+            : t("验证通道")
         }
         footer={
           <div className={styles.modalFooter}>
@@ -227,7 +225,7 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
               onClick={onCloseTest}
               disabled={testChannel ? testing.has(testChannel.channel) : false}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               variant="primary"
@@ -239,7 +237,7 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
               }}
               data-testid="rc-channel-test-confirm"
             >
-              {t('开始验证')}
+              {t("开始验证")}
             </Button>
           </div>
         }
@@ -249,8 +247,8 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
             <p className={styles.modalLead}>{testMeta.description}</p>
             {!testChannel.configComplete && (
               <p className={styles.modalLead}>
-                {t('通道配置不完整（缺失：{keys}），验证将直接失败。', {
-                  keys: testHints.map((hint) => hint.label).join('、'),
+                {t("通道配置不完整（缺失：{keys}），验证将直接失败。", {
+                  keys: testHints.map((hint) => hint.label).join("、"),
                 })}
               </p>
             )}
@@ -269,7 +267,7 @@ export const ChannelStatusCard: React.FC<ChannelStatusCardProps> = ({
                 {testResult.problemKeys.length > 0 && (
                   <>
                     <div className={styles.missingKeysTitle}>
-                      {t('以下配置项可能是错误原因，点击可定位到该项')}
+                      {t("以下配置项可能是错误原因，点击可定位到该项")}
                     </div>
                     <ul className={styles.missingKeysList}>
                       {problemHints.map((hint) => (

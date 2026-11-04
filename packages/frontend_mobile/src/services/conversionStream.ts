@@ -14,6 +14,15 @@ import { getApiBaseUrl } from '@/utils/apiConfig';
 
 export type ConversionStatus = 'COMPLETED' | 'FAILED';
 
+/** 无节点转换终态（统一对象形状，便于调用方取 status + 失败原因） */
+export interface ConversionResult {
+  status: ConversionStatus;
+  /** 转换引擎返回的具体错误（仅 FAILED 有意义，后端 SSE 透传） */
+  error?: string;
+  /** 失败性质分类：content-error=文件内容问题；其余=引擎/服务异常（可重试） */
+  errorCategory?: string;
+}
+
 /** 等待超时：终态事件迟迟不到（服务端任务丢失，如服务重启）按失败处理 */
 export const CONVERSION_WAIT_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -24,14 +33,17 @@ export const CONVERSION_WAIT_TIMEOUT_MS = 5 * 60 * 1000;
  * mxweb 未就位时返回 404，引擎只能把它当成「打开图纸失败」，用户看不到转换进度。
  * EventSource 不可用（老浏览器 / 非 secure 上下文）同样按失败处理——静默继续打开
  * 只会得到不可诊断的 404。
+ *
+ * FAILED 时一并返回后端透传的 error + errorCategory，调用方据此区分
+ * 「文件内容问题」vs「引擎/服务异常」，不再弹笼统的「转换失败」。
  */
 export function waitPublicConversion(
   hash: string,
   timeoutMs: number = CONVERSION_WAIT_TIMEOUT_MS
-): Promise<ConversionStatus> {
+): Promise<ConversionResult> {
   return new Promise((resolve) => {
     if (typeof EventSource === 'undefined') {
-      resolve('FAILED');
+      resolve({ status: 'FAILED' });
       return;
     }
 
@@ -41,21 +53,33 @@ export function waitPublicConversion(
       `${getApiBaseUrl()}/v1/mxcad/conversion/file-stream?hash=${encodeURIComponent(hash)}`
     );
 
-    const finish = (status: ConversionStatus): void => {
+    const finish = (
+      status: ConversionStatus,
+      failure?: Omit<ConversionResult, 'status'>
+    ): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       es.close();
-      resolve(status);
+      resolve({ status, ...(failure ?? {}) });
     };
 
     const timer = setTimeout(() => finish('FAILED'), timeoutMs);
 
     es.onmessage = (event: MessageEvent) => {
       try {
-        const payload = JSON.parse(event.data) as { status?: string };
-        if (payload.status === 'COMPLETED' || payload.status === 'FAILED') {
-          finish(payload.status);
+        const payload = JSON.parse(event.data) as {
+          status?: string;
+          error?: string;
+          errorCategory?: string;
+        };
+        if (payload.status === 'COMPLETED') {
+          finish('COMPLETED');
+        } else if (payload.status === 'FAILED') {
+          finish('FAILED', {
+            error: payload.error,
+            errorCategory: payload.errorCategory,
+          });
         }
         // PROCESSING（建连推的当前状态）→ 继续等终态
       } catch {

@@ -1,6 +1,7 @@
 /* 文件队列面板（#471 / #475 / #497）—— 可拖动浮动面板，隐藏态不渲染任何元素 */
 
-/* 默认右下角（S6-4）：与面板注释一致；拖动后由内联 left/top（视口绝对坐标）覆盖 bottom/right。
+/* 右下角兜底（S6-4）：正常渲染时内联 left/top（视口绝对坐标，clampPanelToViewport 物化）
+   恒覆盖 bottom/right；此定位仅作内联样式缺失时的兜底。
    位置必须挂在这个 fixed 容器上——内层元素是 relative/static，left/top 会变成偏移量导致飞出视口 */
 .conversion-panel-portal {
   position: fixed;

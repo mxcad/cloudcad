@@ -191,13 +191,14 @@ export class IssueRewardDto {
   durationDays?: number;
 }
 
-/** 客服：撤销奖励 */
-export class RevokeRewardDto {
-  @ApiProperty({ description: '撤销原因（必填，审计留痕）', maxLength: 500 })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(500)
-  reason: string;
+/** 管理端：批量删除反馈记录（上限 200，防误传整表） */
+export class BatchDeleteFeedbackDto {
+  @ApiProperty({ description: '反馈 ID 列表', type: [String] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  @ArrayMaxSize(200)
+  ids: string[];
 }
 
 /** 管理端：批量删除附件（上限 200，防误传整表） */

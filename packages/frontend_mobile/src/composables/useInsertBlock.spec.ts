@@ -54,7 +54,7 @@ vi.mock('@/services/publicFileService', () => ({
   ),
 }))
 vi.mock('@/services/conversionStream', () => ({
-  waitPublicConversion: vi.fn(async () => 'COMPLETED' as const),
+  waitPublicConversion: vi.fn(async () => ({ status: 'COMPLETED' as const })),
   CONVERSION_WAIT_TIMEOUT_MS: 300000,
 }))
 
@@ -95,7 +95,7 @@ describe('useInsertBlock.openFile 浏览文件', () => {
     vi.mocked(useStorage).mockImplementation((_: string, v: unknown) =>
       ({ value: v } as never)
     )
-    vi.mocked(waitPublicConversion).mockResolvedValue('COMPLETED' as const)
+    vi.mocked(waitPublicConversion).mockResolvedValue({ status: 'COMPLETED' })
   })
 
   afterEach(() => {
@@ -106,7 +106,7 @@ describe('useInsertBlock.openFile 浏览文件', () => {
     const started = vi.fn()
     vi.mocked(waitPublicConversion).mockImplementation(async () => {
       started()
-      return 'COMPLETED'
+      return { status: 'COMPLETED' as const }
     })
     const created = vi.spyOn(URL, 'createObjectURL')
 
@@ -128,11 +128,13 @@ describe('useInsertBlock.openFile 浏览文件', () => {
   })
 
   it('转换失败：提示失败、不加入块列表、但正常结束浏览流程', async () => {
-    vi.mocked(waitPublicConversion).mockResolvedValue('FAILED' as const)
+    vi.mocked(waitPublicConversion).mockResolvedValue({ status: 'FAILED' })
 
     const p = await openAndPick()
 
-    expect(showFailToast).toHaveBeenCalledWith('转换失败')
+    expect(showFailToast).toHaveBeenCalledWith(
+      '转换服务异常，请稍后重试；多次失败请联系管理员'
+    )
     expect(p.list.value).toHaveLength(0)
     expect(p.currentItem.value).toBeUndefined()
     expect(buildPublicMxwebUrl).not.toHaveBeenCalled()

@@ -108,6 +108,26 @@ t('剩余 {days} 天').replace('{days}', String(membership.daysRemaining));
 
 所有带变量的翻译文本必须通过 `t(msg, vars)` 的第二参数传入变量。禁止使用 `.replace()` 手动替换。
 
+### 模块级 t() 烘焙（铁律）
+
+`src/languages/index.ts` 中非中文语言包（en-US/zh-TW/ko-KR）全是**动态 import（异步）**。模块求值期（import 阶段）en-US pack 尚未就绪，`t()` 必然回退同步 zh-CN——因此**模块顶层的 `t()` 结果会被烘焙成中文，切语言后永不刷新**（实例：runtime-config 页 44 处分类/子组/档位标签、登录注册 zod 校验消息，2026-11-03 全量修复）：
+
+```tsx
+// ❌ 模块顶层——求值时烘焙成中文
+const TIER_LABEL = { user: t('普通用户') };
+
+// ✅ 函数式 getter——渲染期求值；switch + t() 字面量让 extract 自动登记
+export function getTierLabel(tier: string): string {
+  switch (tier) { case 'user': return t('普通用户'); default: return tier; }
+}
+```
+
+- 修复模式：静态标签表 → 函数式 getter；零散文案 → 移入组件体/hook 体。`key={activeLanguage}` 整树重挂载（App.tsx / CADEditorDirect.tsx）保证 memo 子树内 getter 刷新，无需额外处理
+- **消费方自愈合免修**：烘焙值的消费方若在渲染期再包一层 `t(bakedValue)`（实例：`openDrawing.ts` 的 `t(DEFAULT_MESSAGES.OPENING_FILE)`），主方向自愈，不要修——下结论前先 grep 消费点
+- **zod v4 函数式消息**：`message` 参数类型只收 string（已废弃）、位置参数函数形式运行时不生效，必须写 `{ error: () => t('...') }`（min/regex/refine 均收函数）
+- 修完跑 `pnpm i18n` 并**重启 Vite**（内存缓存旧模块，页面会显示裸数字 id，刷新无效）
+- 完整审计/验证工作流（静态扫描、残留分类、浏览器 CJK 扫描）见 `frontend-i18n-audit` 技能
+
 ### 关键约束
 
 - `@voerkai18n/vite` 插件必须在 `react()` 之前注册（vite.config.ts）

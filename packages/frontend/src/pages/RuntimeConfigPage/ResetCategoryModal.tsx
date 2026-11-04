@@ -8,13 +8,13 @@
  * 并对已由系统预置的项单独提示（恢复出厂不会回到出厂默认值）。
  */
 
-import React from 'react';
-import { RotateCcw, TerminalSquare } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import styles from './RuntimeConfigPage.module.css';
-import type { ConfigGroup } from './types';
-import { t } from '@/languages';
+import React from "react";
+import { RotateCcw, TerminalSquare } from "lucide-react";
+import { Modal, Button } from "@/components/ui";
+
+import styles from "./RuntimeConfigPage.module.css";
+import type { ConfigGroup } from "./types";
+import { t } from "@/languages";
 
 interface ResetCategoryModalProps {
   group: ConfigGroup | null;
@@ -40,8 +40,8 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
       size="lg"
       title={
         group
-          ? t('恢复「{label}」为默认值', { label: group.label })
-          : t('恢复默认')
+          ? t("恢复「{label}」为默认值", { label: group.label })
+          : t("恢复默认")
       }
       footer={
         <div className={styles.modalFooter}>
@@ -51,7 +51,7 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
             onClick={onCancel}
             disabled={saving}
           >
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             variant="danger"
@@ -63,7 +63,7 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
             }}
             data-testid="rc-confirm-reset-category"
           >
-            {t('确认恢复 {n} 项', { n: String(group?.items.length ?? 0) })}
+            {t("确认恢复 {n} 项", { n: String(group?.items.length ?? 0) })}
           </Button>
         </div>
       }
@@ -71,7 +71,7 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
       {group && (
         <>
           <p className={styles.modalLead}>
-            {t('将恢复以下 {n} 项配置的显式修改。', {
+            {t("将恢复以下 {n} 项配置的显式修改。", {
               n: String(group.items.length),
             })}
           </p>
@@ -81,10 +81,10 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
               <TerminalSquare size={13} />
               <span>
                 {t(
-                  '其中 {n} 项由系统预置：恢复出厂后取值会退回预置值，而不是出厂默认值。',
+                  "其中 {n} 项由系统预置：恢复出厂后取值会退回预置值，而不是出厂默认值。",
                   {
                     n: String(envItems.length),
-                  }
+                  },
                 )}
               </span>
             </div>
@@ -94,17 +94,17 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
             {group.items.map((item) => (
               <div
                 key={item.key}
-                className={`${styles.previewRow} ${item.isModified ? styles.previewRowModified : ''}`}
+                className={`${styles.previewRow} ${item.isModified ? styles.previewRowModified : ""}`}
               >
                 <span className={styles.configKey}>{item.key}</span>
                 <span className={styles.previewDesc}>
-                  {item.description ?? ''}
+                  {item.description ? t(item.description) : ""}
                 </span>
                 {item.dangerous && (
-                  <span className={styles.dangerTag}>{t('危险项')}</span>
+                  <span className={styles.dangerTag}>{t("危险项")}</span>
                 )}
                 {item.isModified && (
-                  <span className={styles.previewTag}>{t('将恢复')}</span>
+                  <span className={styles.previewTag}>{t("将恢复")}</span>
                 )}
               </div>
             ))}

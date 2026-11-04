@@ -16,6 +16,7 @@ import { RuntimeConfigService } from "./runtime-config.service";
 import { ChannelCryptoService } from "./channel-crypto.service";
 import { validateDefinitions } from "./runtime-config.invariants";
 import type { RuntimeConfigDefinition } from "./runtime-config.types";
+import type { RuntimeConfigChannel } from "@cloudcad/contracts";
 
 describe("RuntimeConfigService", () => {
 	let service: RuntimeConfigService;
@@ -152,7 +153,7 @@ describe("RuntimeConfigService", () => {
 
 			const result = await service.getValue("maxFileSize");
 
-			expect(result).toBe(100);
+			expect(result).toBe(500);
 			expect(warnSpy).toHaveBeenCalledWith(
 				expect.stringContaining("启动期降级用默认值"),
 			);
@@ -161,8 +162,8 @@ describe("RuntimeConfigService", () => {
 		it("启动期数据库不可达且未传默认值 → 回落到配置定义默认值", async () => {
 			dbDown();
 
-			// maxFileSize 在 RUNTIME_CONFIG_DEFINITIONS 中的默认值是 100
-			expect(await service.getValue("maxFileSize")).toBe(100);
+			// maxFileSize 在 RUNTIME_CONFIG_DEFINITIONS 中的默认值是 500
+			expect(await service.getValue("maxFileSize")).toBe(500);
 		});
 
 		it("运行期（onModuleInit 之后）数据库不可达 → 抛错，不静默降级", async () => {
@@ -217,7 +218,7 @@ describe("RuntimeConfigService", () => {
 			mockRedis.get.mockResolvedValue(null);
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
 
-			expect(await service.getValue("maxFileSize")).toBe(100);
+			expect(await service.getValue("maxFileSize")).toBe(500);
 		});
 
 		it("env 值非法（number 类型）→ 回退定义默认值", async () => {
@@ -1892,7 +1893,7 @@ describe("RuntimeConfigService", () => {
 			description: "测试通道主机",
 			defaultValue: "",
 			isPublic: false,
-			channel: "testChannel",
+			channel: "testChannel" as RuntimeConfigChannel,
 		};
 		const channelSwitchDef: RuntimeConfigDefinition = {
 			key: "testChannelEnabled",
@@ -1901,7 +1902,7 @@ describe("RuntimeConfigService", () => {
 			description: "测试通道开关",
 			defaultValue: false,
 			isPublic: false,
-			channelSwitch: "testChannel",
+			channelSwitch: "testChannel" as RuntimeConfigChannel,
 			// 声明 profiles 才参与 profile 批量应用（验证「不得经 profile 绕过门禁」）
 			profiles: { secure: true, normal: false },
 		};
@@ -1912,7 +1913,7 @@ describe("RuntimeConfigService", () => {
 			description: "测试通道 profile 主机",
 			defaultValue: "",
 			isPublic: false,
-			channel: "testChannel",
+			channel: "testChannel" as RuntimeConfigChannel,
 			profiles: { secure: "smtp.secure.test", normal: "" },
 		};
 

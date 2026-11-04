@@ -119,7 +119,7 @@ export function toSubmitValue(
         valid: false,
         message: t('不能小于 {min}{unit}', {
           min: String(meta.min),
-          unit: meta.unit ?? '',
+          unit: meta.unit ? t(meta.unit) : '',
         }),
       };
     }
@@ -128,7 +128,7 @@ export function toSubmitValue(
         valid: false,
         message: t('不能大于 {max}{unit}', {
           max: String(meta.max),
-          unit: meta.unit ?? '',
+          unit: meta.unit ? t(meta.unit) : '',
         }),
       };
     }

@@ -390,7 +390,7 @@ export const useFileBrowserActions = ({
     }
     setClipboard(Array.from(selectedNodes), 'copy', projectId);
     snapshotSourceTransfer();
-    showToast(t(`已复制 ${selectedNodes.size} 个项目`), 'info');
+    showToast(t('已复制 {count} 个项目', { count: String(selectedNodes.size) }), 'info');
   }, [
     enableClipboard,
     selectedNodes,
@@ -444,7 +444,7 @@ export const useFileBrowserActions = ({
       setClipboard(nodeIds, 'cut', projectId, { sourceParentIds });
     });
     snapshotSourceTransfer();
-    showToast(t(`已剪切 ${selectedNodes.size} 个项目`), 'info');
+    showToast(t('已剪切 {count} 个项目', { count: String(selectedNodes.size) }), 'info');
   }, [
     enableClipboard,
     selectedNodes,
@@ -560,7 +560,7 @@ export const useFileBrowserActions = ({
       const action = undoStack[undoStack.length - 1];
       if (!action) return;
       await undoStoreUndo(undoProjectId);
-      showToast(t(`已撤销: ${action.description}`), 'info');
+      showToast(t('已撤销: {desc}', { desc: action.description }), 'info');
       loadData();
     } catch (error) {
       const appError = handleError(error, t('撤销'), 'medium');
@@ -574,7 +574,7 @@ export const useFileBrowserActions = ({
       const action = redoStack[redoStack.length - 1];
       if (!action) return;
       await undoStoreRedo(undoProjectId);
-      showToast(t(`已重做: ${action.description}`), 'info');
+      showToast(t('已重做: {desc}', { desc: action.description }), 'info');
       loadData();
     } catch (error) {
       const appError = handleError(error, t('重做'), 'medium');

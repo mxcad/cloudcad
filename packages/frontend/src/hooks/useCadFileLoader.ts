@@ -29,6 +29,7 @@ import {
   useConversionQueueStore,
 } from '@/stores/conversionQueueStore';
 import { t } from '@/languages';
+import { describeConversionError } from '@/lib/conversionError';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { globalShowToast, globalShowConfirm } from '@/utils/notificationEvents';
@@ -417,20 +418,24 @@ export function useCadFileLoader(
                 conversion.status
               );
               if (isTerminalFailure) {
-                // #477：永久失败弹窗提示（区别于「尚未转换完成」）
+                // #477：永久失败弹窗提示（区别于「尚未转换完成」）。按后端 errorCategory
+                // 区分「文件内容问题」vs「引擎/服务异常」，不再统一报「检查文件内容」。
+                const info = describeConversionError(
+                  conversion.errorCategory,
+                  conversion.error
+                );
                 void globalShowConfirm({
                   title: t('转换失败'),
-                  message: t('该文件转换失败，请检查文件内容'),
+                  message: info.message,
                   confirmText: t('知道了'),
                   type: 'danger',
                 });
+                fail(info.message);
+                return;
               }
               // conversion.error 非空 = 轮询取不到状态（连续传输失败），带出真实原因，
               // 不再一律报「尚未转换完成」
-              const msg = isTerminalFailure
-                ? t('文件转换失败，无法打开文件')
-                : conversion.error || t('文件尚未转换完成');
-              fail(msg);
+              fail(conversion.error || t('文件尚未转换完成'));
               return;
             }
             // 转换完成，重新获取节点信息（fileHash/path/updatedAt 可能已更新）

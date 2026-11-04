@@ -10,12 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { FileSystemNode } from '../types/filesystem';
-import { API_BASE_URL } from '../config/apiConfig';
-import { t } from '@/languages';
-import { checkFileName, relativeTime } from '@cloudcad/platform';
-import { formatFileSize as _formatFileSize } from '../components/ui/FileSize';
-import { formatDateTime as _formatDateTime } from './dateUtils';
+import { FileSystemNode } from "../types/filesystem";
+import { API_BASE_URL } from "../config/apiConfig";
+import { t } from "@/languages";
+import { checkFileName, relativeTime } from "@cloudcad/platform";
+import { formatFileSize as _formatFileSize } from "@/components/ui";
+import { formatDateTime as _formatDateTime } from "./dateUtils";
 
 export const formatFileSize = _formatFileSize;
 // 绝对日期时间口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，与移动端共用）；
@@ -24,24 +24,24 @@ export const formatDate = _formatDateTime;
 
 export const getFileIcon = (node: FileSystemNode) => {
   if (node.isFolder) {
-    return '📁';
+    return "📁";
   }
 
-  const extension = node.extension?.toLowerCase() || '';
+  const extension = node.extension?.toLowerCase() || "";
 
   switch (extension) {
-    case '.dwg':
-      return '📐';
-    case '.dxf':
-      return '📏';
-    case '.pdf':
-      return '📄';
-    case '.png':
-    case '.jpg':
-    case '.jpeg':
-      return '🖼️';
+    case ".dwg":
+      return "📐";
+    case ".dxf":
+      return "📏";
+    case ".pdf":
+      return "📄";
+    case ".png":
+    case ".jpg":
+    case ".jpeg":
+      return "🖼️";
     default:
-      return '📄';
+      return "📄";
   }
 };
 
@@ -50,20 +50,20 @@ export const getFileIcon = (node: FileSystemNode) => {
  */
 export const formatRelativeTime = (dateString: string): string => {
   const r = relativeTime(dateString);
-  if (r.tier === 'just_now') return t('刚刚');
+  if (r.tier === "just_now") return t("刚刚");
   switch (r.unit) {
-    case 'minute':
-      return `${r.value}${t('分钟前')}`;
-    case 'hour':
-      return `${r.value}${t('小时前')}`;
-    case 'day':
-      return `${r.value}${t('天前')}`;
-    case 'week':
-      return `${r.value}${t('周前')}`;
-    case 'month':
-      return `${r.value}${t('个月前')}`;
-    case 'year':
-      return `${r.value}${t('年前')}`;
+    case "minute":
+      return `${r.value}${t("分钟前")}`;
+    case "hour":
+      return `${r.value}${t("小时前")}`;
+    case "day":
+      return `${r.value}${t("天前")}`;
+    case "week":
+      return `${r.value}${t("周前")}`;
+    case "month":
+      return `${r.value}${t("个月前")}`;
+    case "year":
+      return `${r.value}${t("年前")}`;
   }
 };
 
@@ -74,13 +74,13 @@ export const isCadFile = (extension: string | null | undefined): boolean => {
 
 export const isImageFile = (extension: string | null | undefined): boolean => {
   if (!extension) return false;
-  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+  const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"];
   return imageExtensions.includes(extension.toLowerCase());
 };
 
 export const isPdfFile = (extension: string | null | undefined): boolean => {
   if (!extension) return false;
-  return extension.toLowerCase() === '.pdf';
+  return extension.toLowerCase() === ".pdf";
 };
 
 /**
@@ -89,13 +89,13 @@ export const isPdfFile = (extension: string | null | undefined): boolean => {
  * 浏览器 <img> 请求自动携带，无需手动添加 Authorization 请求头
  */
 export const getThumbnailUrl = (node: FileSystemNode): string => {
-  if (!node.id) return '';
+  if (!node.id) return "";
 
   // 判断是否是图片文件
-  const extension = node.extension?.toLowerCase() || '';
-  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+  const extension = node.extension?.toLowerCase() || "";
+  const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"];
   if (!imageExtensions.includes(extension)) {
-    return '';
+    return "";
   }
 
   // 通过 auth_token Cookie 认证访问
@@ -108,11 +108,11 @@ export const getThumbnailUrl = (node: FileSystemNode): string => {
  * 注意：此接口返回图片流，支持所有类型文件（CAD 和图片），认证走 auth_token Cookie
  */
 export const getCadThumbnailUrl = (node: FileSystemNode): string => {
-  if (!node.id) return '';
+  if (!node.id) return "";
 
-  const extension = node.extension?.toLowerCase() || '';
+  const extension = node.extension?.toLowerCase() || "";
   if (!CAD_EXTENSIONS.includes(extension)) {
-    return '';
+    return "";
   }
 
   return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
@@ -124,9 +124,9 @@ export const getCadThumbnailUrl = (node: FileSystemNode): string => {
  */
 export const getLibraryThumbnailUrl = (
   nodeId: string,
-  libraryType: 'drawing' | 'block'
+  libraryType: "drawing" | "block",
 ): string => {
-  if (!nodeId) return '';
+  if (!nodeId) return "";
   return `${API_BASE_URL}/v1/library/${libraryType}/nodes/${nodeId}/thumbnail`;
 };
 
@@ -136,10 +136,10 @@ export const getLibraryThumbnailUrl = (
  * 图片文件返回原图下载链接
  */
 export const getOriginalFileUrl = (node: FileSystemNode): string => {
-  if (!node.id) return '';
+  if (!node.id) return "";
 
   // CAD 文件使用缩略图路径预览
-  const extension = node.extension?.toLowerCase() || '';
+  const extension = node.extension?.toLowerCase() || "";
   if (CAD_EXTENSIONS.includes(extension)) {
     return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
   }
@@ -151,7 +151,7 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
 // ========== 文件类型检查 ==========
 
 /** CAD 可编辑文件扩展名（不含模板 .dwt） */
-export const CAD_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
+export const CAD_EXTENSIONS = [".dwg", ".dxf", ".mxweb"];
 
 // ========== 文件名处理 ==========
 
@@ -162,7 +162,7 @@ export const CAD_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
  */
 export function sanitizeFileName(name: string): string {
   // eslint-disable-next-line no-control-regex -- 有意匹配并移除控制字符
-  return name.replace(/[\x00-\x1F\x7F<>:"/\\|?*]/g, '');
+  return name.replace(/[\x00-\x1F\x7F<>:"/\\|?*]/g, "");
 }
 
 /**
@@ -181,17 +181,17 @@ export function validateFolderName(name: string): {
   if (result.valid) return { valid: true };
 
   switch (result.reason) {
-    case 'empty':
-      return { valid: false, error: t('名称不能为空') };
-    case 'too_long':
-      return { valid: false, error: t('名称长度不能超过 100 个字符') };
-    case 'illegal_chars':
+    case "empty":
+      return { valid: false, error: t("名称不能为空") };
+    case "too_long":
+      return { valid: false, error: t("名称长度不能超过 100 个字符") };
+    case "illegal_chars":
       return { valid: false, error: t('名称包含非法字符：< > : " | ? * / \\') };
-    case 'control_chars':
-      return { valid: false, error: t('名称包含非法字符') };
-    case 'reserved_name':
-      return { valid: false, error: t('该名称为系统保留名称') };
-    case 'dot_edges':
-      return { valid: false, error: t('名称不能以点开头或结尾') };
+    case "control_chars":
+      return { valid: false, error: t("名称包含非法字符") };
+    case "reserved_name":
+      return { valid: false, error: t("该名称为系统保留名称") };
+    case "dot_edges":
+      return { valid: false, error: t("名称不能以点开头或结尾") };
   }
 }

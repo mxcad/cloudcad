@@ -8,24 +8,24 @@
  * - 显示完成状态和进度
  * - 支持搜索筛选
  */
-import React, { useState, useMemo, useCallback } from 'react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Tabs, Tab } from '../ui';
-import { Card } from '../ui/Card';
-import { t } from '@/languages';
-import { Tag } from '../ui/Tag';
-import { useTour } from '../../contexts/TourContext';
-import type { TourGuide, TourCategory } from '../../types/tour';
+import React, { useState, useMemo, useCallback } from "react";
+import { Modal, Button, Card, Tag } from "@/components/ui";
+
+import { Tabs, Tab } from "../ui";
+
+import { t } from "@/languages";
+
+import { useTour } from "../../contexts/TourContext";
+import type { TourGuide, TourCategory } from "../../types/tour";
 
 // Lucide 图标导入
-import { SearchInput } from '@/components/search/SearchInput';
-import { Search } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
-import { Circle } from 'lucide-react';
-import { PlayCircle } from 'lucide-react';
-import { Clock } from 'lucide-react';
-import { FolderOpen } from 'lucide-react';
+import { SearchInput } from "@/components/search/SearchInput";
+import { Search } from "lucide-react";
+import { CheckCircle } from "lucide-react";
+import { Circle } from "lucide-react";
+import { PlayCircle } from "lucide-react";
+import { Clock } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 
 /** z-index 层级（与引导遮罩层一致） */
 const TOUR_CENTER_Z_INDEX = 10002;
@@ -54,21 +54,21 @@ const TourCard: React.FC<{
       className="border border-[var(--border-default)] group relative cursor-pointer p-4 transition-all duration-300"
       onClick={onStart}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--primary-400)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+        e.currentTarget.style.borderColor = "var(--primary-400)";
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "var(--shadow-lg)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border-default)';
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.borderColor = "var(--border-default)";
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "none";
       }}
     >
       {/* 完成标记 */}
       {isCompleted && (
         <div
           className="absolute top-2 right-2"
-          style={{ color: 'var(--success)' }}
+          style={{ color: "var(--success)" }}
         >
           <CheckCircle size={20} />
         </div>
@@ -79,14 +79,14 @@ const TourCard: React.FC<{
         className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
         style={{
           background: isCompleted
-            ? 'linear-gradient(135deg, var(--success-light), var(--success-dim))'
-            : 'linear-gradient(135deg, var(--primary-100), var(--primary-50))',
+            ? "linear-gradient(135deg, var(--success-light), var(--success-dim))"
+            : "linear-gradient(135deg, var(--primary-100), var(--primary-50))",
         }}
       >
         <DefaultCategoryIcon
           size={20}
           className={
-            isCompleted ? 'text-[var(--success)]' : 'text-[var(--primary-500)]'
+            isCompleted ? "text-[var(--success)]" : "text-[var(--primary-500)]"
           }
         />
       </div>
@@ -94,7 +94,7 @@ const TourCard: React.FC<{
       {/* 标题 */}
       <h4
         className="text-sm font-semibold mb-1"
-        style={{ color: 'var(--text-primary)' }}
+        style={{ color: "var(--text-primary)" }}
       >
         {guide.name}
       </h4>
@@ -102,7 +102,7 @@ const TourCard: React.FC<{
       {/* 描述 */}
       <p
         className="text-xs mb-3 line-clamp-2"
-        style={{ color: 'var(--text-muted)' }}
+        style={{ color: "var(--text-muted)" }}
       >
         {guide.description}
       </p>
@@ -110,7 +110,7 @@ const TourCard: React.FC<{
       {/* 底部信息 */}
       <div
         className="flex items-center justify-between text-xs"
-        style={{ color: 'var(--text-tertiary)' }}
+        style={{ color: "var(--text-tertiary)" }}
       >
         <span className="flex items-center gap-1">
           <Clock size={12} />
@@ -118,18 +118,18 @@ const TourCard: React.FC<{
         </span>
         <span className="flex items-center gap-1">
           {isCompleted ? (
-            <CheckCircle size={12} style={{ color: 'var(--success)' }} />
+            <CheckCircle size={12} style={{ color: "var(--success)" }} />
           ) : (
             <Circle size={12} />
           )}
-          {t('{count} 步', { count: String(guide.steps.length) })}
+          {t("{count} 步", { count: String(guide.steps.length) })}
         </span>
       </div>
 
       {/* 开始按钮（悬停显示） */}
       <div
         className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl"
-        style={{ background: 'var(--bg-overlay)' }}
+        style={{ background: "var(--bg-overlay)" }}
       >
         <Button
           variant="primary"
@@ -140,7 +140,7 @@ const TourCard: React.FC<{
             onStart();
           }}
         >
-          {isCompleted ? t('重新开始') : t('开始引导')}
+          {isCompleted ? t("重新开始") : t("开始引导")}
         </Button>
       </div>
     </Card>
@@ -149,10 +149,10 @@ const TourCard: React.FC<{
 
 export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
   const { guides, completedGuides, startTour, isActive } = useTour();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
-    TourCategory | 'all'
-  >('all');
+    TourCategory | "all"
+  >("all");
 
   /** 从引导配置动态提取分类列表（保持首次出现的顺序） */
   const categories = useMemo(() => {
@@ -193,12 +193,12 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
       result = result.filter(
         (guide) =>
           guide.name.toLowerCase().includes(query) ||
-          guide.description.toLowerCase().includes(query)
+          guide.description.toLowerCase().includes(query),
       );
     }
 
     // 分类筛选
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== "all") {
       result = result.filter((guide) => guide.category === selectedCategory);
     }
 
@@ -219,15 +219,15 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
       startTour(guideId);
       onClose();
     },
-    [startTour, onClose]
+    [startTour, onClose],
   );
 
   /** 按分类筛选后的引导 */
   const categorizedGuides = useMemo(() => {
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== "all") {
       return {
         [selectedCategory]: filteredGuides.filter(
-          (g) => g.category === selectedCategory
+          (g) => g.category === selectedCategory,
         ),
       };
     }
@@ -235,7 +235,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
     const result: Partial<Record<TourCategory, TourGuide[]>> = {};
     categories.forEach((category) => {
       const categoryGuides = filteredGuides.filter(
-        (g) => g.category === category
+        (g) => g.category === category,
       );
       if (categoryGuides.length > 0) {
         result[category] = categoryGuides;
@@ -248,7 +248,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('引导中心')}
+      title={t("引导中心")}
       className="max-w-4xl"
       zIndex={TOUR_CENTER_Z_INDEX}
     >
@@ -257,56 +257,56 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
         {/* 进度统计 */}
         <div
           className="flex items-center gap-4 p-4 rounded-xl"
-          style={{ background: 'var(--bg-tertiary)' }}
+          style={{ background: "var(--bg-tertiary)" }}
         >
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
               <span
                 className="text-sm font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('学习进度')}
+                {t("学习进度")}
               </span>
               <span
                 className="text-sm font-semibold"
-                style={{ color: 'var(--primary-500)' }}
+                style={{ color: "var(--primary-500)" }}
               >
                 {stats.completed} / {stats.total}
               </span>
             </div>
             <div
               className="h-2 rounded-full overflow-hidden"
-              style={{ background: 'var(--bg-secondary)' }}
+              style={{ background: "var(--bg-secondary)" }}
             >
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${stats.percentage}%`,
                   background:
-                    'linear-gradient(90deg, var(--primary-500), var(--primary-400))',
+                    "linear-gradient(90deg, var(--primary-500), var(--primary-400))",
                 }}
               />
             </div>
           </div>
           <div
             className="text-center p-3 rounded-xl"
-            style={{ background: 'var(--bg-secondary)' }}
+            style={{ background: "var(--bg-secondary)" }}
           >
             <div
               className="text-2xl font-bold"
-              style={{ color: 'var(--primary-500)' }}
+              style={{ color: "var(--primary-500)" }}
             >
               {stats.percentage}%
             </div>
-            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {t('已完成')}
+            <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("已完成")}
             </div>
           </div>
         </div>
 
         {/* 搜索框 */}
         <SearchInput
-          placeholder={t('搜索引导流程...')}
+          placeholder={t("搜索引导流程...")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -314,10 +314,10 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
         {/* 分类筛选 */}
         <Tabs>
           <Tab
-            active={selectedCategory === 'all'}
-            onClick={() => setSelectedCategory('all')}
+            active={selectedCategory === "all"}
+            onClick={() => setSelectedCategory("all")}
           >
-            {t('全部')}
+            {t("全部")}
           </Tab>
           {categories.map((category) => {
             const count = guidesByCategory[category]?.length || 0;
@@ -341,10 +341,10 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
           <Search
             size={48}
             className="mx-auto mb-4"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
           />
-          <p style={{ color: 'var(--text-muted)' }}>
-            {searchQuery ? t('未找到匹配的引导流程') : t('暂无引导流程')}
+          <p style={{ color: "var(--text-muted)" }}>
+            {searchQuery ? t("未找到匹配的引导流程") : t("暂无引导流程")}
           </p>
         </div>
       ) : (
@@ -363,7 +363,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
                     />
                     <h3
                       className="text-sm font-semibold"
-                      style={{ color: 'var(--text-secondary)' }}
+                      style={{ color: "var(--text-secondary)" }}
                     >
                       {category}
                     </h3>
@@ -383,7 +383,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
                   </div>
                 </div>
               );
-            }
+            },
           )}
         </div>
       )}
@@ -393,18 +393,18 @@ export const TourCenter: React.FC<TourCenterProps> = ({ isOpen, onClose }) => {
         <div
           className="mt-6 p-4 rounded-xl flex items-center justify-between"
           style={{
-            background: 'var(--primary-50)',
-            border: '1px solid var(--primary-200)',
+            background: "var(--primary-50)",
+            border: "1px solid var(--primary-200)",
           }}
         >
           <div className="flex items-center gap-3">
-            <PlayCircle size={20} style={{ color: 'var(--primary-500)' }} />
-            <span className="text-sm" style={{ color: 'var(--primary-600)' }}>
-              {t('当前有引导正在进行中')}
+            <PlayCircle size={20} style={{ color: "var(--primary-500)" }} />
+            <span className="text-sm" style={{ color: "var(--primary-600)" }}>
+              {t("当前有引导正在进行中")}
             </span>
           </div>
           <Button variant="outline" size="sm" onClick={onClose}>
-            {t('继续引导')}
+            {t("继续引导")}
           </Button>
         </div>
       )}

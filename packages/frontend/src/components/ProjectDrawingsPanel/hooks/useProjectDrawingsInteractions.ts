@@ -179,7 +179,9 @@ export function useProjectDrawingsInteractions({
       if (!perms?.canDelete) return;
       const confirmed = await showConfirmPromise({
         title: t('删除项目'),
-        message: t(`确定要删除项目"${project.name}"吗？删除后将移至回收站。`),
+        message: t('确定要删除项目"{name}"吗？删除后将移至回收站。', {
+          name: project.name,
+        }),
         type: 'danger',
         confirmText: t('删除'),
       });

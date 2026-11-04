@@ -110,23 +110,23 @@ export class PublicFileController {
     );
 
     try {
-      const fileStats = fs.statSync(filePath);
-
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Length', fileStats.size);
-      setContentDisposition(res, path.basename(filePath), 'inline');
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
-
-      fileStream.on('error', (error) => {
-        this.logger.error(`文件流错误: ${error.message}`, error);
-        if (!res.headersSent) {
-          res.status(500).json({ code: -1, message: (I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败') });
+      // 传输编排走 streamFileToResponse 唯一出口（含客户端中断→销毁读流句柄防护，
+      // 避免公开 mxweb 访问中断后文件被一直占用）。
+      await streamFileToResponse(
+        res,
+        filePath,
+        path.basename(filePath),
+        'application/octet-stream',
+        undefined,
+        {
+          cacheControl: 'public, max-age=3600',
+          allowOrigin: '*',
+          disposition: 'inline',
+          errorCode: -1,
+          errorMessage:
+            I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败',
         }
-      });
+      );
     } catch (error) {
       this.logger.error(`访问文件失败: ${error.message}`, error.stack);
       if (!res.headersSent) {
@@ -169,23 +169,23 @@ export class PublicFileController {
     this.logger.log(`文件访问: filename=${filename}, hash=${hash}, path=${filePath}`);
 
     try {
-      const fileStats = fs.statSync(filePath);
-
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Length', fileStats.size);
-      setContentDisposition(res, path.basename(filePath), 'inline');
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
-
-      fileStream.on('error', (error) => {
-        this.logger.error(`文件流错误: ${error.message}`, error);
-        if (!res.headersSent) {
-          res.status(500).json({ code: -1, message: (I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败') });
+      // 传输编排走 streamFileToResponse 唯一出口（含客户端中断→销毁读流句柄防护，
+      // 避免公开 mxweb 访问中断后文件被一直占用）。
+      await streamFileToResponse(
+        res,
+        filePath,
+        path.basename(filePath),
+        'application/octet-stream',
+        undefined,
+        {
+          cacheControl: 'public, max-age=3600',
+          allowOrigin: '*',
+          disposition: 'inline',
+          errorCode: -1,
+          errorMessage:
+            I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败',
         }
-      });
+      );
     } catch (error) {
       this.logger.error(`访问文件失败: ${error.message}`, error.stack);
       if (!res.headersSent) {

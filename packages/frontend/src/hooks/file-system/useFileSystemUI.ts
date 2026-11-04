@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
-import { globalShowToast } from '@/utils/notificationEvents';
-import type { Toast } from '../../components/ui/Toast';
+import { useCallback } from "react";
+import { globalShowToast } from "@/utils/notificationEvents";
+import type { Toast } from "@/components/ui";
 
 /**
  * 文件系统 UI 提示 hook。
@@ -14,10 +14,10 @@ import type { Toast } from '../../components/ui/Toast';
  */
 export const useFileSystemUI = () => {
   const showToast = useCallback(
-    (message: string, type: Toast['type'] = 'info') => {
+    (message: string, type: Toast["type"] = "info") => {
       globalShowToast(message, type);
     },
-    []
+    [],
   );
 
   return { showToast };

@@ -6,339 +6,119 @@
 /**
  * 运行时配置页数据层：取值、草稿、本地校验、保存、单键/分类重置、修改历史、搜索分组。
  *
- * 按职责切片组合（拆分 god-hook，见评审候选 2）：本文件保留「配置列表取值 +
- * 草稿/保存 + 搜索分组」核心面，面板类职责委托给同目录子 hook——
- * `useConfigHistory`（修改历史）、`useConfigChannel`（通道状态 + 测试）、
- * `useModeSwitch`（安全模式切换）、`useResetCategory`（分类批量重置）。
- * 对外返回形状不变，页面消费方零改动。
+ * 按职责切片组合（拆分 god-hook，见评审候选 2）：本文件只做**组合**——
+ * 列表核心面在 `useConfigList`，面板类职责在 `useConfigChannel`（通道状态 + 测试）、
+ * `useModeSwitch`（安全模式切换）、`useResetCategory`（分类批量重置）、
+ * `useConfigHistory`（修改历史）。对外返回**分组切片** `{ list, channel, mode, reset, history, stats }`，
+ * 页面按需消费单个切片，不再吃一个 55 成员的扁平 mega 对象。
  *
  * 权限说明：进本页的人已持有 SYSTEM_CONFIG_READ/WRITE，档位（tier）只做展示分层，
  * 因此这里不做任何额外的权限判断。
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  runtimeConfigControllerGetAllConfigs,
-  runtimeConfigControllerUpdateConfig,
-  runtimeConfigControllerResetConfig,
-  type RuntimeProfilePreviewResponseDto,
-} from '@/api-sdk';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useNotification } from '@/contexts/NotificationContext';
-import { usePermission } from '@/hooks/usePermission';
-import { SystemPermission } from '@/constants/permissions';
-import { getErrorMessage, handleError } from '@/utils/errorHandler';
-import { queryKeys } from '@/lib/queryKeys';
-import { t } from '@/languages';
 import {
-  CATEGORY_META,
-  FALLBACK_CATEGORY_META,
-  CATEGORY_ORDER,
-  buildSubgroupSections,
-  toConfigItems,
-  configItemId,
-} from '../meta';
-import type {
-  ChannelStatus,
-  ChannelTestResult,
-  ConfigGroup,
-  ConfigHistoryEntry,
-  ConfigItem,
-  DependencyStatus,
-} from '../types';
-import { defaultDraftOf, toSubmitValue, prettyJson } from '../validate';
-import type { DraftValue } from '../validate';
-import { useConfigHistory } from './useConfigHistory';
-import { useConfigChannel } from './useConfigChannel';
-import { useModeSwitch } from './useModeSwitch';
-import { useResetCategory } from './useResetCategory';
+  useConfigList,
+  type RuntimeConfigStats,
+  type UseConfigListReturn,
+} from './useConfigList';
 
-export interface RuntimeConfigStats {
-  total: number;
-  /** 后端标记的已修改项（区别于安装默认行） */
-  modified: number;
-  /** 环境变量已注入、优先级低于运行时配置的项 */
-  envDriven: number;
-  /** 当前页面尚未提交的草稿数 */
-  pendingSave: number;
-  /**
-   * 被安全模式管理的项数（声明了 profile 目标值的键）。
-   * 其中多数属 advanced 档、默认隐藏，页面列表里看不到——这个计数是给
-   * 管理员的「模式实际管住了多少项」锚点。
-   */
-  modeManaged: number;
-}
+// 兼容既有导入路径（PageHeader 等从本文件取类型）
+export type { RuntimeConfigStats } from './useConfigList';
+import {
+  useConfigChannel,
+  type UseConfigChannelReturn,
+} from './useConfigChannel';
+import {
+  useModeSwitch,
+  type UseModeSwitchReturn,
+} from './useModeSwitch';
+import {
+  useResetCategory,
+  type UseResetCategoryReturn,
+} from './useResetCategory';
+import {
+  useConfigHistory,
+  type UseConfigHistoryReturn,
+} from './useConfigHistory';
 
 export interface UseRuntimeConfigReturn {
-  configs: ConfigItem[];
-  /** key → 配置项：预览接口只返回 key，展示中文说明时据此取 description */
-  configsByKey: Map<string, ConfigItem>;
-  /**
-   * 开关依赖状态（检查手段②）：key → 该开关每个依赖项的满足情况。
-   * 满足与否按依赖项的**当前生效值**判定，页面据此渲染「依赖项 + 满足/不满足」。
-   */
-  dependencyStatus: Map<string, DependencyStatus[]>;
-  /** 通道状态（ADR-0082 #496）：配置完整度 + 验证记录，空数组表示后端未注册任何通道 */
-  channelStatuses: ChannelStatus[];
-  /** 正在执行测试发送的通道（按钮 loading 态） */
-  channelTesting: Set<string>;
-  /** 打开中的测试对话框对应的通道；null 表示未打开 */
-  channelTestTarget: string | null;
-  /** 测试对话框中的接收方草稿（邮箱/手机号，语义随通道而定；留空由通道动作自行决定） */
-  channelTestRecipient: string;
-  /**
-   * 最近一次测试的结果（失败时保留在对话框里展示错误文案 + 可定位的出错配置项；
-   * 成功/关闭对话框时清空）
-   */
-  channelTestResult: ChannelTestResult | null;
-  groups: ConfigGroup[];
-  loading: boolean;
-  configsError: string | null;
-  retryFetch: () => Promise<void>;
-  drafts: Record<string, DraftValue>;
-  fieldErrors: Record<string, string>;
-  saving: Set<string>;
-  savingCategory: boolean;
-  /** 当前选定的目标安全模式；null 表示未打开切换对话框 */
-  modeSwitchTarget: 'secure' | 'normal' | null;
-  /** 打开对话框后拉预览的加载态 */
-  modePreviewing: boolean;
-  /** 已取预览对应的目标模式（计数来源，可能早于对话框打开） */
-  modePreviewTarget: 'secure' | 'normal' | null;
-  /** 预览清单（willChange 决定将改动、envValue 标出 env 遮蔽项） */
-  modePreview: RuntimeProfilePreviewResponseDto[];
-  modeSaving: boolean;
-  resetPreviewCategory: string | null;
-  resetPreviewItems: ConfigItem[];
-  historyKey: string | null;
-  history: ConfigHistoryEntry[];
-  historyLoading: boolean;
-  historyError: string | null;
-  collapsed: Set<string>;
-  keyword: string;
-  onlyModified: boolean;
-  /** 默认收起的高级项条数（工具栏文案用） */
-  advancedCount: number;
-  showAdvanced: boolean;
-  secretVisible: Set<string>;
-  canManageConfig: boolean;
+  /** 配置列表 + 草稿/保存 + 搜索分组 + 折叠/定位 */
+  list: UseConfigListReturn;
+  /** 通道状态 + 测试发送 */
+  channel: UseConfigChannelReturn;
+  /** 安全模式切换 */
+  mode: UseModeSwitchReturn;
+  /** 分类批量重置 */
+  reset: UseResetCategoryReturn;
+  /** 修改历史 */
+  history: UseConfigHistoryReturn;
+  /** 页面级统计（列表的量 + 模式受管项数） */
   stats: RuntimeConfigStats;
-  setKeyword: (keyword: string) => void;
-  setOnlyModified: (onlyModified: boolean) => void;
-  setShowAdvanced: (showAdvanced: boolean) => void;
-  toggleCollapsed: (category: string) => void;
-  setAllCollapsed: (collapsed: boolean) => void;
-  /** 待高亮的配置项 key：通道缺失键点击定位后短暂闪烁，提示位置 */
-  highlightKey: string | null;
-  /** 定位到指定配置项（通道缺失键清单的跳转入口） */
-  focusConfigItem: (key: string) => void;
-  draftOf: (item: ConfigItem) => DraftValue;
-  isDirty: (item: ConfigItem) => boolean;
-  handleDraftChange: (key: string, value: DraftValue) => void;
-  handleFormatJson: (key: string) => void;
-  handleSave: (key: string) => Promise<boolean>;
-  handleReset: (key: string) => Promise<void>;
-  toggleSecretVisibility: (key: string) => void;
-  openChannelTest: (channel: string) => void;
-  closeChannelTest: () => void;
-  setChannelTestRecipient: (value: string) => void;
-  confirmChannelTest: () => Promise<void>;
-  requestResetCategory: (category: string) => void;
-  confirmResetCategory: () => Promise<void>;
-  cancelResetCategory: () => void;
-  requestModeSwitch: (target: 'secure' | 'normal') => void;
-  confirmModeSwitch: () => Promise<void>;
-  cancelModeSwitch: () => void;
-  openHistory: (key: string) => void;
-  closeHistory: () => void;
-}
-
-/**
- * 判断一条草稿相对当前值是否有实际变化。
- * 合法草稿按规范化值比对（避免 JSON 纯格式差异误判为待保存）；
- * 非法草稿与当前值的文本表示比对——保证错误提示能显示、保存按钮可用，
- * 用户不会面对一个「无法提交也看不到原因」的死状态。
- */
-function isDraftChanged(
-  item: ConfigItem,
-  draft: DraftValue | undefined
-): boolean {
-  if (draft === undefined) return false;
-  const outcome = toSubmitValue(item, draft);
-  if (outcome.valid && outcome.value !== undefined) {
-    return JSON.stringify(outcome.value) !== JSON.stringify(item.value ?? null);
-  }
-  return String(draft).trim() !== String(item.value ?? '').trim();
 }
 
 export function useRuntimeConfig(): UseRuntimeConfigReturn {
-  const { showToast, showConfirm } = useNotification();
-  const { hasPermission } = usePermission();
-  const queryClient = useQueryClient();
+  const { showToast } = useNotification();
 
-  const [configs, setConfigs] = useState<ConfigItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState<Set<string>>(new Set());
-  /** 待定位的配置项（seq 递增保证连续点击同一键也能重新触发滚动） */
-  const [focusRequest, setFocusRequest] = useState<{
-    key: string;
-    seq: number;
-  } | null>(null);
-  /** 正在高亮闪烁的配置项 key（定位落点后短暂提示位置） */
-  const [highlightKey, setHighlightKey] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [keyword, setKeyword] = useState('');
-  const [onlyModified, setOnlyModified] = useState(false);
-  /** 高级项默认收起：这类项（各接口限流阈值、压缩级别、文件锁参数）需要理解系统内部才敢改；备份/告警/清理等运维基线属 admin 档，默认展开 */
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  /** 已展开显示的遮罩值（input.secret 项默认隐藏） */
-  const [secretVisible, setSecretVisible] = useState<Set<string>>(new Set());
-  /** 首次拉取失败时的错误文案；非空时页面渲染错误态而非「暂无配置项」 */
-  const [configsError, setConfigsError] = useState<string | null>(null);
-
-  const canManageConfig = hasPermission(SystemPermission.SYSTEM_CONFIG_WRITE);
-
-  /**
-   * 保存/重置公开配置项后刷新公开配置缓存：公开配置的前端消费者
-   *（上传限制、VIP 导出门控、品牌与客服信息）读的是聚合后的 public 响应，
-   * 不清缓存会让同会话内的改动不生效。按 isPublic 判定而非硬编码键名——
-   * 否则 15 个公开项（mailEnabled / supportEmail / collaborationDomains …）
-   * 改完仍显旧值。
-   */
-  const invalidatePublicConfigCache = useCallback(
-    async (isPublic: boolean) => {
-      if (!isPublic) return;
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.runtimeConfig.public,
-      });
-    },
-    [queryClient]
-  );
-
-  /**
-   * 拉取配置列表。`silent` 用于保存/重置后的刷新：静默模式下不切全页 loading，
-   * 否则用户刚保存一条配置，整页会闪成「正在加载配置...」并丢失滚位。
-   * 首次加载与重试走非静默模式，由页面渲染 loading / 错误态。
-   */
-  const fetchConfigs = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      const silent = opts?.silent === true;
-      if (!silent) {
-        setLoading(true);
-        setConfigsError(null);
-      }
-      try {
-        const result = await runtimeConfigControllerGetAllConfigs({
-          throwOnError: true,
-        });
-        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
-        setConfigs(toConfigItems(result.data));
-      } catch (error: unknown) {
-        // 失败不能伪装成「暂无配置项」：首次加载失败给错误态，静默刷新只 toast
-        const message = getErrorMessage(error) || t('获取配置失败');
-        handleError(error, t('获取配置失败'));
-        showToast(message, 'error');
-        if (!silent) setConfigsError(message);
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    },
-    [showToast]
-  );
-
-  useEffect(() => {
-    void fetchConfigs();
-  }, [fetchConfigs]);
-
-  const configsByKey = useMemo(
-    () => new Map(configs.map((item) => [item.key, item])),
-    [configs]
-  );
-
-  /** 开关依赖状态：声明了 requires 的键，逐项判定依赖项当前生效值是否为 true */
-  const dependencyStatus = useMemo(() => {
-    const map = new Map<string, DependencyStatus[]>();
-    for (const item of configs) {
-      if (!item.requires?.length) continue;
-      map.set(
-        item.key,
-        item.requires.map((depKey) => {
-          const dep = configsByKey.get(depKey);
-          return {
-            key: depKey,
-            label: dep?.description || depKey,
-            satisfied: dep?.value === true,
-          };
-        })
-      );
-    }
-    return map;
-  }, [configs, configsByKey]);
-
-  // ---- 子 hook：修改历史 / 通道状态与测试 / 安全模式切换 / 分类批量重置 ----
-
-  const historyCtl = useConfigHistory();
-
-  const channelCtl = useConfigChannel(showToast);
+  const channel = useConfigChannel(showToast);
   // 子 hook 返回的是每次渲染新建的对象字面量，但成员函数是稳定的 useCallback。
   // 解构出稳定成员直接引用，避免把不稳定的对象字面量写进下游 useCallback/useEffect
   // 的依赖数组（react-hooks/exhaustive-deps 也会对 member 依赖报警）。
-  const { refreshChannelStatuses, loadChannelStatuses } = channelCtl;
+  const {
+    refreshChannelStatuses,
+    loadChannelStatuses,
+  } = channel;
+
+  const list = useConfigList({ refreshChannelStatuses });
+
+  const {
+    clearKeys,
+    clearCategory,
+    refetchSilent,
+    invalidatePublicCache,
+    configs,
+    isDirty,
+  } = list;
 
   const handleModeApplied = useCallback(
     async (applied: string[], unchanged: string[]) => {
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const key of applied) delete next[key];
-        for (const key of unchanged) delete next[key];
-        return next;
-      });
-      setFieldErrors({});
-      await fetchConfigs({ silent: true });
+      clearKeys([...applied, ...unchanged]);
+      await refetchSilent();
       await refreshChannelStatuses();
     },
-    [fetchConfigs, refreshChannelStatuses]
+    [clearKeys, refetchSilent, refreshChannelStatuses]
   );
 
-  const modeCtl = useModeSwitch(showToast, handleModeApplied);
-  const { modePreviewTarget, loadModePreview } = modeCtl;
+  const mode = useModeSwitch(showToast, handleModeApplied);
 
   const handleResetCategory = useCallback(
     async (category: string) => {
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const item of configs) {
-          if (item.category === category) delete next[item.key];
-        }
-        return next;
-      });
-      setFieldErrors({});
-      await fetchConfigs({ silent: true });
-      await invalidatePublicConfigCache(
+      clearCategory(category);
+      await refetchSilent();
+      await invalidatePublicCache(
         configs.some((c) => c.category === category && c.isPublic)
       );
       await refreshChannelStatuses();
     },
-    [configs, fetchConfigs, invalidatePublicConfigCache, refreshChannelStatuses]
+    [clearCategory, refetchSilent, invalidatePublicCache, configs, refreshChannelStatuses]
   );
 
-  const resetCategoryCtl = useResetCategory(configs, showToast, handleResetCategory);
+  const reset = useResetCategory(configs, showToast, handleResetCategory);
+
+  const history = useConfigHistory();
 
   // 配置列表加载完成后拉一次通道状态
   useEffect(() => {
-    if (loading) return;
+    if (list.loading) return;
     void loadChannelStatuses();
-  }, [loading, loadChannelStatuses]);
+  }, [list.loading, loadChannelStatuses]);
 
   // 首次进页取一次模式预览：「模式受管项」计数只来自这里
   useEffect(() => {
-    if (loading || modePreviewTarget !== null) return;
-    void loadModePreview('secure');
-  }, [loading, modePreviewTarget, loadModePreview]);
-
-  // ---- 派生：统计 / 分组 ----
+    if (list.loading || mode.modePreviewTarget !== null) return;
+    void mode.loadModePreview('secure');
+  }, [list.loading, mode.modePreviewTarget, mode.loadModePreview]);
 
   const stats: RuntimeConfigStats = useMemo(
     () => ({
@@ -347,398 +127,11 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       envDriven: configs.filter(
         (c) => c.envValue !== null && c.envValue !== undefined
       ).length,
-      pendingSave: configs.filter((c) => isDraftChanged(c, drafts[c.key]))
-        .length,
-      modeManaged: modeCtl.modeProfileKeys.size,
+      pendingSave: configs.filter((c) => isDirty(c)).length,
+      modeManaged: mode.modeProfileKeys.size,
     }),
-    [configs, drafts, modeCtl.modeProfileKeys]
+    [configs, isDirty, mode.modeProfileKeys]
   );
 
-  /** 搜索 + 只看已修改 + 高级项开关 → 按分类分组（分类顺序固定，已修改项组内置顶） */
-  const groups: ConfigGroup[] = useMemo(() => {
-    const q = keyword.trim().toLowerCase();
-    const matched = configs.filter((item) => {
-      if (onlyModified && !item.isModified) return false;
-      // 关键（搜索）时不过滤档位：藏起来的高级项也要能被搜出来
-      if (!q && !showAdvanced && item.tier === 'advanced') return false;
-      if (!q) return true;
-      const categoryLabel = CATEGORY_META[item.category]?.label ?? '';
-      return (
-        item.key.toLowerCase().includes(q) ||
-        (item.description ?? '').toLowerCase().includes(q) ||
-        categoryLabel.toLowerCase().includes(q) ||
-        (item.impact ?? '').toLowerCase().includes(q)
-      );
-    });
-
-    const byCategory = new Map<string, ConfigItem[]>();
-    for (const item of matched) {
-      const list = byCategory.get(item.category) ?? [];
-      list.push(item);
-      byCategory.set(item.category, list);
-    }
-
-    const ordered = [...byCategory.keys()].sort((a, b) => {
-      const ia = CATEGORY_ORDER.indexOf(a);
-      const ib = CATEGORY_ORDER.indexOf(b);
-      if (ia === -1 || ib === -1) return ia === -1 ? 1 : -1;
-      return ia - ib;
-    });
-
-    return ordered.map((category) => {
-      const items = [...(byCategory.get(category) ?? [])].sort((a, b) => {
-        const ma = a.isModified ? 0 : 1;
-        const mb = b.isModified ? 0 : 1;
-        return ma - mb || a.key.localeCompare(b.key);
-      });
-      return {
-        category,
-        label: CATEGORY_META[category]?.label ?? category,
-        icon: CATEGORY_META[category]?.icon ?? FALLBACK_CATEGORY_META.icon,
-        items,
-        subgroups: buildSubgroupSections(category, items),
-        modifiedCount: items.filter((i) => i.isModified).length,
-      };
-    });
-  }, [configs, keyword, onlyModified, showAdvanced]);
-
-  const advancedCount = useMemo(
-    () => configs.filter((c) => c.tier === 'advanced').length,
-    [configs]
-  );
-
-  // ---- 草稿 ----
-
-  const draftOf = useCallback(
-    (item: ConfigItem): DraftValue => {
-      const draft = drafts[item.key];
-      return draft === undefined ? defaultDraftOf(item) : draft;
-    },
-    [drafts]
-  );
-
-  const isDirty = useCallback(
-    (item: ConfigItem): boolean => isDraftChanged(item, drafts[item.key]),
-    [drafts]
-  );
-
-  const handleDraftChange = useCallback((key: string, value: DraftValue) => {
-    setDrafts((prev) => ({ ...prev, [key]: value }));
-    // 用户重新编辑即清除该项的就地错误
-    setFieldErrors((prev) => {
-      if (!(key in prev)) return prev;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  }, []);
-
-  /** 美化 JSON 草稿：只改缩进不改语义，无法解析时原样不动 */
-  const handleFormatJson = useCallback(
-    (key: string) => {
-      const item = configsByKey.get(key);
-      if (!item) return;
-      setDrafts((prev) => {
-        const current = prev[key] ?? defaultDraftOf(item);
-        if (typeof current !== 'string') return prev;
-        const next = prettyJson(current);
-        if (next === current) return prev;
-        return { ...prev, [key]: next };
-      });
-      setFieldErrors((prev) => {
-        if (!(key in prev)) return prev;
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    },
-    [configsByKey]
-  );
-
-  /**
-   * 保存单项。流程：本地校验 → 危险项二次确认 → 提交 → 就地错误 / toast。
-   * 危险项（dangerous）在保存前确认并说明 impact；普通项不弹确认框，避免干扰日常操作。
-   */
-  const handleSave = useCallback(
-    async (key: string): Promise<boolean> => {
-      const item = configsByKey.get(key);
-      if (!item) return false;
-
-      const outcome = toSubmitValue(item, draftOf(item));
-      if (!outcome.valid || outcome.value === undefined) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          [key]: outcome.message ?? t('输入值不合法'),
-        }));
-        return false;
-      }
-
-      if (item.dangerous) {
-        const confirmed = await showConfirm({
-          title: t('确认修改危险配置'),
-          message: [
-            t('即将修改「{key}」，该配置已标记为危险项。', { key }),
-            item.impact ?? t('请确认了解该配置的影响面。'),
-          ].join('\n'),
-          confirmText: t('确认修改'),
-          cancelText: t('取消'),
-          type: 'warning',
-        });
-        if (!confirmed) return false;
-      }
-
-      try {
-        setSaving((prev) => new Set(prev).add(key));
-        const result = await runtimeConfigControllerUpdateConfig({
-          throwOnError: true,
-          path: { key },
-          body: { val: outcome.value as never },
-        });
-        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-        // 否则保存失败仍会弹「配置已保存」
-        showToast(t('配置已保存'), 'success');
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-        await fetchConfigs({ silent: true });
-        await invalidatePublicConfigCache(item.isPublic);
-        // 通道配置项变更会使验证记录失效，刷新通道区块状态
-        await refreshChannelStatuses();
-        return true;
-      } catch (error: unknown) {
-        handleError(error, t('保存配置失败'));
-        // 后端 400（范围/类型/枚举不合法）就地展示在对应卡片，而不是只弹全局 toast
-        setFieldErrors((prev) => ({
-          ...prev,
-          [key]: getErrorMessage(error) || t('保存失败'),
-        }));
-        showToast(getErrorMessage(error) || t('保存失败'), 'error');
-        return false;
-      } finally {
-        setSaving((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      }
-    },
-    [
-      configsByKey,
-      draftOf,
-      showConfirm,
-      showToast,
-      fetchConfigs,
-      invalidatePublicConfigCache,
-      refreshChannelStatuses,
-    ]
-  );
-
-  /**
-   * 单键恢复默认。
-   * 后端语义是「清空显式修改标记」而非「写回默认值」：若该键在 .env 配了值，
-   * 生效值会退回 env 值而不是代码默认值，因此确认文案必须带这一提示。
-   */
-  const handleReset = useCallback(
-    async (key: string) => {
-      const item = configsByKey.get(key);
-      if (!item) return;
-
-      const hasEnv = item.envValue !== null && item.envValue !== undefined;
-      const lines = [t('确定要把「{key}」恢复默认吗？', { key })];
-      if (hasEnv) {
-        lines.push(
-          t(
-            '该项由系统预置为「{env}」，恢复出厂后仍由它生效，不会变成出厂默认值「{def}」。',
-            {
-              env: String(item.envValue),
-              def: String(item.defaultValue ?? ''),
-            }
-          )
-        );
-      } else {
-        lines.push(t('此操作会清空页面修改，不可撤销。'));
-      }
-
-      const confirmed = await showConfirm({
-        title: t('确认恢复默认'),
-        message: lines.join('\n'),
-        confirmText: t('确认恢复'),
-        cancelText: t('取消'),
-        type: 'warning',
-      });
-      if (!confirmed) return;
-
-      try {
-        setSaving((prev) => new Set(prev).add(key));
-        const result = await runtimeConfigControllerResetConfig({
-          throwOnError: true,
-          path: { key },
-        });
-        showToast(t('已恢复默认'), 'success');
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-        setFieldErrors((prev) => {
-          if (!(key in prev)) return prev;
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-        await fetchConfigs({ silent: true });
-        await invalidatePublicConfigCache(item.isPublic);
-        // 通道配置项重置会使验证记录失效，刷新通道区块状态
-        await refreshChannelStatuses();
-      } catch (error: unknown) {
-        handleError(error, t('恢复默认失败'));
-        showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
-      } finally {
-        setSaving((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      }
-    },
-    [
-      configsByKey,
-      showConfirm,
-      showToast,
-      fetchConfigs,
-      invalidatePublicConfigCache,
-      refreshChannelStatuses,
-    ]
-  );
-
-  // ---- UI：折叠 / 定位 ----
-
-  const toggleCollapsed = useCallback((category: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(category)) next.delete(category);
-      else next.add(category);
-      return next;
-    });
-  }, []);
-
-  /**
-   * 定位到指定配置项：通道缺失键清单的跳转入口。
-   * 目标项可能被搜索关键词、只看已修改、高级项收起、分类折叠挡住，
-   * 先把这些挡住的条件清掉再发定位请求——滚动与高亮由下方 effect 在
-   * DOM 更新后执行。
-   */
-  const focusConfigItem = useCallback(
-    (key: string) => {
-      const item = configsByKey.get(key);
-      if (!item) return;
-      if (keyword.trim()) setKeyword('');
-      if (onlyModified) setOnlyModified(false);
-      if (item.tier === 'advanced' && !showAdvanced) setShowAdvanced(true);
-      if (collapsed.has(item.category)) {
-        setCollapsed((prev) => {
-          const next = new Set(prev);
-          next.delete(item.category);
-          return next;
-        });
-      }
-      setFocusRequest((prev) => ({ key, seq: (prev?.seq ?? 0) + 1 }));
-    },
-    [configsByKey, keyword, onlyModified, showAdvanced, collapsed]
-  );
-
-  /** 定位生效：滚动到配置项并短暂高亮（seq 变化即重新定位） */
-  useEffect(() => {
-    if (!focusRequest) return;
-    const key = focusRequest.key;
-    setHighlightKey(key);
-    document.getElementById(configItemId(key))?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
-    const timer = setTimeout(() => setHighlightKey(null), 2400);
-    return () => clearTimeout(timer);
-  }, [focusRequest]);
-
-  const setAllCollapsed = useCallback(
-    (value: boolean) => {
-      setCollapsed(value ? new Set(groups.map((g) => g.category)) : new Set());
-    },
-    [groups]
-  );
-
-  const toggleSecretVisibility = useCallback((key: string) => {
-    setSecretVisible((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
-
-  return {
-    configs,
-    configsByKey,
-    dependencyStatus,
-    channelStatuses: channelCtl.channelStatuses,
-    channelTesting: channelCtl.channelTesting,
-    channelTestTarget: channelCtl.channelTestTarget,
-    channelTestRecipient: channelCtl.channelTestRecipient,
-    channelTestResult: channelCtl.channelTestResult,
-    groups,
-    loading,
-    configsError,
-    drafts,
-    fieldErrors,
-    saving,
-    savingCategory: resetCategoryCtl.savingCategory,
-    modeSwitchTarget: modeCtl.modeSwitchTarget,
-    modePreviewing: modeCtl.modePreviewing,
-    modePreviewTarget: modeCtl.modePreviewTarget,
-    modePreview: modeCtl.modePreview,
-    modeSaving: modeCtl.modeSaving,
-    resetPreviewCategory: resetCategoryCtl.resetPreviewCategory,
-    resetPreviewItems: resetCategoryCtl.resetPreviewItems,
-    historyKey: historyCtl.historyKey,
-    history: historyCtl.history,
-    historyLoading: historyCtl.historyLoading,
-    historyError: historyCtl.historyError,
-    collapsed,
-    keyword,
-    onlyModified,
-    advancedCount,
-    showAdvanced,
-    secretVisible,
-    canManageConfig,
-    stats,
-    setKeyword,
-    setOnlyModified,
-    setShowAdvanced,
-    retryFetch: () => fetchConfigs(),
-    toggleCollapsed,
-    setAllCollapsed,
-    highlightKey,
-    focusConfigItem,
-    draftOf,
-    isDirty,
-    handleDraftChange,
-    handleFormatJson,
-    handleSave,
-    handleReset,
-    toggleSecretVisibility,
-    openChannelTest: channelCtl.openChannelTest,
-    closeChannelTest: channelCtl.closeChannelTest,
-    setChannelTestRecipient: channelCtl.setChannelTestRecipient,
-    confirmChannelTest: channelCtl.confirmChannelTest,
-    requestResetCategory: resetCategoryCtl.requestResetCategory,
-    confirmResetCategory: resetCategoryCtl.confirmResetCategory,
-    cancelResetCategory: resetCategoryCtl.cancelResetCategory,
-    requestModeSwitch: modeCtl.requestModeSwitch,
-    confirmModeSwitch: modeCtl.confirmModeSwitch,
-    cancelModeSwitch: modeCtl.cancelModeSwitch,
-    openHistory: historyCtl.openHistory,
-    closeHistory: historyCtl.closeHistory,
-  };
+  return { list, channel, mode, reset, history, stats };
 }

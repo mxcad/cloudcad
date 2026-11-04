@@ -36,7 +36,8 @@ vi.mock('@/api-sdk', () => ({
 }));
 
 vi.mock('@/languages', () => ({
-  t: (msg: string) => msg,
+  t: (m: string, vars?: Record<string, string>) =>
+    vars ? m.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? '') : m,
 }));
 
 vi.mock('@/utils/errorHandler', () => ({
@@ -404,7 +405,7 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
       expect(pushSpy).toHaveBeenCalledTimes(1);
       expect(pushSpy.mock.calls[0][0].description).toBe('移动 1 个项目');
       expect(showToast).toHaveBeenCalledWith(
-        expect.stringContaining('{failedCount} 项失败'),
+        expect.stringMatching(/成功移动.*项失败/),
         'warning'
       );
     });

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FilePickerResult } from '@/composables/useNativeFilePicker';
+import type { ConversionResult } from '@/services/conversionStream';
 
 /**
  * 「打开文件」命令编排契约测试。
@@ -28,7 +29,9 @@ const {
   openMxWebMock: vi.fn(
     async (_url: string, _options?: { fetchAttributes?: number }) => true
   ),
-  waitPublicConversionMock: vi.fn(async () => 'COMPLETED'),
+  waitPublicConversionMock: vi.fn(
+    async (): Promise<ConversionResult> => ({ status: 'COMPLETED' })
+  ),
   checkExtRefsMock: vi.fn(async () => true),
   toastMock: vi.fn(),
   guardMock: vi.fn(async () => true),
@@ -120,7 +123,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   editorStateMock.state.isModified = false;
   openMxWebMock.mockResolvedValue(true);
-  waitPublicConversionMock.mockResolvedValue('COMPLETED');
+  waitPublicConversionMock.mockResolvedValue({ status: 'COMPLETED' });
   guardMock.mockResolvedValue(true);
 });
 
@@ -162,7 +165,7 @@ describe('打开文件命令编排', () => {
     const settled: string[] = [];
     waitPublicConversionMock.mockImplementation(async () => {
       settled.push('COMPLETED');
-      return 'COMPLETED';
+      return { status: 'COMPLETED' };
     });
 
     await pick();
@@ -175,15 +178,32 @@ describe('打开文件命令编排', () => {
     expect(editorStateMock.setFileName).toHaveBeenCalledWith('test.dwg');
   });
 
-  it('转换失败不打开、不查外部参照，提示转换失败并收起遮罩', async () => {
-    waitPublicConversionMock.mockResolvedValue('FAILED');
+  it('转换失败不打开、不查外部参照，按失败性质提示并收起遮罩', async () => {
+    waitPublicConversionMock.mockResolvedValue({ status: 'FAILED' });
 
     await pick();
 
     expect(openMxWebMock).not.toHaveBeenCalled();
     expect(checkExtRefsMock).not.toHaveBeenCalled();
-    expect(toastMock).toHaveBeenCalledWith('转换失败');
+    // 未分类（无 errorCategory）归「引擎/服务异常」桶
+    expect(toastMock).toHaveBeenCalledWith(
+      '转换服务异常，请稍后重试；多次失败请联系管理员'
+    );
     expect(editorStateMock.setLoading).toHaveBeenCalledWith(false);
+  });
+
+  it('转换失败 content-error：提示「文件内容问题」而非「服务异常」', async () => {
+    waitPublicConversionMock.mockResolvedValue({
+      status: 'FAILED',
+      errorCategory: 'content-error',
+      error: 'read file error',
+    });
+
+    await pick();
+
+    expect(toastMock).toHaveBeenCalledWith(
+      '图纸文件内容异常，转换无法完成，请检查文件或重新导出后再试'
+    );
   });
 
   it('无缓存打开传入引擎 fetch 标志位；缓存打开不传', async () => {

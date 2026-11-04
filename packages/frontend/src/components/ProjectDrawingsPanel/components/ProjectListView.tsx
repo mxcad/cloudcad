@@ -3,19 +3,19 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useMemo, useRef } from 'react';
-import { FolderOpen, Loader2, AlertTriangle } from 'lucide-react';
-import type { FileSystemNode } from '@/types/filesystem';
-import { FileItem } from '@/components/FileItem';
-import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
-import type { ProjectFilterType } from '@/api-sdk';
-import { Tab, Tabs } from '@/components/ui';
-import { Button } from '@/components/ui/Button';
-import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
-import { useScrollPagination } from '@/hooks/common/useScrollPagination';
-import { PAGE_SIZE } from '@/constants/pagination';
-import styles from '@/components/sidebar/sidebar.module.css';
-import { t } from '@/languages';
+import React, { useMemo, useRef } from "react";
+import { FolderOpen, Loader2, AlertTriangle } from "lucide-react";
+import type { FileSystemNode } from "@/types/filesystem";
+import { FileItem } from "@/components/FileItem";
+import { getFileItemPermissionProps } from "@/hooks/useFileItemProps";
+import type { ProjectFilterType } from "@/api-sdk";
+import { Tab, Tabs } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
+import { useScrollPagination } from "@/hooks/common/useScrollPagination";
+import { PAGE_SIZE } from "@/constants/pagination";
+import styles from "@/components/sidebar/sidebar.module.css";
+import { t } from "@/languages";
 
 interface ProjectListViewProps {
   projects: FileSystemNode[];
@@ -53,7 +53,7 @@ interface ProjectListViewProps {
   /** 列表第一项所属页码（累计模型下由数据层维护；prev 触发防重复加载已存在页） */
   minLoadedPage?: number;
   /** 滚动触发的翻页（追加/前插由父层 useAccumulatedPagination 处理） */
-  onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
+  onScrollPageChange?: (page: number, direction: "prev" | "next") => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -83,10 +83,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     () =>
       searchQuery
         ? projects.filter((p) =>
-            p.name.toLowerCase().includes(searchQuery.toLowerCase())
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()),
           )
         : projects,
-    [projects, searchQuery]
+    [projects, searchQuery],
   );
 
   // 滚动分页统一控制器：滚动容器（listRef）与列表项容器（itemContainerRef，仅含项目 DOM）
@@ -117,7 +117,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             onClick={onCreateProject}
             className="w-full px-3 py-1 text-sm rounded-lg bg-[var(--primary-500)] text-white hover:bg-[var(--primary-600)] transition-colors"
           >
-            {t('+ 创建项目')}
+            {t("+ 创建项目")}
           </button>
         </div>
       )}
@@ -125,9 +125,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       {/* 项目过滤 Tab */}
       <Tabs>
         {[
-          { key: 'all', label: t('全部') },
-          { key: 'owned', label: t('我创建的') },
-          { key: 'joined', label: t('我加入的') },
+          { key: "all", label: t("全部") },
+          { key: "owned", label: t("我创建的") },
+          { key: "joined", label: t("我加入的") },
         ].map((tab) => (
           <Tab
             key={tab.key}
@@ -146,10 +146,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           <div
             data-testid="project-list-top-loader"
             className="flex items-center justify-center gap-2 py-2 text-xs"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
           >
             <Loader2 size={14} className="animate-spin" />
-            <span>{t('加载中...')}</span>
+            <span>{t("加载中...")}</span>
           </div>
         )}
 
@@ -158,7 +158,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           <div className={styles.emptyState}>
             <FolderOpen size={48} className={styles.emptyIcon} />
             <div className={styles.emptyText}>
-              {t('暂无项目，请先创建项目')}
+              {t("暂无项目，请先创建项目")}
             </div>
           </div>
         ) : (
@@ -226,16 +226,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           (showBottomLoader ? (
             <div
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <Loader2 size={14} className="animate-spin" />
-              <span>{t('加载中...')}</span>
+              <span>{t("加载中...")}</span>
             </div>
           ) : loadError ? (
             <div
               data-testid="project-list-load-error"
               className="flex items-center justify-center gap-2 py-3 text-xs"
-              style={{ color: 'var(--error)' }}
+              style={{ color: "var(--error)" }}
             >
               <AlertTriangle size={14} className="shrink-0" />
               <span className="max-w-[60%] truncate" title={loadError}>
@@ -243,16 +243,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
               </span>
               {onRetryLoadMore && (
                 <Button variant="outline" size="xs" onClick={onRetryLoadMore}>
-                  {t('重试')}
+                  {t("重试")}
                 </Button>
               )}
             </div>
           ) : isLastPage ? (
             <div
               className="flex items-center justify-center py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
-              {t('已经是最后一页')}
+              {t("已经是最后一页")}
             </div>
           ) : null)}
         <ScrollToTopButton containerRef={listRef} />

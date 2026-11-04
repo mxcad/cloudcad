@@ -30,6 +30,9 @@ import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { CONVERSION_FILE_CHANNEL } from '../conversion/conversion-task-sse.constants';
 import { DatabaseService } from '../../database/database.service';
+import { QuotaGuardService } from './quota-guard.service';
+import { NoNodeConversionService } from './no-node-conversion.service';
+import { FailureSettlementService } from './failure-settlement.service';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -168,6 +171,10 @@ describe('DrawingIngestService', () => {
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: DatabaseService, useValue: mockPrisma },
+        // 评审候选 6：DrawingIngest 拆出的三个 stage 服务（真实实例，DI 解析其底层依赖）
+        QuotaGuardService,
+        NoNodeConversionService,
+        FailureSettlementService,
       ],
     }).compile();
     service = module.get<DrawingIngestService>(DrawingIngestService);

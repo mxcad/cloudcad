@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Filter,
   X,
@@ -8,21 +8,24 @@ import {
   FileText,
   Ruler,
   ArrowUpDown,
-} from 'lucide-react';
-import { Select } from '@/components/ui/Select';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { dateOnlyToIso, isoToDateOnly } from '@/utils/dateUtils';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { Z_LAYERS } from '@/constants/layers';
+} from "lucide-react";
 import {
+  Select,
+  DatePicker,
+  Tooltip,
   formatFileSize,
   toBytes,
   FileSizeInput,
   type SizeUnit,
-} from '@/components/ui/FileSize';
-import { t, $t } from '@/languages';
-import { useIsMobile } from '@/lib/useIsMobile';
-import { appendToken, removeToken } from './search-utils';
+} from "@/components/ui";
+
+import { dateOnlyToIso, isoToDateOnly } from "@/utils/dateUtils";
+
+import { Z_LAYERS } from "@/constants/layers";
+
+import { t, $t } from "@/languages";
+import { useIsMobile } from "@/lib/useIsMobile";
+import { appendToken, removeToken } from "./search-utils";
 
 export interface SearchFilterValues {
   extensions?: string[];
@@ -34,7 +37,7 @@ export interface SearchFilterValues {
   sizeMin?: number;
   sizeMax?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 function cleanFilters(f: SearchFilterValues): SearchFilterValues {
@@ -55,9 +58,9 @@ function cleanFilters(f: SearchFilterValues): SearchFilterValues {
 
 function getExtOptions() {
   return [
-    { value: '.dwg', label: t('DWG 图纸') },
-    { value: '.dxf', label: t('DXF 图纸') },
-    { value: '.mxweb', label: t('MXWEB 文件') },
+    { value: ".dwg", label: t("DWG 图纸") },
+    { value: ".dxf", label: t("DXF 图纸") },
+    { value: ".mxweb", label: t("MXWEB 文件") },
   ];
 }
 
@@ -68,31 +71,31 @@ function getSizePresets(): {
   max?: number;
 }[] {
   return [
-    { value: '', label: t('全部大小') },
-    { value: 'lt1mb', label: '< 1 MB', max: toBytes(1, 'MB') },
+    { value: "", label: t("全部大小") },
+    { value: "lt1mb", label: "< 1 MB", max: toBytes(1, "MB") },
     {
-      value: '1mb-10mb',
-      label: '1 MB - 10 MB',
-      min: toBytes(1, 'MB'),
-      max: toBytes(10, 'MB'),
+      value: "1mb-10mb",
+      label: "1 MB - 10 MB",
+      min: toBytes(1, "MB"),
+      max: toBytes(10, "MB"),
     },
     {
-      value: '10mb-100mb',
-      label: '10 MB - 100 MB',
-      min: toBytes(10, 'MB'),
-      max: toBytes(100, 'MB'),
+      value: "10mb-100mb",
+      label: "10 MB - 100 MB",
+      min: toBytes(10, "MB"),
+      max: toBytes(100, "MB"),
     },
-    { value: 'gt100mb', label: '> 100 MB', min: toBytes(100, 'MB') },
+    { value: "gt100mb", label: "> 100 MB", min: toBytes(100, "MB") },
   ];
 }
 
 function getTimePresets(): { value: string; label: string }[] {
   return [
-    { value: '', label: t('不限') },
-    { value: '-1d', label: t('今天') },
-    { value: '-7d', label: t('最近 7 天') },
-    { value: '-30d', label: t('最近 30 天') },
-    { value: '-90d', label: t('最近 90 天') },
+    { value: "", label: t("不限") },
+    { value: "-1d", label: t("今天") },
+    { value: "-7d", label: t("最近 7 天") },
+    { value: "-30d", label: t("最近 30 天") },
+    { value: "-90d", label: t("最近 90 天") },
   ];
 }
 
@@ -100,57 +103,57 @@ function getSortOptions(): {
   value: string;
   label: string;
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
 }[] {
   return [
-    { value: '', label: t('默认排序'), sortBy: 'updatedAt', sortOrder: 'desc' },
+    { value: "", label: t("默认排序"), sortBy: "updatedAt", sortOrder: "desc" },
     {
-      value: 'updatedAt|desc',
-      label: t('更新时间 ↑'),
-      sortBy: 'updatedAt',
-      sortOrder: 'desc',
+      value: "updatedAt|desc",
+      label: t("更新时间 ↑"),
+      sortBy: "updatedAt",
+      sortOrder: "desc",
     },
     {
-      value: 'updatedAt|asc',
-      label: t('更新时间 ↓'),
-      sortBy: 'updatedAt',
-      sortOrder: 'asc',
+      value: "updatedAt|asc",
+      label: t("更新时间 ↓"),
+      sortBy: "updatedAt",
+      sortOrder: "asc",
     },
     {
-      value: 'createdAt|desc',
-      label: t('创建时间 ↑'),
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      value: "createdAt|desc",
+      label: t("创建时间 ↑"),
+      sortBy: "createdAt",
+      sortOrder: "desc",
     },
     {
-      value: 'createdAt|asc',
-      label: t('创建时间 ↓'),
-      sortBy: 'createdAt',
-      sortOrder: 'asc',
+      value: "createdAt|asc",
+      label: t("创建时间 ↓"),
+      sortBy: "createdAt",
+      sortOrder: "asc",
     },
     {
-      value: 'name|asc',
-      label: t('名称 A-Z'),
-      sortBy: 'name',
-      sortOrder: 'asc',
+      value: "name|asc",
+      label: t("名称 A-Z"),
+      sortBy: "name",
+      sortOrder: "asc",
     },
     {
-      value: 'name|desc',
-      label: t('名称 Z-A'),
-      sortBy: 'name',
-      sortOrder: 'desc',
+      value: "name|desc",
+      label: t("名称 Z-A"),
+      sortBy: "name",
+      sortOrder: "desc",
     },
     {
-      value: 'size|asc',
-      label: t('从小到大'),
-      sortBy: 'size',
-      sortOrder: 'asc',
+      value: "size|asc",
+      label: t("从小到大"),
+      sortBy: "size",
+      sortOrder: "asc",
     },
     {
-      value: 'size|desc',
-      label: t('从大到小'),
-      sortBy: 'size',
-      sortOrder: 'desc',
+      value: "size|desc",
+      label: t("从大到小"),
+      sortBy: "size",
+      sortOrder: "desc",
     },
   ];
 }
@@ -159,78 +162,78 @@ function getProjectSortOptions(): {
   value: string;
   label: string;
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
 }[] {
   return [
-    { value: '', label: t('默认排序'), sortBy: 'updatedAt', sortOrder: 'desc' },
+    { value: "", label: t("默认排序"), sortBy: "updatedAt", sortOrder: "desc" },
     {
-      value: 'updatedAt|desc',
-      label: t('更新时间 ↑'),
-      sortBy: 'updatedAt',
-      sortOrder: 'desc',
+      value: "updatedAt|desc",
+      label: t("更新时间 ↑"),
+      sortBy: "updatedAt",
+      sortOrder: "desc",
     },
     {
-      value: 'updatedAt|asc',
-      label: t('更新时间 ↓'),
-      sortBy: 'updatedAt',
-      sortOrder: 'asc',
+      value: "updatedAt|asc",
+      label: t("更新时间 ↓"),
+      sortBy: "updatedAt",
+      sortOrder: "asc",
     },
     {
-      value: 'createdAt|desc',
-      label: t('创建时间 ↑'),
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      value: "createdAt|desc",
+      label: t("创建时间 ↑"),
+      sortBy: "createdAt",
+      sortOrder: "desc",
     },
     {
-      value: 'createdAt|asc',
-      label: t('创建时间 ↓'),
-      sortBy: 'createdAt',
-      sortOrder: 'asc',
+      value: "createdAt|asc",
+      label: t("创建时间 ↓"),
+      sortBy: "createdAt",
+      sortOrder: "asc",
     },
     {
-      value: 'name|asc',
-      label: t('名称 A-Z'),
-      sortBy: 'name',
-      sortOrder: 'asc',
+      value: "name|asc",
+      label: t("名称 A-Z"),
+      sortBy: "name",
+      sortOrder: "asc",
     },
     {
-      value: 'name|desc',
-      label: t('名称 Z-A'),
-      sortBy: 'name',
-      sortOrder: 'desc',
+      value: "name|desc",
+      label: t("名称 Z-A"),
+      sortBy: "name",
+      sortOrder: "desc",
     },
     {
-      value: 'size|asc',
-      label: t('从小到大'),
-      sortBy: 'size',
-      sortOrder: 'asc',
+      value: "size|asc",
+      label: t("从小到大"),
+      sortBy: "size",
+      sortOrder: "asc",
     },
     {
-      value: 'size|desc',
-      label: t('从大到小'),
-      sortBy: 'size',
-      sortOrder: 'desc',
+      value: "size|desc",
+      label: t("从大到小"),
+      sortBy: "size",
+      sortOrder: "desc",
     },
   ];
 }
 
 function getCurrentSortValue(
   sortBy?: string,
-  sortOrder?: 'asc' | 'desc'
+  sortOrder?: "asc" | "desc",
 ): string {
-  if (!sortBy) return '';
-  return `${sortBy}|${sortOrder || 'desc'}`;
+  if (!sortBy) return "";
+  return `${sortBy}|${sortOrder || "desc"}`;
 }
 
 function parseSortValue(value: string): {
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 } {
   if (!value) return {};
-  const parts = value.split('|');
+  const parts = value.split("|");
   return {
     sortBy: parts[0],
-    sortOrder: (parts[1] as 'asc' | 'desc') || 'desc',
+    sortOrder: (parts[1] as "asc" | "desc") || "desc",
   };
 }
 
@@ -244,8 +247,8 @@ function getSizeLabel(min?: number, max?: number): string | undefined {
 
 function getDateLabel(from?: string, to?: string): string | undefined {
   if (from && to) return `${from.slice(0, 10)} ~ ${to.slice(0, 10)}`;
-  if (from) return $t('从 {date}', { date: from.slice(0, 10) });
-  if (to) return $t('到 {date}', { date: to.slice(0, 10) });
+  if (from) return $t("从 {date}", { date: from.slice(0, 10) });
+  if (to) return $t("到 {date}", { date: to.slice(0, 10) });
   return undefined;
 }
 
@@ -258,16 +261,16 @@ export interface FilterChip {
 export function getActiveFilterChips(
   filters: SearchFilterValues,
   onChange: (f: SearchFilterValues) => void,
-  scope?: 'project' | 'project_files'
+  scope?: "project" | "project_files",
 ): FilterChip[] {
   const chips: FilterChip[] = [];
 
   // 文件专属过滤（项目模式不显示）
-  if (scope !== 'project') {
+  if (scope !== "project") {
     if (filters.extensions && filters.extensions.length > 0) {
       chips.push({
-        key: 'extensions',
-        label: $t('格式: {ext}', { ext: filters.extensions.join(', ') }),
+        key: "extensions",
+        label: $t("格式: {ext}", { ext: filters.extensions.join(", ") }),
         onRemove: () =>
           onChange(cleanFilters({ ...filters, extensions: undefined })),
       });
@@ -276,8 +279,8 @@ export function getActiveFilterChips(
     if (filters.timeRange) {
       const opt = getTimePresets().find((o) => o.value === filters.timeRange);
       chips.push({
-        key: 'timeRange',
-        label: $t('修改: {label}', { label: opt?.label || filters.timeRange }),
+        key: "timeRange",
+        label: $t("修改: {label}", { label: opt?.label || filters.timeRange }),
         onRemove: () =>
           onChange(cleanFilters({ ...filters, timeRange: undefined })),
       });
@@ -285,38 +288,38 @@ export function getActiveFilterChips(
 
     const modifiedLabel = getDateLabel(
       filters.modifiedAtFrom,
-      filters.modifiedAtTo
+      filters.modifiedAtTo,
     );
     if (modifiedLabel) {
       chips.push({
-        key: 'modifiedAt',
-        label: $t('修改: {label}', { label: modifiedLabel }),
+        key: "modifiedAt",
+        label: $t("修改: {label}", { label: modifiedLabel }),
         onRemove: () =>
           onChange(
             cleanFilters({
               ...filters,
               modifiedAtFrom: undefined,
               modifiedAtTo: undefined,
-            })
+            }),
           ),
       });
     }
 
     const createdLabel = getDateLabel(
       filters.createdAtFrom,
-      filters.createdAtTo
+      filters.createdAtTo,
     );
     if (createdLabel) {
       chips.push({
-        key: 'createdAt',
-        label: $t('创建: {label}', { label: createdLabel }),
+        key: "createdAt",
+        label: $t("创建: {label}", { label: createdLabel }),
         onRemove: () =>
           onChange(
             cleanFilters({
               ...filters,
               createdAtFrom: undefined,
               createdAtTo: undefined,
-            })
+            }),
           ),
       });
     }
@@ -324,11 +327,15 @@ export function getActiveFilterChips(
     const sizeLabel = getSizeLabel(filters.sizeMin, filters.sizeMax);
     if (sizeLabel) {
       chips.push({
-        key: 'size',
-        label: $t('大小: {label}', { label: sizeLabel }),
+        key: "size",
+        label: $t("大小: {label}", { label: sizeLabel }),
         onRemove: () =>
           onChange(
-            cleanFilters({ ...filters, sizeMin: undefined, sizeMax: undefined })
+            cleanFilters({
+              ...filters,
+              sizeMin: undefined,
+              sizeMax: undefined,
+            }),
           ),
       });
     }
@@ -336,18 +343,18 @@ export function getActiveFilterChips(
 
   if (filters.sortBy) {
     const opts =
-      scope === 'project' ? getProjectSortOptions() : getSortOptions();
+      scope === "project" ? getProjectSortOptions() : getSortOptions();
     const sortOption = opts.find(
-      (o) => o.sortBy === filters.sortBy && o.sortOrder === filters.sortOrder
+      (o) => o.sortBy === filters.sortBy && o.sortOrder === filters.sortOrder,
     );
     chips.push({
-      key: 'sort',
-      label: $t('排序: {label}', {
+      key: "sort",
+      label: $t("排序: {label}", {
         label: sortOption?.label || `${filters.sortBy} ${filters.sortOrder}`,
       }),
       onRemove: () =>
         onChange(
-          cleanFilters({ ...filters, sortBy: undefined, sortOrder: undefined })
+          cleanFilters({ ...filters, sortBy: undefined, sortOrder: undefined }),
         ),
     });
   }
@@ -372,7 +379,7 @@ function CheckboxList<T extends string>({
         onChange([...selected, value]);
       }
     },
-    [selected, onChange]
+    [selected, onChange],
   );
 
   return (
@@ -386,9 +393,9 @@ function CheckboxList<T extends string>({
             onClick={() => toggle(opt.value)}
             className="px-2 py-1 text-xs rounded-[3px] transition-all duration-150"
             style={{
-              background: isActive ? 'var(--info)' : 'var(--bg-tertiary)',
-              color: isActive ? 'var(--text-inverse)' : 'var(--text-secondary)',
-              border: `1px solid ${isActive ? 'var(--info)' : 'var(--border-subtle)'}`,
+              background: isActive ? "var(--info)" : "var(--bg-tertiary)",
+              color: isActive ? "var(--text-inverse)" : "var(--text-secondary)",
+              border: `1px solid ${isActive ? "var(--info)" : "var(--border-subtle)"}`,
             }}
           >
             {opt.label}
@@ -402,7 +409,7 @@ function CheckboxList<T extends string>({
 interface SearchFiltersProps {
   filters: SearchFilterValues;
   onChange: (filters: SearchFilterValues) => void;
-  scope?: 'project' | 'project_files';
+  scope?: "project" | "project_files";
   searchQuery?: string;
   onSearchQueryChange?: (query: string) => void;
 }
@@ -410,17 +417,17 @@ interface SearchFiltersProps {
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
   filters,
   onChange,
-  scope = 'project_files',
-  searchQuery = '',
+  scope = "project_files",
+  searchQuery = "",
   onSearchQueryChange,
 }) => {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
   const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
-  const [sizeUnit, setSizeUnit] = useState<SizeUnit>('MB');
+  const [sizeUnit, setSizeUnit] = useState<SizeUnit>("MB");
   const isMobile = useIsMobile();
 
-  const extQueryPrefix = 'ext:';
+  const extQueryPrefix = "ext:";
 
   useEffect(() => {
     if (!onSearchQueryChange || !searchQuery) return;
@@ -460,7 +467,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       }
       onSearchQueryChange(q);
     },
-    [filters.extensions, onSearchQueryChange, searchQuery]
+    [filters.extensions, onSearchQueryChange, searchQuery],
   );
 
   const closePanel = useCallback(() => {
@@ -471,11 +478,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
     if (!open) return;
     const closeOnScroll = () => closePanel();
     const closeOnResize = () => closePanel();
-    window.addEventListener('scroll', closeOnScroll, true);
-    window.addEventListener('resize', closeOnResize);
+    window.addEventListener("scroll", closeOnScroll, true);
+    window.addEventListener("resize", closeOnResize);
     return () => {
-      window.removeEventListener('scroll', closeOnScroll, true);
-      window.removeEventListener('resize', closeOnResize);
+      window.removeEventListener("scroll", closeOnScroll, true);
+      window.removeEventListener("resize", closeOnResize);
     };
   }, [open, closePanel]);
 
@@ -509,7 +516,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           left = window.innerWidth - panelW - gap;
         }
         setPanelStyle({
-          position: 'fixed',
+          position: "fixed",
           top: rect.bottom + 8,
           left,
         });
@@ -523,9 +530,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       <div className="flex items-center justify-between">
         <span
           className="text-xs font-medium"
-          style={{ color: 'var(--text-secondary)' }}
+          style={{ color: "var(--text-secondary)" }}
         >
-          {t('筛选排序')}
+          {t("筛选排序")}
         </span>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
@@ -533,9 +540,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               type="button"
               onClick={clearAll}
               className="text-xs hover:underline cursor-pointer"
-              style={{ color: 'var(--info)' }}
+              style={{ color: "var(--info)" }}
             >
-              {t('重置')}
+              {t("重置")}
             </button>
           )}
           {isMobile && (
@@ -543,7 +550,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               type="button"
               onClick={closePanel}
               className="p-0.5 rounded hover:bg-[var(--bg-tertiary)]"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <X size={14} />
             </button>
@@ -554,14 +561,14 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       <div className="space-y-1.5">
         <label
           className="block text-xs"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: "var(--text-tertiary)" }}
         >
           <ArrowUpDown size={12} className="inline mr-1" />
-          {t('排序')}
+          {t("排序")}
         </label>
         <Select
           options={
-            scope === 'project' ? getProjectSortOptions() : getSortOptions()
+            scope === "project" ? getProjectSortOptions() : getSortOptions()
           }
           value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
           onChange={(v) => {
@@ -572,14 +579,14 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         />
       </div>
 
-      {scope === 'project_files' && (
+      {scope === "project_files" && (
         <div className="space-y-1.5">
           <label
             className="block text-xs"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             <FileText size={12} className="inline mr-1" />
-            {t('文件格式（多选）')}
+            {t("文件格式（多选）")}
           </label>
           <CheckboxList
             options={getExtOptions()}
@@ -593,14 +600,14 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         </div>
       )}
 
-      {scope === 'project_files' && (
+      {scope === "project_files" && (
         <div className="space-y-1.5">
           <label
             className="block text-xs"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             <Ruler size={12} className="inline mr-1" />
-            {t('文件大小')}
+            {t("文件大小")}
           </label>
           <Select
             options={getSizePresets()}
@@ -608,9 +615,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               filters.sizeMin !== undefined || filters.sizeMax !== undefined
                 ? getSizePresets().find(
                     (p) =>
-                      p.min === filters.sizeMin && p.max === filters.sizeMax
-                  )?.value || ''
-                : ''
+                      p.min === filters.sizeMin && p.max === filters.sizeMax,
+                  )?.value || ""
+                : ""
             }
             onChange={(v) => {
               const preset = getSizePresets().find((p) => p.value === v);
@@ -620,7 +627,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                     ...filters,
                     sizeMin: preset.min,
                     sizeMax: preset.max,
-                  })
+                  }),
                 );
               }
             }}
@@ -635,12 +642,12 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               }
               unit={sizeUnit}
               onUnitChange={setSizeUnit}
-              placeholder={t('最小')}
+              placeholder={t("最小")}
               min={0}
             />
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               ~
             </span>
@@ -652,35 +659,35 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               }
               unit={sizeUnit}
               onUnitChange={setSizeUnit}
-              placeholder={t('最大')}
+              placeholder={t("最大")}
               min={0}
             />
           </div>
         </div>
       )}
 
-      {scope === 'project_files' && (
+      {scope === "project_files" && (
         <div
           className="border-t"
-          style={{ borderColor: 'var(--border-subtle)' }}
+          style={{ borderColor: "var(--border-subtle)" }}
         />
       )}
 
-      {scope === 'project_files' && (
+      {scope === "project_files" && (
         <div className="space-y-1.5">
           <label
             className="block text-xs"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             <Calendar size={12} className="inline mr-1" />
-            {t('修改时间')}
+            {t("修改时间")}
           </label>
           <div className="flex items-center gap-1">
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('起')}
+              {t("起")}
             </span>
             <div className="flex-1 min-w-0">
               <DatePicker
@@ -692,14 +699,14 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                       ...filters,
                       modifiedAtFrom: isoToDateOnly(v) || undefined,
                       timeRange: undefined,
-                    })
+                    }),
                   )
                 }
               />
             </div>
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               ~
             </span>
@@ -713,16 +720,16 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                       ...filters,
                       modifiedAtTo: isoToDateOnly(v) || undefined,
                       timeRange: undefined,
-                    })
+                    }),
                   )
                 }
               />
             </div>
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('止')}
+              {t("止")}
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
@@ -740,20 +747,20 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                           filters.timeRange === p.value ? undefined : p.value,
                         modifiedAtFrom: undefined,
                         modifiedAtTo: undefined,
-                      })
+                      }),
                     )
                   }
                   className="px-2 py-0.5 text-xs rounded-[3px] transition-all duration-150"
                   style={{
                     background:
                       filters.timeRange === p.value
-                        ? 'var(--info)'
-                        : 'var(--bg-tertiary)',
+                        ? "var(--info)"
+                        : "var(--bg-tertiary)",
                     color:
                       filters.timeRange === p.value
-                        ? 'var(--text-inverse)'
-                        : 'var(--text-tertiary)',
-                    border: `1px solid ${filters.timeRange === p.value ? 'var(--info)' : 'var(--border-subtle)'}`,
+                        ? "var(--text-inverse)"
+                        : "var(--text-tertiary)",
+                    border: `1px solid ${filters.timeRange === p.value ? "var(--info)" : "var(--border-subtle)"}`,
                   }}
                 >
                   {p.label}
@@ -763,21 +770,21 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         </div>
       )}
 
-      {scope === 'project_files' && (
+      {scope === "project_files" && (
         <div className="space-y-1.5">
           <label
             className="block text-xs"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             <CalendarPlus size={12} className="inline mr-1" />
-            {t('创建时间')}
+            {t("创建时间")}
           </label>
           <div className="flex items-center gap-1">
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('起')}
+              {t("起")}
             </span>
             <div className="flex-1 min-w-0">
               <DatePicker
@@ -788,14 +795,14 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                     cleanFilters({
                       ...filters,
                       createdAtFrom: isoToDateOnly(v) || undefined,
-                    })
+                    }),
                   )
                 }
               />
             </div>
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               ~
             </span>
@@ -808,16 +815,16 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                     cleanFilters({
                       ...filters,
                       createdAtTo: isoToDateOnly(v) || undefined,
-                    })
+                    }),
                   )
                 }
               />
             </div>
             <span
               className="text-xs shrink-0"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('止')}
+              {t("止")}
             </span>
           </div>
         </div>
@@ -829,7 +836,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
     <div className="inline-flex">
       <div ref={buttonRef} className="flex items-center gap-1">
         <Tooltip
-          content={hasActiveFilters ? t('已启用筛选条件') : t('筛选条件')}
+          content={hasActiveFilters ? t("已启用筛选条件") : t("筛选条件")}
           disabled={open}
         >
           <button
@@ -837,20 +844,20 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             onClick={() => (open ? closePanel() : openPanel())}
             className="p-1.5 rounded-[3px] transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
             style={{
-              color: hasActiveFilters ? 'var(--info)' : 'var(--text-muted)',
-              background: open ? 'var(--bg-tertiary)' : 'transparent',
+              color: hasActiveFilters ? "var(--info)" : "var(--text-muted)",
+              background: open ? "var(--bg-tertiary)" : "transparent",
             }}
           >
             <Filter size={14} />
           </button>
         </Tooltip>
         {hasActiveFilters && (
-          <Tooltip content={t('清除筛选')} disabled={open}>
+          <Tooltip content={t("清除筛选")} disabled={open}>
             <button
               type="button"
               onClick={clearAll}
               className="p-1.5 rounded-[3px] transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <X size={14} />
             </button>
@@ -872,9 +879,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 className="fixed bottom-0 left-0 right-0 rounded-t-2xl shadow-2xl overflow-y-auto mobile-filter-panel"
                 style={{
                   zIndex: Z_LAYERS.POPUP,
-                  background: 'var(--bg-elevated)',
-                  maxHeight: '80vh',
-                  paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                  background: "var(--bg-elevated)",
+                  maxHeight: "80vh",
+                  paddingBottom: "env(safe-area-inset-bottom, 0px)",
                 }}
               >
                 <div className="p-4 space-y-4">{panelContent}</div>
@@ -885,15 +892,15 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 style={{
                   ...panelStyle,
                   zIndex: Z_LAYERS.POPUP,
-                  background: 'var(--bg-primary)',
-                  border: '1px solid var(--border-default)',
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border-default)",
                 }}
               >
                 {panelContent}
               </div>
             )}
           </>,
-          document.body
+          document.body,
         )}
     </div>
   );

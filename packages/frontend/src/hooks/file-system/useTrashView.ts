@@ -9,31 +9,31 @@
  * （trashActions.ts，undo 联动）/面包屑/门控派生。
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { t } from '@/languages';
-import type { BreadcrumbItem, FileSystemNode } from '@/types/filesystem';
-import type { PaginationMeta } from '@/components/ui/Pagination';
-import type { SearchFilterValues } from '@/components/search/SearchFilters';
+import { t } from "@/languages";
+import type { BreadcrumbItem, FileSystemNode } from "@/types/filesystem";
+import type { PaginationMeta } from "@/components/ui";
+import type { SearchFilterValues } from "@/components/search/SearchFilters";
 
-import { useTrashActions } from './trashActions';
-import { buildTrashBreadcrumbs, buildTrashQueryOptions } from './trashQuery';
-import type { TrashListData } from './trashQuery';
+import { useTrashActions } from "./trashActions";
+import { buildTrashBreadcrumbs, buildTrashQueryOptions } from "./trashQuery";
+import type { TrashListData } from "./trashQuery";
 
-export type { TrashListData } from './trashQuery';
+export type { TrashListData } from "./trashQuery";
 
 type ShowToastFn = (
   message: string,
-  type: 'success' | 'error' | 'info' | 'warning'
+  type: "success" | "error" | "info" | "warning",
 ) => void;
 
 type ShowConfirmFn = (
   title: string,
   message: string,
   onConfirm: () => void | Promise<void>,
-  type?: 'danger' | 'warning' | 'info',
-  confirmText?: string
+  type?: "danger" | "warning" | "info",
+  confirmText?: string,
 ) => void;
 
 interface UseTrashViewOptions {
@@ -97,7 +97,7 @@ export const useTrashView = ({
   const prevIsTrashViewRef = useRef(isTrashView);
   useEffect(() => {
     if (prevIsTrashViewRef.current !== isTrashView) {
-      setStoreSearchTerm('');
+      setStoreSearchTerm("");
       setPagination((prev) => ({ ...prev, page: 1 }));
       refresh();
       prevIsTrashViewRef.current = isTrashView;
@@ -106,7 +106,7 @@ export const useTrashView = ({
 
   // ── trash 查询（配置由 trashQuery.ts 构建） ────────────────────────
   const projectIdForTrash =
-    isTrashView && !isProjectRootMode ? urlProjectId || '' : undefined;
+    isTrashView && !isProjectRootMode ? urlProjectId || "" : undefined;
 
   const trashQuery = useQuery(
     buildTrashQueryOptions({
@@ -116,7 +116,7 @@ export const useTrashView = ({
       searchQuery,
       searchFilters,
       isTrashView,
-    })
+    }),
   );
 
   const trashData: TrashListData | null = trashQuery.data ?? null;
@@ -172,7 +172,7 @@ export const useTrashView = ({
     trashError: trashQuery.error
       ? trashQuery.error instanceof Error
         ? trashQuery.error.message
-        : t('加载数据失败')
+        : t("加载数据失败")
       : null,
     canRestore,
     canPurge,

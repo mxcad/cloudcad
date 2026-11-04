@@ -4,18 +4,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useCallback, useLayoutEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { Textarea } from '@/components/ui/Textarea';
-import { t } from '@/languages';
-import {
-  isLoopbackIpOrCidr,
-  isValidIpOrCidr,
-} from '@/utils/ipCidrValidation';
-import type { IpBlacklistEntryForm } from '../types';
+import { useCallback, useLayoutEffect, useState } from "react";
+import { Button, DatePicker, Input, Modal, Textarea } from "@/components/ui";
+
+import { t } from "@/languages";
+import { isLoopbackIpOrCidr, isValidIpOrCidr } from "@/utils/ipCidrValidation";
+import type { IpBlacklistEntryForm } from "../types";
 
 interface AddEntryModalProps {
   isOpen: boolean;
@@ -38,23 +32,23 @@ export function AddEntryModal({
   onClose,
   onSubmit,
 }: AddEntryModalProps) {
-  const [ip, setIp] = useState('');
-  const [reason, setReason] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [ipError, setIpError] = useState('');
-  const [reasonError, setReasonError] = useState('');
-  const [expiresAtError, setExpiresAtError] = useState('');
+  const [ip, setIp] = useState("");
+  const [reason, setReason] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [ipError, setIpError] = useState("");
+  const [reasonError, setReasonError] = useState("");
+  const [expiresAtError, setExpiresAtError] = useState("");
 
   // 今天（本地日期粒度），用于限制限期可选范围
   const todayIso = new Date().toISOString();
 
   const reset = useCallback(() => {
-    setIp('');
-    setReason('');
-    setExpiresAt('');
-    setIpError('');
-    setReasonError('');
-    setExpiresAtError('');
+    setIp("");
+    setReason("");
+    setExpiresAt("");
+    setIpError("");
+    setReasonError("");
+    setExpiresAtError("");
   }, []);
 
   // 弹窗打开时同步重置表单（useLayoutEffect：重开首帧即为空，成功提交后不留旧值）
@@ -75,25 +69,25 @@ export function AddEntryModal({
     let valid = true;
 
     if (!trimmedIp) {
-      setIpError(t('请输入 IP 或 CIDR'));
+      setIpError(t("请输入 IP 或 CIDR"));
       valid = false;
     } else if (!isValidIpOrCidr(trimmedIp)) {
-      setIpError(t('IP/CIDR 格式非法'));
+      setIpError(t("IP/CIDR 格式非法"));
       valid = false;
     } else if (isLoopbackIpOrCidr(trimmedIp)) {
       // BUG-ADMIN-001：环回是管理员白名单本机自救通道，拉黑会锁死本机管理
       // 通道（黑名单判定先于白名单 fail-close）且无安全价值——前端先行拦截
-      setIpError(t('不能将本机环回地址加入 IP 黑名单'));
+      setIpError(t("不能将本机环回地址加入 IP 黑名单"));
       valid = false;
     } else {
-      setIpError('');
+      setIpError("");
     }
 
     if (!trimmedReason) {
-      setReasonError(t('请输入封禁原因'));
+      setReasonError(t("请输入封禁原因"));
       valid = false;
     } else {
-      setReasonError('');
+      setReasonError("");
     }
 
     if (expiresAt) {
@@ -101,13 +95,13 @@ export function AddEntryModal({
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       if (new Date(expiresAt).getTime() < todayStart.getTime()) {
-        setExpiresAtError(t('限期不能早于今天'));
+        setExpiresAtError(t("限期不能早于今天"));
         valid = false;
       } else {
-        setExpiresAtError('');
+        setExpiresAtError("");
       }
     } else {
-      setExpiresAtError('');
+      setExpiresAtError("");
     }
 
     if (!valid) return;
@@ -121,7 +115,7 @@ export function AddEntryModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={t('添加 IP 黑名单')}
+      title={t("添加 IP 黑名单")}
       size="md"
       closeOnOverlayClick={!saving}
     >
@@ -129,19 +123,19 @@ export function AddEntryModal({
         <div>
           <label
             className="block text-sm font-medium mb-1.5"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('IP/CIDR')} <span style={{ color: 'var(--error)' }}>*</span>
+            {t("IP/CIDR")} <span style={{ color: "var(--error)" }}>*</span>
           </label>
           <Input
             value={ip}
             onChange={(e) => setIp(e.target.value)}
-            placeholder={t('如 203.0.113.7 或 203.0.113.0/24')}
-            variant={ipError ? 'error' : 'default'}
+            placeholder={t("如 203.0.113.7 或 203.0.113.0/24")}
+            variant={ipError ? "error" : "default"}
             size="lg"
           />
           {ipError && (
-            <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>
+            <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
               {ipError}
             </p>
           )}
@@ -150,20 +144,20 @@ export function AddEntryModal({
         <div>
           <label
             className="block text-sm font-medium mb-1.5"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('封禁原因')} <span style={{ color: 'var(--error)' }}>*</span>
+            {t("封禁原因")} <span style={{ color: "var(--error)" }}>*</span>
           </label>
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder={t('如：撞库扫描攻击')}
-            variant={reasonError ? 'error' : 'default'}
+            placeholder={t("如：撞库扫描攻击")}
+            variant={reasonError ? "error" : "default"}
             size="lg"
             maxLength={500}
           />
           {reasonError && (
-            <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>
+            <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
               {reasonError}
             </p>
           )}
@@ -172,31 +166,31 @@ export function AddEntryModal({
         <div>
           <label
             className="block text-sm font-medium mb-1.5"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('限期')}
+            {t("限期")}
           </label>
           <DatePicker
             value={expiresAt}
             onChange={(v) => {
-              setExpiresAt(v ?? '');
+              setExpiresAt(v ?? "");
               // 改选日期后立即清除上次提交的错误提示
-              setExpiresAtError('');
+              setExpiresAtError("");
             }}
-            placeholder={t('选择日期')}
+            placeholder={t("选择日期")}
             size="lg"
             minDate={todayIso}
           />
           {expiresAtError ? (
-            <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>
+            <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
               {expiresAtError}
             </p>
           ) : (
             <p
               className="mt-1 text-xs"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('不填写则为永久封禁')}
+              {t("不填写则为永久封禁")}
             </p>
           )}
         </div>
@@ -204,10 +198,10 @@ export function AddEntryModal({
 
       <div className="flex justify-end gap-2 mt-6">
         <Button variant="outline" onClick={handleClose} disabled={saving}>
-          {t('取消')}
+          {t("取消")}
         </Button>
         <Button onClick={handleSubmit} loading={saving}>
-          {t('确认添加')}
+          {t("确认添加")}
         </Button>
       </div>
     </Modal>

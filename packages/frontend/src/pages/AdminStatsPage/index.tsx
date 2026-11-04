@@ -1,39 +1,39 @@
-import React, { useState } from 'react';
-import { usePermission } from '@/hooks/usePermission';
-import { SystemPermission } from '@/constants/permissions';
-import { t } from '@/languages';
+import React, { useState } from "react";
+import { usePermission } from "@/hooks/usePermission";
+import { SystemPermission } from "@/constants/permissions";
+import { t } from "@/languages";
 import {
   useActiveStats,
   useAdminStatsOverview,
   useDailyPurchases,
   useDailyRegistrations,
-} from './hooks/useAdminStats';
-import { ActiveUsersSection } from './components/ActiveUsersSection';
-import { RegistrationsSection } from './components/RegistrationsSection';
-import { PurchasesSection } from './components/PurchasesSection';
-import type { AdminStatsRangeParams } from './hooks/useAdminStats';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { dateOnlyToIso, isoToDateOnly } from '@/utils/dateUtils';
-import styles from './AdminStatsPage.module.css';
+} from "./hooks/useAdminStats";
+import { ActiveUsersSection } from "./components/ActiveUsersSection";
+import { RegistrationsSection } from "./components/RegistrationsSection";
+import { PurchasesSection } from "./components/PurchasesSection";
+import type { AdminStatsRangeParams } from "./hooks/useAdminStats";
+import { DatePicker } from "@/components/ui";
+import { dateOnlyToIso, isoToDateOnly } from "@/utils/dateUtils";
+import styles from "./AdminStatsPage.module.css";
 
 /** 统计切日与后端一致：东八区（UTC+8）自然日 */
 const CST_OFFSET_MS = 8 * 60 * 60 * 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-type RangePreset = '7' | '30' | '90' | 'custom';
+type RangePreset = "7" | "30" | "90" | "custom";
 
 const cstDateString = (offsetDays: number): string =>
   new Date(Date.now() + CST_OFFSET_MS - offsetDays * MS_PER_DAY)
     .toISOString()
     .slice(0, 10);
 
-const PRESET_PARAMS: Record<'7' | '30' | '90', AdminStatsRangeParams> = {
-  '7': { startDate: cstDateString(6), endDate: cstDateString(0) },
-  '30': { startDate: cstDateString(29), endDate: cstDateString(0) },
-  '90': { startDate: cstDateString(89), endDate: cstDateString(0) },
+const PRESET_PARAMS: Record<"7" | "30" | "90", AdminStatsRangeParams> = {
+  "7": { startDate: cstDateString(6), endDate: cstDateString(0) },
+  "30": { startDate: cstDateString(29), endDate: cstDateString(0) },
+  "90": { startDate: cstDateString(89), endDate: cstDateString(0) },
 };
 
-const PRESETS: RangePreset[] = ['7', '30', '90'];
+const PRESETS: RangePreset[] = ["7", "30", "90"];
 
 /**
  * 运营统计页——总量概览 / 每日新增用户 / 活跃用户（DAU/MAU）/ 每日会员购买。
@@ -51,14 +51,14 @@ export default function AdminStatsPage({
   const canReadUsers = hasPermission(SystemPermission.SYSTEM_USER_READ);
   const canReadBilling = hasPermission(SystemPermission.SYSTEM_BILLING_READ);
 
-  const [preset, setPreset] = useState<RangePreset>('30');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
+  const [preset, setPreset] = useState<RangePreset>("30");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
 
   const customReady =
-    preset === 'custom' && customStart !== '' && customEnd !== '';
+    preset === "custom" && customStart !== "" && customEnd !== "";
   const rangeParams: AdminStatsRangeParams =
-    preset === 'custom'
+    preset === "custom"
       ? customReady
         ? { startDate: customStart, endDate: customEnd }
         : {}
@@ -72,17 +72,15 @@ export default function AdminStatsPage({
   const effectiveRange = registrations.stats ?? purchases.stats ?? undefined;
 
   return (
-    <div
-      className={`${styles.page} ${embedded ? styles.pageEmbedded : ''}`}
-    >
+    <div className={`${styles.page} ${embedded ? styles.pageEmbedded : ""}`}>
       {!embedded && (
         <header className={styles.header}>
-          <h1>{t('运营统计')}</h1>
+          <h1>{t("运营统计")}</h1>
           <p>
-            {t('统计区间')}
+            {t("统计区间")}
             {effectiveRange
               ? `：${effectiveRange.startDate} ~ ${effectiveRange.endDate}`
-              : ''}
+              : ""}
           </p>
         </header>
       )}
@@ -93,11 +91,11 @@ export default function AdminStatsPage({
             key={p}
             type="button"
             className={`${styles.rangeButton} ${
-              preset === p ? styles.rangeButtonActive : ''
+              preset === p ? styles.rangeButtonActive : ""
             }`}
             onClick={() => setPreset(p)}
           >
-            {t('{days} 天', { days: p })}
+            {t("{days} 天", { days: p })}
           </button>
         ))}
         <div className={styles.customDivider} />
@@ -106,7 +104,7 @@ export default function AdminStatsPage({
           maxDate={dateOnlyToIso(cstDateString(0))}
           onChange={(v) => {
             setCustomStart(isoToDateOnly(v));
-            setPreset('custom');
+            setPreset("custom");
           }}
         />
         <span>~</span>
@@ -115,7 +113,7 @@ export default function AdminStatsPage({
           maxDate={dateOnlyToIso(cstDateString(0))}
           onChange={(v) => {
             setCustomEnd(isoToDateOnly(v));
-            setPreset('custom');
+            setPreset("custom");
           }}
         />
       </div>
@@ -124,17 +122,17 @@ export default function AdminStatsPage({
         <div className={styles.kpiRow}>
           {canReadUsers && (
             <div className={styles.kpiCard}>
-              <span className={styles.kpiLabel}>{t('当前用户总数')}</span>
+              <span className={styles.kpiLabel}>{t("当前用户总数")}</span>
               <span className={styles.kpiValue}>
-                {overview.loading ? '…' : (overview.stats?.totalUsers ?? 0)}
+                {overview.loading ? "…" : (overview.stats?.totalUsers ?? 0)}
               </span>
             </div>
           )}
           {canReadBilling && (
             <div className={styles.kpiCard}>
-              <span className={styles.kpiLabel}>{t('累计付费用户')}</span>
+              <span className={styles.kpiLabel}>{t("累计付费用户")}</span>
               <span className={styles.kpiValue}>
-                {overview.loading ? '…' : (overview.stats?.paidUsers ?? 0)}
+                {overview.loading ? "…" : (overview.stats?.paidUsers ?? 0)}
               </span>
             </div>
           )}

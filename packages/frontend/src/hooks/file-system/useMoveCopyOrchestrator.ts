@@ -173,7 +173,7 @@ export function useMoveCopyOrchestrator({
             description ||
             (mode === 'drag'
               ? t('拖拽移动')
-              : t(`移动 ${movedIds.length} 个项目`)),
+              : t('移动 {count} 个项目', { count: String(movedIds.length) })),
           projectId,
         })
       );
@@ -262,7 +262,7 @@ export function useMoveCopyOrchestrator({
             description ||
             (mode === 'drag'
               ? t('拖拽复制')
-              : t(`复制 ${createdIds.length} 个项目`)),
+              : t('复制 {count} 个项目', { count: String(createdIds.length) })),
           projectId,
           endpoints: {
             copyNode: (id, pid) =>

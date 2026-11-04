@@ -6,7 +6,6 @@ import {
   generatePosterImageBlob,
   uploadThumbnailBlobForNode,
   detectRegionBorder,
-  getContentBoundsRegion,
   type ThumbnailRegion,
 } from './thumbnailService'
 
@@ -103,10 +102,9 @@ export async function renderSharePosterInBackground(
 
   // 边框检测须在任意 zoom（generatePosterImageBlob 会 zoomW 到区域）之前执行：
   // 共线容差是「屏幕 5px 换算的 CAD 长度」，以框选时的视图为准，缩放后容差失真。
-  // 无 region（非指定区域）时用整图内容包围盒检测——与指定区域同套绘制，内容包围盒 =
-  // 图纸边框则省略海报圆角描边（对齐 PC generatePosterImage 统一逻辑，不再恒有描边）。
-  const effectiveRegion = region ?? (await getContentBoundsRegion())
-  const hasBorder = effectiveRegion ? await detectRegionBorder(effectiveRegion) : false
+  // 有 region（用户框选）→ 按四边算法判定；无 region（默认整图框）→ 整图框天然不需要
+  // 描边，恒 hasBorder=true（不描边），不走算法（对齐 PC generatePosterImage 统一逻辑）。
+  const hasBorder = region ? await detectRegionBorder(region) : true
 
   // 缩略图（200px PNG）生成与上传分离：best-effort 不阻塞海报（文件列表/后台渲染复用）
   const thumbBlob = await generateThumbnail(region)

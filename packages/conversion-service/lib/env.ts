@@ -4,6 +4,7 @@
 // 已存在的 process.env 优先（真实环境变量覆盖 .env 文件，便于部署时用系统 env 注入）。
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { maskRedisUrl } from './redis-client';
 
 // 候选路径：cwd（pnpm --filter dev 的 cwd 即包目录）+ 编译产物 dist/lib 上两级 + 源码 lib 上一级。
 // 编译后 __dirname 落在 dist/lib/，故包目录须上两级；源码态（tsx 直跑）则上一级。
@@ -70,7 +71,7 @@ if (process.env.QUEUE_DRIVER?.toLowerCase() === 'redis') {
   }
   if (PLACEHOLDER_RE.test(redisUrl)) {
     console.error(
-      `[env] REDIS_URL 仍是占位符值 (${redisUrl})，但 QUEUE_DRIVER=redis。\n` +
+      `[env] REDIS_URL 仍是占位符值 (${maskRedisUrl(redisUrl)})，但 QUEUE_DRIVER=redis。\n` +
         '      该地址必然连不上，队列驱动将静默回退内存模式（不持久化、重启丢存量任务）。\n' +
         '      请改为真实连接串（须与 backend .env 的 REDIS_HOST/PORT/PASSWORD/DB 一致），' +
         '或把 QUEUE_DRIVER 改回 local。'

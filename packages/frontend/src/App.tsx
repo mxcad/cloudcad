@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { Suspense, lazy, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import {
   Navigate,
   Route,
@@ -18,31 +18,31 @@ import {
   Routes,
   useLocation,
   useNavigate,
-} from 'react-router-dom';
-import { Layout } from './components/Layout';
-import { LoadingOverlay } from './components/LoadingOverlay';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { CadLoadFailedFallback } from './components/CadLoadFailedFallback';
-import { importWithTimeout } from './lib/lazyImport';
-import { ConversionPanel } from './components/conversion-panel/ConversionPanel';
-import { useAuth } from './contexts/AuthContext';
-import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
-import { TourProvider } from './contexts/TourContext';
-import { GlobalTourRenderer } from './components/tour';
-import { NoticeProvider } from './components/notice';
-import PlanSelectOverlay from './components/billing/PlanSelectOverlay';
-import { usePermission } from './hooks/usePermission';
-import { SystemPermission } from './constants/permissions';
-import { getRoutePermission } from './config/navigation';
-import { ADMIN_LOGIN_PATH } from './constants/adminLoginConfig';
-import { BrandProvider } from './contexts/BrandContext';
-import NoPermissionPage from './components/ui/NoPermissionPage';
-import { i18nScope, t } from '@/languages';
-import { useVoerkaI18n } from '@voerkai18n/react';
-import { setSpaNavigate, buildLoginUrl } from './config/clientSetup';
-import { performMobileRedirectIfNeeded } from './utils/mobileRedirect';
-import { isConversionPanelRoute } from './utils/conversionPanelRoute';
-import { FeedbackFab } from './components/feedback/FeedbackFab';
+} from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { LoadingOverlay } from "./components/LoadingOverlay";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { CadLoadFailedFallback } from "./components/CadLoadFailedFallback";
+import { importWithTimeout } from "./lib/lazyImport";
+import { ConversionPanel } from "./components/conversion-panel/ConversionPanel";
+import { useAuth } from "./contexts/AuthContext";
+import { RuntimeConfigProvider } from "./contexts/RuntimeConfigContext";
+import { TourProvider } from "./contexts/TourContext";
+import { GlobalTourRenderer } from "./components/tour";
+import { NoticeProvider } from "./components/notice";
+import PlanSelectOverlay from "./components/billing/PlanSelectOverlay";
+import { usePermission } from "./hooks/usePermission";
+import { SystemPermission } from "./constants/permissions";
+import { getRoutePermission } from "./config/navigation";
+import { ADMIN_LOGIN_PATH } from "./constants/adminLoginConfig";
+import { BrandProvider } from "./contexts/BrandContext";
+import { NoPermissionPage } from "@/components/ui";
+import { i18nScope, t } from "@/languages";
+import { useVoerkaI18n } from "@voerkai18n/react";
+import { setSpaNavigate, buildLoginUrl } from "./config/clientSetup";
+import { performMobileRedirectIfNeeded } from "./utils/mobileRedirect";
+import { isConversionPanelRoute } from "./utils/conversionPanelRoute";
+import { FeedbackFab } from "./components/feedback/FeedbackFab";
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -51,38 +51,38 @@ import { FeedbackFab } from './components/feedback/FeedbackFab';
 const PageLoader: React.FC = () => (
   <div
     className="flex items-center justify-center min-h-screen"
-    style={{ background: 'var(--bg-primary)' }}
+    style={{ background: "var(--bg-primary)" }}
   >
     <div className="flex flex-col items-center gap-4">
       <div
         className="w-10 h-10 rounded-full animate-spin"
         style={{
-          border: '3px solid var(--border-default)',
-          borderTopColor: 'var(--primary-500)',
+          border: "3px solid var(--border-default)",
+          borderTopColor: "var(--primary-500)",
         }}
       />
-      <p style={{ color: 'var(--text-secondary)' }}>{t('加载中...')}</p>
+      <p style={{ color: "var(--text-secondary)" }}>{t("加载中...")}</p>
     </div>
   </div>
 );
 
 // 公开页面（认证相关）
-const Login = lazy(() => import('./pages/Login'));
-const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const AdminMfaSetup = lazy(() => import('./pages/AdminMfaSetup'));
-const AdminPasswordChange = lazy(() => import('./pages/AdminPasswordChange'));
-const Register = lazy(() => import('./pages/Register'));
-const EmailVerification = lazy(() => import('./pages/EmailVerification'));
-const PhoneVerification = lazy(() => import('./pages/PhoneVerification'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Login = lazy(() => import("./pages/Login"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminMfaSetup = lazy(() => import("./pages/AdminMfaSetup"));
+const AdminPasswordChange = lazy(() => import("./pages/AdminPasswordChange"));
+const Register = lazy(() => import("./pages/Register"));
+const EmailVerification = lazy(() => import("./pages/EmailVerification"));
+const PhoneVerification = lazy(() => import("./pages/PhoneVerification"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // 设备授权页面（桌面端 EXE OAuth）
-const DeviceAuthorize = lazy(() => import('./pages/DeviceAuthorize'));
-const SessionTransfer = lazy(() => import('./pages/SessionTransfer'));
-const PrivacyPolicyPage = lazy(() => import('./pages/Legal/PrivacyPolicyPage'));
+const DeviceAuthorize = lazy(() => import("./pages/DeviceAuthorize"));
+const SessionTransfer = lazy(() => import("./pages/SessionTransfer"));
+const PrivacyPolicyPage = lazy(() => import("./pages/Legal/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(
-  () => import('./pages/Legal/TermsOfServicePage')
+  () => import("./pages/Legal/TermsOfServicePage"),
 );
 
 // CAD 编辑器（高频使用，单独分包）
@@ -99,36 +99,40 @@ const TermsOfServicePage = lazy(
 // lazyImport.ts 头部注释）。import.meta.env.DEV 是编译期常量，生产产物里的 dev 分支
 // 会被消除。
 const CADEditorDirect = import.meta.env.DEV
-  ? lazy(() => importWithTimeout(() => import('./pages/CADEditorDirect'), 180_000, 1))
-  : lazy(() => importWithTimeout(() => import('./pages/CADEditorDirect'), 30_000, 2));
+  ? lazy(() =>
+      importWithTimeout(() => import("./pages/CADEditorDirect"), 180_000, 1),
+    )
+  : lazy(() =>
+      importWithTimeout(() => import("./pages/CADEditorDirect"), 30_000, 2),
+    );
 
 // 分享管理页
-const ShareManagePage = lazy(() => import('./pages/ShareManagePage'));
+const ShareManagePage = lazy(() => import("./pages/ShareManagePage"));
 
 // 主要功能页面
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const FileSystemManager = lazy(() => import('./pages/FileSystemManager'));
-const Profile = lazy(() => import('./pages/Profile'));
-const MemberCenter = lazy(() => import('./pages/MemberCenter'));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const FileSystemManager = lazy(() => import("./pages/FileSystemManager"));
+const Profile = lazy(() => import("./pages/Profile"));
+const MemberCenter = lazy(() => import("./pages/MemberCenter"));
 
 // 管理页面（低频使用，按需加载）
-const UserManagement = lazy(() => import('./pages/UserManagement'));
-const RoleManagement = lazy(() => import('./pages/RoleManagement'));
-const FontLibrary = lazy(() => import('./pages/FontLibrary'));
-const LibraryManager = lazy(() => import('./pages/LibraryManager'));
-const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
-const SystemMonitorPage = lazy(() => import('./pages/SystemMonitorPage'));
-const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
-const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
-const AdminStatsPage = lazy(() => import('./pages/AdminStatsPage'));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const RoleManagement = lazy(() => import("./pages/RoleManagement"));
+const FontLibrary = lazy(() => import("./pages/FontLibrary"));
+const LibraryManager = lazy(() => import("./pages/LibraryManager"));
+const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
+const SystemMonitorPage = lazy(() => import("./pages/SystemMonitorPage"));
+const RuntimeConfigPage = lazy(() => import("./pages/RuntimeConfigPage"));
+const AdminBillingPage = lazy(() => import("./pages/AdminBillingPage"));
+const AdminStatsPage = lazy(() => import("./pages/AdminStatsPage"));
 // IP 访问控制（黑名单 / 白名单 / 高危访问尝试 三 Tab；子页面由容器静态引用，同 chunk）
-const IpAccessControlPage = lazy(() => import('./pages/IpAccessControlPage'));
-const NoticeCenterPage = lazy(() => import('./pages/NoticeCenterPage'));
+const IpAccessControlPage = lazy(() => import("./pages/IpAccessControlPage"));
+const NoticeCenterPage = lazy(() => import("./pages/NoticeCenterPage"));
 
 // 用户反馈（匿名查询页公开；我的反馈页需登录）
-const FeedbackQueryPage = lazy(() => import('./pages/FeedbackQueryPage'));
-const FeedbackMinePage = lazy(() => import('./pages/FeedbackMinePage'));
-const AdminFeedbackPage = lazy(() => import('./pages/AdminFeedbackPage'));
+const FeedbackQueryPage = lazy(() => import("./pages/FeedbackQueryPage"));
+const FeedbackMinePage = lazy(() => import("./pages/FeedbackMinePage"));
+const AdminFeedbackPage = lazy(() => import("./pages/AdminFeedbackPage"));
 
 // ============================================================================
 // 路由保护组件
@@ -145,13 +149,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
       return (
         <div
           className="flex items-center justify-center min-h-screen"
-          style={{ background: 'var(--bg-primary)' }}
+          style={{ background: "var(--bg-primary)" }}
         >
           <div
             className="w-10 h-10 rounded-full animate-spin"
             style={{
-              border: '3px solid var(--border-default)',
-              borderTopColor: 'var(--primary-500)',
+              border: "3px solid var(--border-default)",
+              borderTopColor: "var(--primary-500)",
             }}
           />
         </div>
@@ -165,7 +169,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
     }
 
     return <>{children}</>;
-  }
+  },
 );
 
 // 权限保护路由组件
@@ -197,7 +201,7 @@ const PermissionRoute: React.FC<{
 function CADEditorRouteGuard() {
   const location = useLocation();
   const currentIsCADRoute =
-    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
+    location.pathname === "/" || location.pathname.startsWith("/cad-editor");
 
   // 跟踪 CAD 是否已首次加载。加载后必须永久驻留 DOM。
   const everLoadedRef = useRef(false);
@@ -214,17 +218,17 @@ function CADEditorRouteGuard() {
         fallback={
           <div
             className="fixed inset-0 flex flex-col items-center justify-center"
-            style={{ background: 'var(--bg-primary)' }}
+            style={{ background: "var(--bg-primary)" }}
           >
             <div
               className="animate-spin rounded-full h-8 w-8"
               style={{
-                border: '2px solid var(--border-strong)',
-                borderTopColor: 'var(--accent-600)',
+                border: "2px solid var(--border-strong)",
+                borderTopColor: "var(--accent-600)",
               }}
             />
-            <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
-              {t('正在加载 CAD 编辑器...')}
+            <p className="mt-4" style={{ color: "var(--text-secondary)" }}>
+              {t("正在加载 CAD 编辑器...")}
             </p>
           </div>
         }
@@ -253,7 +257,7 @@ function AppContent() {
 
   // 语言跨标签页同步：监听其他标签页的 localStorage 语言变更
   useEffect(() => {
-    const LANGUAGE_STORAGE_KEY = 'language';
+    const LANGUAGE_STORAGE_KEY = "language";
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LANGUAGE_STORAGE_KEY && e.newValue !== null) {
@@ -264,9 +268,38 @@ function AppContent() {
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  // 等待当前语言 pack 就绪后再渲染路由。异步 pack（en-US/zh-TW/ko-KR）未加载完成时
+  // t() 会回退到同步的 zh-CN，导致非默认语言下页面（尤其立即渲染的公开页：登录/注册）
+  // 显示中文且 pack 加载完成后不重渲染。ready() 在 pack 加载完成后触发；8s 兜底防 pack
+  // 加载失败导致永久 loading。语言切换时重置并重新等待新语言 pack。
+  const [i18nReady, setI18nReady] = useState(false);
+  useEffect(() => {
+    setI18nReady(false);
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        setI18nReady(true);
+      }
+    };
+    const timer = setTimeout(finish, 8000);
+    i18nScope.ready(() => {
+      clearTimeout(timer);
+      finish();
+    });
+    return () => {
+      clearTimeout(timer);
+      done = true;
+    };
+  }, [activeLanguage]);
+
+  if (!i18nReady) {
+    return <PageLoader />;
+  }
 
   return (
     <div className="layout-container">
@@ -526,7 +559,7 @@ function AppContent() {
                     path="/users"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/users')!}
+                        permission={getRoutePermission("/users")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <UserManagement />
@@ -540,7 +573,7 @@ function AppContent() {
                     path="/roles"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/roles')!}
+                        permission={getRoutePermission("/roles")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <RoleManagement />
@@ -563,7 +596,7 @@ function AppContent() {
                     path="/font-library"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/font-library')!}
+                        permission={getRoutePermission("/font-library")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <FontLibrary />
@@ -577,7 +610,7 @@ function AppContent() {
                     path="/library"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/library')!}
+                        permission={getRoutePermission("/library")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -589,7 +622,7 @@ function AppContent() {
                     path="/library/:libraryType"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/library')!}
+                        permission={getRoutePermission("/library")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -601,7 +634,7 @@ function AppContent() {
                     path="/library/:libraryType/:nodeId"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/library')!}
+                        permission={getRoutePermission("/library")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -625,7 +658,7 @@ function AppContent() {
                     path="/audit-logs"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/audit-logs')!}
+                        permission={getRoutePermission("/audit-logs")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AuditLogPage />
@@ -639,7 +672,7 @@ function AppContent() {
                     path="/system-monitor"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/system-monitor')!}
+                        permission={getRoutePermission("/system-monitor")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <SystemMonitorPage />
@@ -669,7 +702,7 @@ function AppContent() {
                     path="/admin/billing"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/admin/billing')!}
+                        permission={getRoutePermission("/admin/billing")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminBillingPage />
@@ -683,7 +716,7 @@ function AppContent() {
                     path="/admin/stats"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/admin/stats')!}
+                        permission={getRoutePermission("/admin/stats")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminStatsPage />
@@ -697,7 +730,7 @@ function AppContent() {
                     path="/runtime-config"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/runtime-config')!}
+                        permission={getRoutePermission("/runtime-config")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <RuntimeConfigPage />
@@ -716,7 +749,7 @@ function AppContent() {
                     path="/admin/notices"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/admin/notices')!}
+                        permission={getRoutePermission("/admin/notices")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <NoticeCenterPage />
@@ -730,7 +763,7 @@ function AppContent() {
                     path="/admin/ip-access"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/admin/ip-access')!}
+                        permission={getRoutePermission("/admin/ip-access")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <IpAccessControlPage />
@@ -744,7 +777,7 @@ function AppContent() {
                     path="/admin/feedback"
                     element={
                       <PermissionRoute
-                        permission={getRoutePermission('/admin/feedback')!}
+                        permission={getRoutePermission("/admin/feedback")!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminFeedbackPage />

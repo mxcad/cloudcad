@@ -1,9 +1,9 @@
-import React from 'react';
-import { Search, X } from 'lucide-react';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { Input } from '@/components/ui/Input';
-import type { InputProps } from '@/components/ui/Input';
-import { t } from '@/languages';
+import React from "react";
+import { Search, X } from "lucide-react";
+import { Tooltip, Input } from "@/components/ui";
+import type { InputProps } from "@/components/ui";
+
+import { t } from "@/languages";
 
 export interface Chip {
   key: string;
@@ -13,7 +13,7 @@ export interface Chip {
 
 export interface SearchInputProps extends Omit<
   InputProps,
-  'leftIcon' | 'rightIcon' | 'rightNode'
+  "leftIcon" | "rightIcon" | "rightNode"
 > {
   onSearch?: (value: string) => void;
   onClear?: () => void;
@@ -26,11 +26,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onSearch,
   onClear,
   chips,
-  placeholder = t('搜索...'),
+  placeholder = t("搜索..."),
   ...props
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       onSearch?.(String(value));
     }
     props.onKeyDown?.(e);
@@ -41,13 +41,13 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       onClear();
     } else if (onChange) {
       const synthetic = {
-        target: { value: '' },
+        target: { value: "" },
       } as React.ChangeEvent<HTMLInputElement>;
       onChange(synthetic);
     }
   };
 
-  const showClear = value !== undefined && value !== '';
+  const showClear = value !== undefined && value !== "";
 
   return (
     <div className="relative flex-1 min-w-0">
@@ -59,12 +59,12 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         placeholder={placeholder}
         rightNode={
           showClear ? (
-            <Tooltip content={t('清除')}>
+            <Tooltip content={t("清除")}>
               <button
                 type="button"
                 onClick={handleClear}
                 className="p-1 rounded-[3px] transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: "var(--text-muted)" }}
               >
                 <X size={14} />
               </button>
@@ -81,9 +81,9 @@ export const SearchInput: React.FC<SearchInputProps> = ({
               key={chip.key}
               className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors duration-150 hover:opacity-80"
               style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-secondary)',
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-secondary)",
               }}
             >
               {chip.label}
@@ -103,6 +103,6 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   );
 };
 
-SearchInput.displayName = 'SearchInput';
+SearchInput.displayName = "SearchInput";
 
 export default SearchInput;

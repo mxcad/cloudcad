@@ -95,7 +95,11 @@ export interface ResourceListProps {
   currentPage?: number;
   /** 分页相关：页码变化回调（用于跳转页面时重置列表） */
   onPageChange?: (page: number, direction: 'prev' | 'next' | 'jump') => void;
-  /** 是否支持分页模式（启用后将使用分页加载而非无限滚动） */
+  /**
+   * 是否支持分页模式（启用后将使用分页加载而非无限滚动）。
+   * 滚动分页默认开启（useResourceListScroll 统一控制器：向下加载更多/向上加载前页）；
+   * 传 false 关闭，仅保留按钮分页。唯一调用方 ProjectPanelView 已显式传 true。
+   */
   paginationEnabled?: boolean;
   /** 图库模式：网格模式图片完全占据容器，文件名在底部，不显示大小；列表模式图片放大，去除后缀标签（默认true） */
   galleryMode?: boolean;

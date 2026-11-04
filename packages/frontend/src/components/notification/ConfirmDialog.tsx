@@ -1,8 +1,8 @@
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Z_LAYERS } from '../../constants/layers';
-import type { ConfirmDialogState } from './types';
-import { renderConfirmIcon } from './ConfirmDialogIcon';
+import { Modal, Button } from "@/components/ui";
+
+import { Z_LAYERS } from "../../constants/layers";
+import type { ConfirmDialogState } from "./types";
+import { renderConfirmIcon } from "./ConfirmDialogIcon";
 
 /**
  * 确认弹框——必须做选择，mustChoose：点遮罩/按 Esc 都不关闭，也不能点右上角 ×，
@@ -40,7 +40,7 @@ export function ConfirmDialog({
     >
       <div className="flex items-start gap-4">
         {renderConfirmIcon(state.dialogType)}
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
           {state.message}
         </p>
       </div>

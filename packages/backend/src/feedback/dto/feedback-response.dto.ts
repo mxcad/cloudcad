@@ -51,6 +51,13 @@ export class BatchDeleteAttachmentsResultDto {
   notFoundIds: string[];
 }
 
+/** 管理端批量删除反馈记录结果 */
+export class BatchDeleteFeedbackResultDto {
+  @ApiProperty({ description: '实际删除的反馈数' }) deleted: number;
+  @ApiProperty({ type: [String], description: '未找到（可能已被删除）的反馈 ID' })
+  notFoundIds: string[];
+}
+
 /** 反馈提交者账号投影（奖励发放默认账号；匿名为 null） */
 export class FeedbackSubmitterDto {
   @ApiProperty({ description: '用户 ID' }) id: string;

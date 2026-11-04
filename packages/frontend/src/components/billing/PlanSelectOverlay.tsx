@@ -41,31 +41,35 @@ function discountText(bps: number): string {
   return map[bps] ?? t('{pct}折', { pct: String(Math.round(bps / 100)) });
 }
 
-const QUOTA_GUIDE_CONTENT: Record<
+/** 配额/功能引导文案：函数式取值，渲染期走 t()（模块级烘焙会在 en-US pack
+ *  未就绪时回退 zh-CN 且切语言后不刷新） */
+function getQuotaGuideContent(): Record<
   string,
   { title: string; description: string }
-> = {
-  'quota.max_projects': {
-    title: t('项目数量已达上限'),
-    description: t('升级会员可创建和恢复更多项目'),
-  },
-  'quota.personal_storage_mb': {
-    title: t('个人存储空间已满'),
-    description: t('升级会员可扩展存储空间'),
-  },
-  'quota.project_size_mb': {
-    title: t('项目体积超出限额'),
-    description: t('升级会员可上传更大的项目'),
-  },
-  'quota.conversion_window_count': {
-    title: t('图纸转换过于频繁'),
-    description: t('升级会员可获取更高的转换频率上限'),
-  },
-  export_download: {
-    title: t('导出下载为会员专属功能'),
-    description: t('开通 VIP 后可将图纸导出为 PDF / DWG / DXF 下载'),
-  },
-};
+> {
+  return {
+    'quota.max_projects': {
+      title: t('项目数量已达上限'),
+      description: t('升级会员可创建和恢复更多项目'),
+    },
+    'quota.personal_storage_mb': {
+      title: t('个人存储空间已满'),
+      description: t('升级会员可扩展存储空间'),
+    },
+    'quota.project_size_mb': {
+      title: t('项目体积超出限额'),
+      description: t('升级会员可上传更大的项目'),
+    },
+    'quota.conversion_window_count': {
+      title: t('图纸转换过于频繁'),
+      description: t('升级会员可获取更高的转换频率上限'),
+    },
+    export_download: {
+      title: t('导出下载为会员专属功能'),
+      description: t('开通 VIP 后可将图纸导出为 PDF / DWG / DXF 下载'),
+    },
+  };
+}
 
 type ViewState = 'selection' | 'payment';
 
@@ -255,7 +259,7 @@ export default function PlanSelectOverlay() {
     ? `${selectedTier.name} · ${months} ${t('个月')}`
     : '';
   const guideContent = reason
-    ? QUOTA_GUIDE_CONTENT[reason.restrictionKey]
+    ? getQuotaGuideContent()[reason.restrictionKey]
     : undefined;
 
   return createPortal(

@@ -1,68 +1,65 @@
-import React, { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { t } from '@/languages';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Pagination } from '@/components/ui/Pagination';
-import { Tabs } from '@/components/ui/Tabs';
-import { Tab } from '@/components/ui/Tab';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCopy } from '@/hooks/useCopy';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { buildLoginUrl } from '@/config/clientSetup';
+import React, { useCallback, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { t } from "@/languages";
+import { fillTemplate } from "@/utils/i18nFill";
+import { Card, Button, Pagination, Tabs, Tab } from "@/components/ui";
+
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCopy } from "@/hooks/useCopy";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { buildLoginUrl } from "@/config/clientSetup";
+import { useAccumulatedPagination } from "@/hooks/common/useAccumulatedPagination";
+import { useScrollPagination } from "@/hooks/common/useScrollPagination";
 import {
   feedbackControllerListMine,
   feedbackControllerListMineRewards,
-} from '@/api-sdk';
-import type {
-  FeedbackResponseDto,
-  FeedbackRewardResponseDto,
-} from '@/api-sdk';
+} from "@/api-sdk";
+import type { FeedbackResponseDto, FeedbackRewardResponseDto } from "@/api-sdk";
 import {
   FEEDBACK_TYPE_MAP,
   FEEDBACK_STATUS_MAP,
   REWARD_STATUS_MAP,
-} from '@/constants/feedback';
-import { FeedbackAttachmentList } from '@/components/feedback/FeedbackAttachmentList';
-import { FeedbackQueryModal } from '@/components/feedback/FeedbackQueryModal';
-import { stripHtmlTags } from '@/components/richtext';
+} from "@/constants/feedback";
+import { FeedbackAttachmentList } from "@/components/feedback/FeedbackAttachmentList";
+import { FeedbackQueryModal } from "@/components/feedback/FeedbackQueryModal";
+import { stripHtmlTags } from "@/components/richtext";
 import {
   getLocalFeedbackRecords,
   type FeedbackLocalRecord,
-} from '@/lib/feedbackLocalRecords';
+} from "@/lib/feedbackLocalRecords";
 
 const PAGE_SIZE = 30;
 
 /** 反馈状态徽标颜色 */
 function statusColor(status: string): string {
   switch (status) {
-    case 'PENDING':
-      return 'bg-amber-100 text-amber-800';
-    case 'REVIEWING':
-      return 'bg-blue-100 text-blue-800';
-    case 'ADOPTED':
-      return 'bg-green-100 text-green-800';
-    case 'REJECTED':
-      return 'bg-red-100 text-red-800';
-    case 'CLOSED':
-      return 'bg-gray-100 text-gray-700';
+    case "PENDING":
+      return "bg-amber-100 text-amber-800";
+    case "REVIEWING":
+      return "bg-blue-100 text-blue-800";
+    case "ADOPTED":
+      return "bg-green-100 text-green-800";
+    case "REJECTED":
+      return "bg-red-100 text-red-800";
+    case "CLOSED":
+      return "bg-gray-100 text-gray-700";
     default:
-      return 'bg-gray-100 text-gray-700';
+      return "bg-gray-100 text-gray-700";
   }
 }
 
 function rewardColor(status: string): string {
   switch (status) {
-    case 'PENDING':
-      return 'bg-amber-100 text-amber-800';
-    case 'ISSUED':
-      return 'bg-green-100 text-green-800';
-    case 'REVOKED':
-      return 'bg-gray-100 text-gray-500';
+    case "PENDING":
+      return "bg-amber-100 text-amber-800";
+    case "ISSUED":
+      return "bg-green-100 text-green-800";
+    case "REVOKED":
+      return "bg-gray-100 text-gray-500";
     default:
-      return 'bg-gray-100 text-gray-500';
+      return "bg-gray-100 text-gray-500";
   }
 }
 
@@ -72,8 +69,8 @@ const LocalRecordCard: React.FC<{
   onQuery: (code: string) => void;
 }> = ({ record, onQuery }) => {
   const copy = useCopy({
-    successMessage: t('查询码已复制'),
-    failMessage: t('复制失败'),
+    successMessage: t("查询码已复制"),
+    failMessage: t("复制失败"),
   });
   return (
     <Card className="p-4">
@@ -82,11 +79,11 @@ const LocalRecordCard: React.FC<{
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium truncate">{record.title}</span>
             <span className="shrink-0 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
-              {t('本地')}
+              {t("本地")}
             </span>
           </div>
           <p className="text-xs text-[var(--text-tertiary)] mb-2">
-            {t(FEEDBACK_TYPE_MAP[record.type] ?? record.type)} ·{' '}
+            {t(FEEDBACK_TYPE_MAP[record.type] ?? record.type)} ·{" "}
             {new Date(record.createdAt).toLocaleString()}
           </p>
           <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
@@ -99,10 +96,14 @@ const LocalRecordCard: React.FC<{
             className="text-xs text-[var(--primary-500)] hover:underline"
             onClick={() => copy.copy(record.code, record.code)}
           >
-            {copy.copiedMarker === record.code ? t('已复制') : t('查询码')}
+            {copy.copiedMarker === record.code ? t("已复制") : t("查询码")}
           </button>
-          <Button variant="outline" size="sm" onClick={() => onQuery(record.code)}>
-            {t('查询进度')}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onQuery(record.code)}
+          >
+            {t("查询进度")}
           </Button>
         </div>
       </div>
@@ -121,16 +122,18 @@ const LocalRecordCard: React.FC<{
 export const FeedbackMinePage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'feedback' | 'reward'>('feedback');
+  const [tab, setTab] = useState<"feedback" | "reward">("feedback");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   // 本地记录：页面挂载时读取一次（提交弹窗写入后重新进入页面即可看到）
-  const [localRecords] = useState<FeedbackLocalRecord[]>(getLocalFeedbackRecords);
+  const [localRecords] = useState<FeedbackLocalRecord[]>(
+    getLocalFeedbackRecords,
+  );
   const [queryOpen, setQueryOpen] = useState(false);
   const [queryCode, setQueryCode] = useState<string | null>(null);
   const copy = useCopy({
-    successMessage: t('查询码已复制'),
-    failMessage: t('复制失败'),
+    successMessage: t("查询码已复制"),
+    failMessage: t("复制失败"),
   });
 
   const openQuery = useCallback((code: string) => {
@@ -140,7 +143,7 @@ export const FeedbackMinePage: React.FC = () => {
 
   const handleBack = useCallback(() => {
     if (window.history.length > 1) navigate(-1);
-    else navigate('/');
+    else navigate("/");
   }, [navigate]);
 
   // 每页条数变化：重置到第一页（新条数下深层页码无意义）
@@ -150,53 +153,90 @@ export const FeedbackMinePage: React.FC = () => {
       setPageSize(next);
       setPage(1);
     },
-    [pageSize]
+    [pageSize],
   );
 
   const feedbackQuery = useQuery<{
     items: FeedbackResponseDto[];
     total: number;
   }>({
-    queryKey: ['feedback-mine', page, pageSize],
+    queryKey: ["feedback-mine", page, pageSize],
+    // 占位期保留上一页数据引用（React Query v5 keepPreviousData 已废弃）：
+    // 滚动分页 useAccumulatedPagination 依赖「displayNodes 引用未变占位期」语义
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const res = await feedbackControllerListMine({
         throwOnError: true,
         query: { page, pageSize },
       });
       const d = res.data as
-        | { items: FeedbackResponseDto[]; total: number }
-        | undefined;
+        { items: FeedbackResponseDto[]; total: number } | undefined;
       return { items: d?.items ?? [], total: d?.total ?? 0 };
     },
-    enabled: isAuthenticated && tab === 'feedback',
+    enabled: isAuthenticated && tab === "feedback",
   });
 
-  const rewardQuery = useQuery<{ items: FeedbackRewardResponseDto[]; total: number }>({
-    queryKey: ['feedback-mine-rewards'],
+  const rewardQuery = useQuery<{
+    items: FeedbackRewardResponseDto[];
+    total: number;
+  }>({
+    queryKey: ["feedback-mine-rewards"],
     queryFn: async () => {
       const res = await feedbackControllerListMineRewards({
         throwOnError: true,
       });
       const d = res.data as
-        | { items: FeedbackRewardResponseDto[]; total: number }
-        | undefined;
+        { items: FeedbackRewardResponseDto[]; total: number } | undefined;
       return { items: d?.items ?? [], total: d?.total ?? 0 };
     },
-    enabled: isAuthenticated && tab === 'reward',
+    enabled: isAuthenticated && tab === "reward",
   });
 
   const loading =
-    tab === 'feedback' ? feedbackQuery.isLoading : rewardQuery.isLoading;
-  const error =
-    tab === 'feedback' ? feedbackQuery.error : rewardQuery.error;
+    tab === "feedback" ? feedbackQuery.isLoading : rewardQuery.isLoading;
+  const error = tab === "feedback" ? feedbackQuery.error : rewardQuery.error;
 
   const handleRefresh = useCallback(() => {
-    if (tab === 'feedback') feedbackQuery.refetch();
+    if (tab === "feedback") feedbackQuery.refetch();
     else rewardQuery.refetch();
   }, [tab, feedbackQuery, rewardQuery]);
 
-  const feedbackItems = feedbackQuery.data?.items ?? [];
   const rewardItems = rewardQuery.data?.items ?? [];
+
+  // 滚动分页（累积模型）：向下加载更多 / 向上加载前页，与按钮分页并存。
+  // resetKey 含 tab/条数：查询身份变化时整体替换并清挂起方向
+  const feedbackScrollRef = useRef<HTMLDivElement>(null);
+  const resetKey = `${tab}|${pageSize}`;
+  const { viewNodes, handleScrollPageChange, minLoadedPage } =
+    useAccumulatedPagination({
+      displayNodes: feedbackQuery.data?.items ?? [],
+      currentPage: page,
+      handlePageChange: setPage,
+      resetKey,
+    });
+  const feedbackPageCount = Math.ceil(
+    (feedbackQuery.data?.total ?? 0) / pageSize,
+  );
+  const feedbackLoadError =
+    tab === "feedback" && feedbackQuery.error
+      ? getErrorMessage(feedbackQuery.error)
+      : null;
+  const { visiblePage, jumpTo, showBottomLoader, showTopLoader, isLastPage } =
+    useScrollPagination({
+      containerRef: feedbackScrollRef,
+      // Card 列表 children 含可选「本地记录补充区」，项↔DOM 非一一对应时测量自动回退 displayedPage
+      itemContainerRef: feedbackScrollRef,
+      itemsLength: viewNodes.length,
+      pageSize,
+      currentPage: page,
+      totalPages: feedbackPageCount,
+      loading: feedbackQuery.isFetching,
+      enabled: tab === "feedback" && isAuthenticated,
+      loadError: feedbackLoadError,
+      minLoadedPage,
+      onPageChange: handleScrollPageChange,
+    });
+  const feedbackItems = viewNodes;
 
   // 不在已加载云页中的本地记录（按查询码去重）：云端查不到的补充区
   const cloudCodes = new Set(feedbackItems.map((f) => f.feedbackCode));
@@ -210,13 +250,13 @@ export const FeedbackMinePage: React.FC = () => {
         className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--primary-500)] mb-2"
       >
         <ArrowLeft size={16} />
-        {t('返回')}
+        {t("返回")}
       </button>
       <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-1">
-        {t('我的反馈')}
+        {t("我的反馈")}
       </h1>
       <p className="text-sm text-[var(--text-tertiary)]">
-        {t('查看你提交的反馈处理进度与采纳奖励')}
+        {t("查看你提交的反馈处理进度与采纳奖励")}
       </p>
     </div>
   );
@@ -228,19 +268,19 @@ export const FeedbackMinePage: React.FC = () => {
         {header}
         <Card className="p-4 flex items-center justify-between gap-3">
           <p className="text-sm text-[var(--text-secondary)]">
-            {t('本地记录仅保存在本设备，登录后可查看云端完整记录')}
+            {t("本地记录仅保存在本设备，登录后可查看云端完整记录")}
           </p>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(buildLoginUrl('/feedback/mine'))}
+            onClick={() => navigate(buildLoginUrl("/feedback/mine"))}
           >
-            {t('登录')}
+            {t("登录")}
           </Button>
         </Card>
         {localRecords.length === 0 ? (
           <Card className="mt-4 p-8 text-center text-sm text-[var(--text-secondary)]">
-            {t('暂无本地反馈记录')}
+            {t("暂无本地反馈记录")}
           </Card>
         ) : (
           <div className="mt-4 space-y-3 flex-1 overflow-y-auto">
@@ -265,17 +305,17 @@ export const FeedbackMinePage: React.FC = () => {
       <Tabs className="mb-4">
         <Tab
           value="feedback"
-          active={tab === 'feedback'}
-          onClick={() => setTab('feedback')}
+          active={tab === "feedback"}
+          onClick={() => setTab("feedback")}
         >
-          {t('我的反馈')}
+          {t("我的反馈")}
         </Tab>
         <Tab
           value="reward"
-          active={tab === 'reward'}
-          onClick={() => setTab('reward')}
+          active={tab === "reward"}
+          onClick={() => setTab("reward")}
         >
-          {t('我的奖励')}
+          {t("我的奖励")}
         </Tab>
       </Tabs>
 
@@ -283,19 +323,31 @@ export const FeedbackMinePage: React.FC = () => {
         <Card className="mt-4 p-8 text-center">
           <p className="text-red-600 text-sm mb-3">{getErrorMessage(error)}</p>
           <Button variant="secondary" onClick={handleRefresh}>
-            {t('重试')}
+            {t("重试")}
           </Button>
         </Card>
       ) : loading ? (
         <Card className="mt-4 p-8 text-center text-sm text-[var(--text-secondary)]">
-          {t('加载中...')}
+          {t("加载中...")}
         </Card>
-      ) : tab === 'feedback' ? (
-        <div className="mt-4 space-y-3 flex-1 overflow-y-auto">
+      ) : tab === "feedback" ? (
+        <div
+          ref={feedbackScrollRef}
+          className="mt-4 space-y-3 flex-1 overflow-y-auto"
+        >
+          {showTopLoader && (
+            <div
+              className="flex items-center justify-center gap-2 py-2 text-xs"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <Loader2 size={14} className="animate-spin" />
+              <span>{t("加载中...")}</span>
+            </div>
+          )}
           {localOnly.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs text-[var(--text-tertiary)]">
-                {t('本地记录仅保存在本设备，登录后可查看云端完整记录')}
+                {t("本地记录仅保存在本设备，登录后可查看云端完整记录")}
               </p>
               {localOnly.map((r) => (
                 <LocalRecordCard key={r.code} record={r} onQuery={openQuery} />
@@ -305,7 +357,7 @@ export const FeedbackMinePage: React.FC = () => {
           {feedbackItems.length === 0 ? (
             localOnly.length === 0 ? (
               <Card className="p-8 text-center text-sm text-[var(--text-secondary)]">
-                {t('暂无反馈记录')}
+                {t("暂无反馈记录")}
               </Card>
             ) : null
           ) : (
@@ -325,11 +377,11 @@ export const FeedbackMinePage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-xs text-[var(--text-tertiary)] mb-2">
-                        {t(FEEDBACK_TYPE_MAP[f.type] ?? f.type)} ·{' '}
+                        {t(FEEDBACK_TYPE_MAP[f.type] ?? f.type)} ·{" "}
                         {new Date(f.createdAt).toLocaleString()}
                       </p>
                       <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                        {stripHtmlTags(f.content ?? '')}
+                        {stripHtmlTags(f.content ?? "")}
                       </p>
                       {f.attachments?.length ? (
                         <div className="mt-2">
@@ -338,12 +390,12 @@ export const FeedbackMinePage: React.FC = () => {
                       ) : null}
                       {f.adoptNote && (
                         <p className="text-sm text-green-700 mt-1">
-                          {t('采纳说明')}：{f.adoptNote}
+                          {t("采纳说明")}：{f.adoptNote}
                         </p>
                       )}
                       {f.rejectReason && (
                         <p className="text-sm text-red-600 mt-1">
-                          {t('驳回原因')}：{f.rejectReason}
+                          {t("驳回原因")}：{f.rejectReason}
                         </p>
                       )}
                     </div>
@@ -358,22 +410,58 @@ export const FeedbackMinePage: React.FC = () => {
                         className="text-xs text-[var(--primary-500)] hover:underline"
                         onClick={() => copy.copy(f.feedbackCode, f.id)}
                       >
-                        {copy.copiedMarker === f.id ? t('已复制') : t('查询码')}
+                        {copy.copiedMarker === f.id ? t("已复制") : t("查询码")}
                       </button>
                     </div>
                   </div>
                 </Card>
               ))}
+              {showBottomLoader ? (
+                <div
+                  className="flex items-center justify-center gap-2 py-2 text-xs"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>{t("加载中...")}</span>
+                </div>
+              ) : feedbackLoadError ? (
+                <div
+                  className="flex items-center justify-center gap-2 py-3 text-xs"
+                  style={{ color: "var(--error)" }}
+                >
+                  <span
+                    className="max-w-[60%] truncate"
+                    title={feedbackLoadError}
+                  >
+                    {feedbackLoadError}
+                  </span>
+                  <Button variant="outline" size="xs" onClick={handleRefresh}>
+                    {t("重试")}
+                  </Button>
+                </div>
+              ) : isLastPage ? (
+                <div
+                  className="flex items-center justify-center gap-2 py-2 text-xs"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <span>{t("已经是最后一页")}</span>
+                </div>
+              ) : null}
               {feedbackQuery.data && feedbackQuery.data.total > pageSize && (
                 <div className="flex justify-center pt-2">
                   <Pagination
                     meta={{
                       total: feedbackQuery.data.total,
-                      page,
+                      page: visiblePage,
                       limit: pageSize,
-                      totalPages: Math.ceil(feedbackQuery.data.total / pageSize),
+                      totalPages: Math.ceil(
+                        feedbackQuery.data.total / pageSize,
+                      ),
                     }}
-                    onPageChange={setPage}
+                    onPageChange={(next) => {
+                      jumpTo(next);
+                      setPage(next);
+                    }}
                     showSizeChanger
                     onPageSizeChange={handlePageSizeChange}
                     pageSizeOptions={[30, 50, 100]}
@@ -385,7 +473,7 @@ export const FeedbackMinePage: React.FC = () => {
         </div>
       ) : rewardItems.length === 0 ? (
         <Card className="mt-4 p-8 text-center text-sm text-[var(--text-secondary)]">
-          {t('暂无奖励记录')}
+          {t("暂无奖励记录")}
         </Card>
       ) : (
         <div className="mt-4 space-y-3 flex-1 overflow-y-auto">
@@ -394,22 +482,22 @@ export const FeedbackMinePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">
-                    {t('VIP{level} 会员 {days} 天', {
+                    {fillTemplate("VIP{level} 会员 {days} 天", {
                       level: r.vipTierLevel,
                       days: r.durationDays,
                     })}
                   </p>
                   {r.feedbackTitle && (
                     <p className="text-xs text-[var(--text-secondary)] mt-1">
-                      {t('关联反馈')}：{r.feedbackTitle}
-                      {r.feedbackCode ? `（${r.feedbackCode}）` : ''}
+                      {t("关联反馈")}：{r.feedbackTitle}
+                      {r.feedbackCode ? `（${r.feedbackCode}）` : ""}
                     </p>
                   )}
                   <p className="text-xs text-[var(--text-tertiary)] mt-1">
                     {new Date(r.createdAt).toLocaleString()}
                     {r.issuedAt
-                      ? ` · ${t('发放于')} ${new Date(r.issuedAt).toLocaleString()}`
-                      : ''}
+                      ? ` · ${t("发放于")} ${new Date(r.issuedAt).toLocaleString()}`
+                      : ""}
                   </p>
                   {r.remark && (
                     <p className="text-xs text-[var(--text-secondary)] mt-1">

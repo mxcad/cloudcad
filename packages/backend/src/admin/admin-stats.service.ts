@@ -92,10 +92,15 @@ interface ActiveStatsRow {
  * - 每日新增用户：users.createdAt 按日聚合，排除软删账号（deletedAt IS NULL）
  * - 购买数：PaymentOrder status=SUCCEEDED，按 paidAt 归日（回退 createdAt），
  *   三项计数（订单笔数 / 去重付费用户数 / 金额分值）；退款单单列不扣减
- * - 活跃用户：活跃行为 = 任意审计事件（成功登录 / 文件 / 项目 / 节点操作等）；
- *   DAU = 当日产生事件的去重用户数，MAU = 近 30 天滚动窗口（含锚定日）去重用户数；
- *   KPI 为当前实时值（与统计区间无关），序列按区间零填充
+ * - 活跃用户：活跃行为 = 任意审计事件（audit_logs）或成功的高频操作
+ *   （登录 / 上传 / 下载，ADR-0045 过滤出 audit_logs、降级记于 user_activity）；
+ *   DAU = 当日产生事件的去重用户数（两表并集），MAU = 近 30 天滚动窗口（含锚定日）
+ *   去重用户数；KPI 为当前实时值（与统计区间无关），序列按区间零填充
  * - 切日一律为东八区自然日；实时聚合，不落快照表
+ * - 归日 SQL 惯用法：Prisma DateTime 落库为 timestamp without time zone（存 UTC 壁钟），
+ *   故 `(x + INTERVAL '8 hours')::date` 即东八区自然日，且不依赖 PG 会话 TimeZone
+ *   （会话时区随部署机 OS 时区变化，Windows 部署为 +08；若用
+ *   `(x AT TIME ZONE 'UTC') + 8h` 再 `::date`，::date 会叠加会话时区造成双重偏移）
  */
 @Injectable()
 export class AdminStatsService {
@@ -135,8 +140,12 @@ export class AdminStatsService {
       ? Prisma.sql`AND "provider" = ${options.provider}`
       : Prisma.empty;
 
+    // 归日惯用法：Prisma DateTime 落为 timestamp without time zone（存 UTC 壁钟），
+    // 直接 (x + 8h)::date 即东八区自然日——不依赖 PG 会话 TimeZone；
+    // 禁用 (x AT TIME ZONE 'UTC') + 8h 再 ::date 的形态（::date 会叠加会话时区，
+    // 会话为 +08 时双重偏移，16:00-24:00 CST 时段事件被归入次日）
     const rows = await this.prisma.$queryRaw<DailyRegistrationRow[]>`
-      SELECT to_char((("createdAt" AT TIME ZONE 'UTC') + INTERVAL '8 hours')::date, 'YYYY-MM-DD') AS "date",
+      SELECT to_char(("createdAt" + INTERVAL '8 hours')::date, 'YYYY-MM-DD') AS "date",
              COUNT(*)::int AS "count"
       FROM users
       WHERE "deletedAt" IS NULL
@@ -176,7 +185,7 @@ export class AdminStatsService {
       : Prisma.empty;
 
     const seriesRows = await this.prisma.$queryRaw<DailyPurchaseRow[]>`
-      SELECT to_char(((COALESCE("paidAt", "createdAt") AT TIME ZONE 'UTC') + INTERVAL '8 hours')::date, 'YYYY-MM-DD') AS "date",
+      SELECT to_char((COALESCE("paidAt", "createdAt") + INTERVAL '8 hours')::date, 'YYYY-MM-DD') AS "date",
              COUNT(*)::int AS "orderCount",
              COUNT(DISTINCT "userId")::int AS "userCount",
              COALESCE(SUM("amount"), 0)::bigint AS "amount"
@@ -282,7 +291,8 @@ export class AdminStatsService {
    *   mau=近 30 天滚动窗口（含今日）；stickiness=dau/mau（mau 为 0 时 null）
    * - series 按区间零填充：dau=当日去重活跃用户，mau=以该日为锚的近 30 天
    *   滚动窗口去重值（查询下界向前扩 29 天）
-   * - 活跃口径=任意审计事件（audit_logs 按 userId+东八区自然日去重）
+   * - 活跃口径=audit_logs 任意审计事件 ∪ user_activity 成功高频操作
+   *   （登录/上传/下载，ADR-0086），按 userId+东八区自然日去重
    */
   async getActiveStats(
     options: { startDate?: string; endDate?: string } = {}
@@ -298,14 +308,28 @@ export class AdminStatsService {
     );
 
     const dauRows = await this.prisma.$queryRaw<OverviewCountRow[]>`
-      SELECT COUNT(DISTINCT "userId")::int AS "count"
-      FROM audit_logs
-      WHERE "createdAt" >= ${todayStartUtc}
+      SELECT COUNT(*)::int AS "count"
+      FROM (
+        SELECT DISTINCT "userId"
+        FROM audit_logs
+        WHERE "createdAt" >= ${todayStartUtc}
+        UNION
+        SELECT DISTINCT "userId"
+        FROM user_activity
+        WHERE "createdAt" >= ${todayStartUtc}
+      ) u
     `;
     const mauRows = await this.prisma.$queryRaw<OverviewCountRow[]>`
-      SELECT COUNT(DISTINCT "userId")::int AS "count"
-      FROM audit_logs
-      WHERE "createdAt" >= ${mauWindowStartUtc}
+      SELECT COUNT(*)::int AS "count"
+      FROM (
+        SELECT DISTINCT "userId"
+        FROM audit_logs
+        WHERE "createdAt" >= ${mauWindowStartUtc}
+        UNION
+        SELECT DISTINCT "userId"
+        FROM user_activity
+        WHERE "createdAt" >= ${mauWindowStartUtc}
+      ) u
     `;
 
     const dau = dauRows[0]?.count ?? 0;
@@ -314,27 +338,33 @@ export class AdminStatsService {
       mau > 0 ? Number((dau / mau).toFixed(4)) : null;
 
     // 序列：user_days 去重 (userId, 东八区自然日)，下界向前扩 29 天供 MAU 窗口；
-    // 条件聚合一次算出每日的 dau（当日）与 mau（近 30 天窗口）
+    // 条件聚合一次算出每日的 dau（当日）与 mau（近 30 天窗口）。
+    // 窗口天数是编译期常量，经 Prisma.raw 内联为字面量：Prisma 7 的类型化参数绑定
+    // 在 PG 下无法解析 `date - $param`（42883 operator does not exist: date >= integer），
+    // 日期参数不受影响（实测仅 date 运算位置的参数触发）
     const extendedStartUtc = new Date(
       range.startUtc.getTime() - (MAU_WINDOW_DAYS - 1) * MS_PER_DAY
     );
+    const mauWindowOffset = Prisma.raw(String(MAU_WINDOW_DAYS - 1));
     const seriesRows = await this.prisma.$queryRaw<ActiveStatsRow[]>`
       WITH user_days AS (
         SELECT DISTINCT "userId",
-               (("createdAt" AT TIME ZONE 'UTC') + INTERVAL '8 hours')::date AS "day"
+               ("createdAt" + INTERVAL '8 hours')::date AS "day"
         FROM audit_logs
+        WHERE "createdAt" >= ${extendedStartUtc}
+          AND "createdAt" < ${range.endUtcExclusive}
+        UNION
+        SELECT DISTINCT "userId",
+               ("createdAt" + INTERVAL '8 hours')::date AS "day"
+        FROM user_activity
         WHERE "createdAt" >= ${extendedStartUtc}
           AND "createdAt" < ${range.endUtcExclusive}
       )
       SELECT to_char(d.day, 'YYYY-MM-DD') AS "date",
              COUNT(DISTINCT CASE WHEN ud."day" = d.day THEN ud."userId" END)::int AS "dau",
-             COUNT(DISTINCT CASE WHEN ud."day" BETWEEN d.day - ${
-               MAU_WINDOW_DAYS - 1
-             } AND d.day THEN ud."userId" END)::int AS "mau"
+             COUNT(DISTINCT CASE WHEN ud."day" BETWEEN d.day - ${mauWindowOffset} AND d.day THEN ud."userId" END)::int AS "mau"
       FROM (SELECT generate_series(${range.startDate}::date, ${range.endDate}::date, INTERVAL '1 day')::date AS day) d
-      LEFT JOIN user_days ud ON ud."day" BETWEEN d.day - ${
-        MAU_WINDOW_DAYS - 1
-      } AND d.day
+      LEFT JOIN user_days ud ON ud."day" BETWEEN d.day - ${mauWindowOffset} AND d.day
       GROUP BY d.day
       ORDER BY d.day
     `;

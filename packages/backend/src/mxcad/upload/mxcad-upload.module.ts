@@ -20,6 +20,9 @@ import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.modul
 import { MxcadSaveModule } from '../save/mxcad-save.module';
 import { AuditLogModule } from '../../audit/audit-log.module';
 import { DrawingIngestService } from './drawing-ingest.service';
+import { QuotaGuardService } from './quota-guard.service';
+import { NoNodeConversionService } from './no-node-conversion.service';
+import { FailureSettlementService } from './failure-settlement.service';
 import { ConversionFileSseService } from './conversion-file.sse.service';
 import { ConversionFileSseController } from './conversion-file.sse.controller';
 import { UploadUtilityService } from './upload-utility.service';
@@ -53,6 +56,10 @@ import { ChunkUploadManagerService } from '../services/chunk-upload-manager.serv
     NodeStatusTransitioner,
     UploadUtilityService,
     ChunkUploadManagerService,
+    // 评审候选 6：DrawingIngest 巨缝拆出的三个 stage 服务
+    QuotaGuardService,
+    NoNodeConversionService,
+    FailureSettlementService,
   ],
   exports: [
     DrawingIngestService,

@@ -365,7 +365,12 @@ export function useScrollPagination({
         rafPendingRef.current = null;
       }
     };
-  }, [enabled, containerRef, measureVisiblePage]);
+    // itemsLength 入依赖：容器可能是「数据到位后才挂载」的条件渲染（空态/加载态
+    // 先行，如 AdminFeedbackPage 的 feedbackRows.length===0 分支、FeedbackMinePage 的
+    // loading 分支）。挂载时容器为 null 会早退，若不随 itemsLength 重跑则监听器永不
+    // 附加（浏览器实测：滚动到底不触发翻页）。数据到位（itemsLength 0→N）时容器挂载
+    // 且本 effect 重跑，此刻 containerRef.current 已就位，正常附加。
+  }, [enabled, containerRef, measureVisiblePage, itemsLength]);
 
   // 数据到位后记录实际渲染的页。
   // 延迟到替换屏蔽窗结束（SETTLE_BLOCK_MS）再更新：滚动触发翻页时 currentPage 立即前跳，

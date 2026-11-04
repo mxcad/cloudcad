@@ -1,9 +1,9 @@
-import { Trash2 } from 'lucide-react';
-import { Button, Tag } from '@/components/ui';
-import { t } from '@/languages';
-import { PERMISSION_GROUPS, getRoleDisplayName } from '@/constants/permissions';
-import styles from '../RoleManagement.module.css';
-import type { SystemRole, ProjectRoleTemplate, RoleType } from '../types';
+import { Trash2 } from "lucide-react";
+import { Button, Tag } from "@/components/ui";
+import { t } from "@/languages";
+import { PERMISSION_GROUPS, getRoleDisplayName } from "@/constants/permissions";
+import styles from "../RoleManagement.module.css";
+import type { SystemRole, ProjectRoleTemplate, RoleType } from "../types";
 
 interface RoleCardProps<T extends SystemRole | ProjectRoleTemplate> {
   role: T;
@@ -21,17 +21,17 @@ function renderPermissionTags(permissions: string[], type: RoleType) {
 
   return permissions.slice(0, 6).map((p) => {
     const permKey =
-      typeof p === 'string'
+      typeof p === "string"
         ? p
-        : (p as { permission?: string })?.permission || '';
+        : (p as { permission?: string })?.permission || "";
     const permItem = allPerms.find((item) => item.key === permKey);
     const label = permItem
       ? permItem.label
-      : permKey.split('_').slice(1).join('_');
+      : permKey.split("_").slice(1).join("_");
 
     return (
       <span key={permKey} className={styles.permissionTag}>
-        {label}
+        {t(label)}
       </span>
     );
   });
@@ -49,8 +49,8 @@ export function RoleCard<T extends SystemRole | ProjectRoleTemplate>({
   // 项目角色/模板：除 PROJECT_OWNER（项目所有者保护 / 模板保底）外可删；
   // 系统角色：仅自定义角色可删（系统角色由后端禁删）
   const canShowDelete =
-    type === 'project'
-      ? canDelete && role.name !== 'PROJECT_OWNER'
+    type === "project"
+      ? canDelete && role.name !== "PROJECT_OWNER"
       : canDelete && !role.isSystem;
 
   return (
@@ -64,12 +64,12 @@ export function RoleCard<T extends SystemRole | ProjectRoleTemplate>({
             {getRoleDisplayName(role.name, role.isSystem)}
             {role.isSystem && (
               <Tag variant="primary" size="xs">
-                {t('系统')}
+                {t("系统")}
               </Tag>
             )}
           </h3>
           <p className={styles.roleDescription}>
-            {role.description ? t(role.description) : t('暂无描述')}
+            {role.description ? t(role.description) : t("暂无描述")}
           </p>
         </div>
         {canShowDelete && (
@@ -78,14 +78,14 @@ export function RoleCard<T extends SystemRole | ProjectRoleTemplate>({
             size="md"
             onClick={() => onDelete(role.id)}
             className={styles.deleteBtn}
-            title={t('删除角色')}
+            title={t("删除角色")}
             icon={Trash2}
           />
         )}
       </div>
 
       <div className={styles.rolePermissions}>
-        <h4 className={styles.permissionsTitle}>{t('拥有权限')}</h4>
+        <h4 className={styles.permissionsTitle}>{t("拥有权限")}</h4>
         <div className={styles.permissionsList}>
           {renderPermissionTags(role.permissions, type)}
           {role.permissions.length > 6 && (
@@ -103,7 +103,7 @@ export function RoleCard<T extends SystemRole | ProjectRoleTemplate>({
             className="w-full"
             onClick={() => onEdit(role)}
           >
-            {t('配置权限')}
+            {t("配置权限")}
           </Button>
         </div>
       )}

@@ -1,17 +1,15 @@
-import { Search, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Tag } from '@/components/ui/Tag';
-import { Input } from '@/components/ui/Input';
-import { t } from '@/languages';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
+import { Search, RefreshCw } from "lucide-react";
+import { Button, Card, Tag, Input } from "@/components/ui";
+
+import { t } from "@/languages";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
 import {
   formatYuan,
   ORDER_STATUS_META,
   PAGE_SIZE,
   STATUS_OPTIONS,
-} from '../constants';
-import type { AdminOrder } from '../types';
+} from "../constants";
+import type { AdminOrder } from "../types";
 
 interface OrdersTabProps {
   orders: AdminOrder[];
@@ -48,7 +46,7 @@ export function OrdersTab({
   const getOrderStatusMeta = (orderStatus: string) =>
     ORDER_STATUS_META[orderStatus] ?? {
       label: orderStatus,
-      color: 'neutral' as const,
+      color: "neutral" as const,
     };
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -59,10 +57,10 @@ export function OrdersTab({
           <Search
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           />
           <Input
-            placeholder={t('搜索订单号...')}
+            placeholder={t("搜索订单号...")}
             value={keyword}
             onChange={(e) => onKeywordChange(e.target.value)}
             className="pl-8"
@@ -74,19 +72,19 @@ export function OrdersTab({
           onChange={(e) => onStatusChange(e.target.value)}
           className="h-[28px] px-3 rounded-lg text-sm"
           style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-default)',
-            color: 'var(--text-primary)',
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border-default)",
+            color: "var(--text-primary)",
           }}
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
         <Button variant="outline" size="sm" onClick={onSearch}>
-          {t('搜索')}
+          {t("搜索")}
         </Button>
         <Button
           variant="outline"
@@ -101,8 +99,8 @@ export function OrdersTab({
           <div
             className="w-8 h-8 rounded-full animate-spin"
             style={{
-              border: '3px solid var(--border-default)',
-              borderTopColor: 'var(--primary-500)',
+              border: "3px solid var(--border-default)",
+              borderTopColor: "var(--primary-500)",
             }}
           />
         </div>
@@ -111,30 +109,30 @@ export function OrdersTab({
           <Card variant="outlined" padding="none" radius="xl">
             <table
               className="w-full text-sm"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                <tr style={{ borderBottom: "1px solid var(--border-default)" }}>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('订单号')}
+                    {t("订单号")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('用户')}
+                    {t("用户")}
                   </th>
                   <th className="text-right px-4 py-3 font-medium">
-                    {t('金额')}
+                    {t("金额")}
                   </th>
                   <th className="text-center px-4 py-3 font-medium">
-                    {t('状态')}
+                    {t("状态")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('支付方式')}
+                    {t("支付方式")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('时间')}
+                    {t("时间")}
                   </th>
                   <th className="text-center px-4 py-3 font-medium">
-                    {t('操作')}
+                    {t("操作")}
                   </th>
                 </tr>
               </thead>
@@ -145,7 +143,7 @@ export function OrdersTab({
                     <tr
                       key={order.id}
                       style={{
-                        borderBottom: '1px solid var(--border-default)',
+                        borderBottom: "1px solid var(--border-default)",
                       }}
                     >
                       <td className="px-4 py-3 font-mono text-xs">
@@ -163,39 +161,39 @@ export function OrdersTab({
                         <Tag
                           variant={
                             meta.color as
-                              'success' | 'warning' | 'error' | 'neutral'
+                              "success" | "warning" | "error" | "neutral"
                           }
                           size="xs"
                         >
-                          {meta.label}
+                          {t(meta.label)}
                         </Tag>
                       </td>
                       <td className="px-4 py-3">{order.gateway}</td>
                       <td className="px-4 py-3 text-xs">
                         {order.createdAt
                           ? formatDateTimeWithSeconds(order.createdAt)
-                          : ''}
+                          : ""}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {order.status === 'SUCCEEDED' && (
+                          {order.status === "SUCCEEDED" && (
                             <Button
                               variant="ghost"
                               size="xs"
                               onClick={() => onRefund(order)}
                               disabled={!canWrite}
                             >
-                              {t('退款')}
+                              {t("退款")}
                             </Button>
                           )}
-                          {order.status === 'PENDING' && (
+                          {order.status === "PENDING" && (
                             <Button
                               variant="ghost"
                               size="xs"
                               onClick={() => onMockCallback(order)}
                               disabled={!canWrite}
                             >
-                              {t('模拟回调')}
+                              {t("模拟回调")}
                             </Button>
                           )}
                         </div>
@@ -208,9 +206,9 @@ export function OrdersTab({
                     <td
                       colSpan={7}
                       className="text-center py-8"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      {t('暂无订单')}
+                      {t("暂无订单")}
                     </td>
                   </tr>
                 )}
@@ -222,28 +220,28 @@ export function OrdersTab({
               <button
                 className="px-3 py-1 rounded-lg text-sm"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-secondary)",
                 }}
                 onClick={() => onPageChange(Math.max(1, page - 1))}
               >
-                {t('上一页')}
+                {t("上一页")}
               </button>
               <span
                 className="px-3 py-1 text-sm"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
                 {page} / {totalPages}
               </span>
               <button
                 className="px-3 py-1 rounded-lg text-sm"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-secondary)",
                 }}
                 onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               >
-                {t('下一页')}
+                {t("下一页")}
               </button>
             </div>
           )}

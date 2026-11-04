@@ -1,16 +1,15 @@
-import { RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Tag } from '@/components/ui/Tag';
-import { t } from '@/languages';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
+import { RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import { Button, Card, Tag } from "@/components/ui";
+
+import { t } from "@/languages";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
 import {
   formatYuan,
   PAGE_SIZE,
   REFUND_APPLICATION_STATUS_META,
   REFUND_APPLICATION_STATUS_OPTIONS,
-} from '../constants';
-import type { RefundApplicationItem } from '../types';
+} from "../constants";
+import type { RefundApplicationItem } from "../types";
 
 interface RefundApplicationsTabProps {
   applications: RefundApplicationItem[];
@@ -43,7 +42,7 @@ export function RefundApplicationsTab({
   const getMeta = (s: string) =>
     REFUND_APPLICATION_STATUS_META[s] ?? {
       label: s,
-      color: 'neutral' as const,
+      color: "neutral" as const,
     };
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -55,14 +54,14 @@ export function RefundApplicationsTab({
           onChange={(e) => onStatusChange(e.target.value)}
           className="h-[28px] px-3 rounded-lg text-sm"
           style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-default)',
-            color: 'var(--text-primary)',
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border-default)",
+            color: "var(--text-primary)",
           }}
         >
           {REFUND_APPLICATION_STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
@@ -79,8 +78,8 @@ export function RefundApplicationsTab({
           <div
             className="w-8 h-8 rounded-full animate-spin"
             style={{
-              border: '3px solid var(--border-default)',
-              borderTopColor: 'var(--primary-500)',
+              border: "3px solid var(--border-default)",
+              borderTopColor: "var(--primary-500)",
             }}
           />
         </div>
@@ -89,33 +88,33 @@ export function RefundApplicationsTab({
           <Card variant="outlined" padding="none" radius="xl">
             <table
               className="w-full text-sm"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                <tr style={{ borderBottom: "1px solid var(--border-default)" }}>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('用户')}
+                    {t("用户")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('订单号')}
+                    {t("订单号")}
                   </th>
                   <th className="text-right px-4 py-3 font-medium">
-                    {t('金额')}
+                    {t("金额")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('申请原因')}
+                    {t("申请原因")}
                   </th>
                   <th className="text-center px-4 py-3 font-medium">
-                    {t('状态')}
+                    {t("状态")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('申请时间')}
+                    {t("申请时间")}
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
-                    {t('审核信息')}
+                    {t("审核信息")}
                   </th>
                   <th className="text-center px-4 py-3 font-medium">
-                    {t('操作')}
+                    {t("操作")}
                   </th>
                 </tr>
               </thead>
@@ -126,7 +125,7 @@ export function RefundApplicationsTab({
                     <tr
                       key={application.id}
                       style={{
-                        borderBottom: '1px solid var(--border-default)',
+                        borderBottom: "1px solid var(--border-default)",
                       }}
                     >
                       <td className="px-4 py-3">
@@ -139,7 +138,7 @@ export function RefundApplicationsTab({
                         {application.order?.description && (
                           <div
                             className="font-sans text-xs mt-0.5"
-                            style={{ color: 'var(--text-tertiary)' }}
+                            style={{ color: "var(--text-tertiary)" }}
                           >
                             {application.order.description}
                           </div>
@@ -155,10 +154,10 @@ export function RefundApplicationsTab({
                         {application.reviewNote && (
                           <div
                             className="truncate text-xs mt-0.5"
-                            style={{ color: 'var(--text-tertiary)' }}
-                            title={`${t('审核意见')}: ${application.reviewNote}`}
+                            style={{ color: "var(--text-tertiary)" }}
+                            title={`${t("审核意见")}: ${application.reviewNote}`}
                           >
-                            {t('审核意见')}: {application.reviewNote}
+                            {t("审核意见")}: {application.reviewNote}
                           </div>
                         )}
                       </td>
@@ -166,11 +165,11 @@ export function RefundApplicationsTab({
                         <Tag
                           variant={
                             meta.color as
-                              'success' | 'warning' | 'error' | 'neutral'
+                              "success" | "warning" | "error" | "neutral"
                           }
                           size="xs"
                         >
-                          {meta.label}
+                          {t(meta.label)}
                         </Tag>
                       </td>
                       <td className="px-4 py-3 text-xs">
@@ -183,9 +182,9 @@ export function RefundApplicationsTab({
                             {application.reviewer && (
                               <div
                                 className="mt-0.5"
-                                style={{ color: 'var(--text-tertiary)' }}
+                                style={{ color: "var(--text-tertiary)" }}
                               >
-                                {t('审核人')}:{' '}
+                                {t("审核人")}:{" "}
                                 {application.reviewer.email ||
                                   application.reviewer.username ||
                                   application.reviewer.id}
@@ -193,14 +192,14 @@ export function RefundApplicationsTab({
                             )}
                           </>
                         ) : (
-                          <span style={{ color: 'var(--text-tertiary)' }}>
+                          <span style={{ color: "var(--text-tertiary)" }}>
                             —
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {application.status === 'PENDING' && (
+                          {application.status === "PENDING" && (
                             <>
                               <Button
                                 variant="ghost"
@@ -209,7 +208,7 @@ export function RefundApplicationsTab({
                                 onClick={() => onApprove(application)}
                                 disabled={!canWrite}
                               >
-                                {t('通过')}
+                                {t("通过")}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -218,7 +217,7 @@ export function RefundApplicationsTab({
                                 onClick={() => onReject(application)}
                                 disabled={!canWrite}
                               >
-                                {t('驳回')}
+                                {t("驳回")}
                               </Button>
                             </>
                           )}
@@ -232,9 +231,9 @@ export function RefundApplicationsTab({
                     <td
                       colSpan={8}
                       className="text-center py-8"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      {t('暂无退款申请')}
+                      {t("暂无退款申请")}
                     </td>
                   </tr>
                 )}
@@ -246,28 +245,28 @@ export function RefundApplicationsTab({
               <button
                 className="px-3 py-1 rounded-lg text-sm"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-secondary)",
                 }}
                 onClick={() => onPageChange(Math.max(1, page - 1))}
               >
-                {t('上一页')}
+                {t("上一页")}
               </button>
               <span
                 className="px-3 py-1 text-sm"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
                 {page} / {totalPages}
               </span>
               <button
                 className="px-3 py-1 rounded-lg text-sm"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-secondary)",
                 }}
                 onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               >
-                {t('下一页')}
+                {t("下一页")}
               </button>
             </div>
           )}

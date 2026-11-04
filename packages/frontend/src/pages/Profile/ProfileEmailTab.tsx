@@ -1,10 +1,10 @@
-import React from 'react';
-import { Mail, Shield, CheckCircle, Send } from 'lucide-react';
-import { UserDto } from '@/api-sdk';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui';
-import { t } from '@/languages';
-import styles from './Profile.module.css';
+import React from "react";
+import { Mail, Shield, CheckCircle, Send } from "lucide-react";
+import { UserDto } from "@/api-sdk";
+import { Input } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "./Profile.module.css";
 
 interface EmailForm {
   email: string;
@@ -14,7 +14,7 @@ interface EmailForm {
 interface ProfileEmailTabProps {
   user?: UserDto | null;
   emailForm: EmailForm;
-  emailStep: 'input' | 'verify' | 'verifyOld' | 'inputNew' | 'verifyNew';
+  emailStep: "input" | "verify" | "verifyOld" | "inputNew" | "verifyNew";
   isEditingEmail: boolean;
   countdown: number;
   sendingCode: boolean;
@@ -38,7 +38,7 @@ interface ProfileEmailTabProps {
 
 function createChangeEvent(
   name: string,
-  value: string
+  value: string,
 ): React.ChangeEvent<HTMLInputElement> {
   return { target: { name, value } } as React.ChangeEvent<HTMLInputElement>;
 }
@@ -75,20 +75,20 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
           <div className={styles.successIcon}>
             <CheckCircle size={48} />
           </div>
-          <h3>{t('邮箱已绑定')}</h3>
+          <h3>{t("邮箱已绑定")}</h3>
           <p className={styles.boundEmail}>{email}</p>
           <div className={styles.benefits}>
             <div className={styles.benefitItem}>
               <CheckCircle size={14} />
-              <span>{t('找回密码')}</span>
+              <span>{t("找回密码")}</span>
             </div>
             <div className={styles.benefitItem}>
               <CheckCircle size={14} />
-              <span>{t('安全验证')}</span>
+              <span>{t("安全验证")}</span>
             </div>
             <div className={styles.benefitItem}>
               <CheckCircle size={14} />
-              <span>{t('重要通知')}</span>
+              <span>{t("重要通知")}</span>
             </div>
           </div>
           {mailEnabled && (
@@ -98,10 +98,10 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 icon={Mail}
                 onClick={() => onSetEditingEmail(true)}
               >
-                {t('换绑邮箱')}
+                {t("换绑邮箱")}
               </Button>
               <Button variant="danger" onClick={onUnbindEmail}>
-                {t('解绑邮箱')}
+                {t("解绑邮箱")}
               </Button>
             </div>
           )}
@@ -112,7 +112,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
 
   const isRebind = !!email;
 
-  if (isRebind && emailStep === 'verifyOld') {
+  if (isRebind && emailStep === "verifyOld") {
     return (
       <div className={`${styles.tabContent} animate-fade-in`}>
         <form onSubmit={onVerifyOldEmail} className={styles.emailForm}>
@@ -120,16 +120,16 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             <CheckCircle size={16} />
             <span>
               {unbindMode
-                ? t('需要先验证原邮箱才能解绑')
-                : t('需要先验证原邮箱才能换绑')}
+                ? t("需要先验证原邮箱才能解绑")
+                : t("需要先验证原邮箱才能换绑")}
             </span>
           </div>
           <div
-            className={`${styles.inputGroup} ${focusedField === 'code' ? styles.inputGroupFocused : ''}`}
+            className={`${styles.inputGroup} ${focusedField === "code" ? styles.inputGroupFocused : ""}`}
           >
             <label className={styles.inputLabel}>
               <Mail size={14} />
-              {t('原邮箱验证码')}
+              {t("原邮箱验证码")}
             </label>
             <div
               className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -139,9 +139,9 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 name="code"
                 value={emailForm.code}
                 onChange={onEmailChange}
-                onFocus={() => onFocusField('code')}
+                onFocus={() => onFocusField("code")}
                 onBlur={() => onFocusField(null)}
-                placeholder={t('请输入原邮箱验证码')}
+                placeholder={t("请输入原邮箱验证码")}
                 maxLength={6}
                 required
               />
@@ -153,7 +153,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 loading={sendingCode}
                 onClick={onSendUnbindCode}
               >
-                {countdown > 0 ? `${countdown}s` : t('获取验证码')}
+                {countdown > 0 ? `${countdown}s` : t("获取验证码")}
               </Button>
               <div className={styles.inputGlow} />
             </div>
@@ -165,7 +165,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               className="flex-1"
               onClick={() => onSetEditingEmail(false)}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               type="submit"
@@ -173,7 +173,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               loading={loading}
               icon={CheckCircle}
             >
-              {loading ? t('验证中...') : t('验证')}
+              {loading ? t("验证中...") : t("验证")}
             </Button>
           </div>
         </form>
@@ -181,22 +181,22 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
     );
   }
 
-  if (isRebind && (emailStep === 'inputNew' || emailStep === 'verifyNew')) {
+  if (isRebind && (emailStep === "inputNew" || emailStep === "verifyNew")) {
     return (
       <div className={`${styles.tabContent} animate-fade-in`}>
         <form onSubmit={onRebindEmail} className={styles.emailForm}>
-          {emailStep === 'inputNew' && (
+          {emailStep === "inputNew" && (
             <div className={styles.verifySuccess}>
               <CheckCircle size={16} />
-              <span>{t('原邮箱验证成功，请输入新邮箱')}</span>
+              <span>{t("原邮箱验证成功，请输入新邮箱")}</span>
             </div>
           )}
           <div
-            className={`${styles.inputGroup} ${focusedField === 'email' ? styles.inputGroupFocused : ''}`}
+            className={`${styles.inputGroup} ${focusedField === "email" ? styles.inputGroupFocused : ""}`}
           >
             <label className={styles.inputLabel}>
               <Mail size={14} />
-              {emailStep === 'verifyNew' ? t('新邮箱地址') : t('邮箱地址')}
+              {emailStep === "verifyNew" ? t("新邮箱地址") : t("邮箱地址")}
             </label>
             <div
               className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -206,10 +206,10 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 name="email"
                 value={emailForm.email}
                 onChange={onEmailChange}
-                onFocus={() => onFocusField('email')}
+                onFocus={() => onFocusField("email")}
                 onBlur={() => onFocusField(null)}
-                placeholder={t('请输入邮箱地址')}
-                readOnly={emailStep === 'verifyNew'}
+                placeholder={t("请输入邮箱地址")}
+                readOnly={emailStep === "verifyNew"}
                 required
               />
               <Button
@@ -220,18 +220,18 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 loading={sendingCode}
                 onClick={onSendNewEmailCode}
               >
-                {countdown > 0 ? `${countdown}s` : t('获取验证码')}
+                {countdown > 0 ? `${countdown}s` : t("获取验证码")}
               </Button>
               <div className={styles.inputGlow} />
             </div>
           </div>
-          {emailStep === 'verifyNew' && (
+          {emailStep === "verifyNew" && (
             <div
-              className={`${styles.inputGroup} ${focusedField === 'code' ? styles.inputGroupFocused : ''}`}
+              className={`${styles.inputGroup} ${focusedField === "code" ? styles.inputGroupFocused : ""}`}
             >
               <label className={styles.inputLabel}>
                 <CheckCircle size={14} />
-                {t('验证码')}
+                {t("验证码")}
               </label>
               <div
                 className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -241,9 +241,9 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                   name="code"
                   value={emailForm.code}
                   onChange={onEmailChange}
-                  onFocus={() => onFocusField('code')}
+                  onFocus={() => onFocusField("code")}
                   onBlur={() => onFocusField(null)}
-                  placeholder={t('请输入 6 位验证码')}
+                  placeholder={t("请输入 6 位验证码")}
                   maxLength={6}
                   required
                 />
@@ -258,16 +258,16 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               className="flex-1"
               onClick={() => onSetEditingEmail(false)}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
-            {emailStep === 'verifyNew' && (
+            {emailStep === "verifyNew" && (
               <Button
                 type="submit"
                 variant="primary"
                 loading={loading}
                 icon={CheckCircle}
               >
-                {loading ? t('换绑中...') : t('确认换绑')}
+                {loading ? t("换绑中...") : t("确认换绑")}
               </Button>
             )}
           </div>
@@ -279,17 +279,17 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
   return (
     <div className={`${styles.tabContent} animate-fade-in`}>
       <div className={styles.emailForm}>
-        {emailStep === 'input' ? (
+        {emailStep === "input" ? (
           <form onSubmit={onSendBindCode}>
             <div className={styles.infoText}>
-              {t('绑定邮箱后，可以通过邮箱找回密码和接收重要通知')}
+              {t("绑定邮箱后，可以通过邮箱找回密码和接收重要通知")}
             </div>
             <div
-              className={`${styles.inputGroup} ${focusedField === 'email' ? styles.inputGroupFocused : ''}`}
+              className={`${styles.inputGroup} ${focusedField === "email" ? styles.inputGroupFocused : ""}`}
             >
               <label className={styles.inputLabel}>
                 <Mail size={14} />
-                {t('邮箱地址')}
+                {t("邮箱地址")}
               </label>
               <div className={styles.inputWrapper}>
                 <Input
@@ -297,9 +297,9 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                   name="email"
                   value={emailForm.email}
                   onChange={onEmailChange}
-                  onFocus={() => onFocusField('email')}
+                  onFocus={() => onFocusField("email")}
                   onBlur={() => onFocusField(null)}
-                  placeholder={t('请输入您的邮箱地址')}
+                  placeholder={t("请输入您的邮箱地址")}
                   required
                 />
                 <div className={styles.inputGlow} />
@@ -312,7 +312,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               icon={Send}
               className="w-full"
             >
-              {loading ? t('发送中...') : t('发送验证码')}
+              {loading ? t("发送中...") : t("发送验证码")}
             </Button>
           </form>
         ) : (
@@ -322,11 +322,11 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               <span>{emailForm.email}</span>
             </div>
             <div
-              className={`${styles.inputGroup} ${focusedField === 'code' ? styles.inputGroupFocused : ''}`}
+              className={`${styles.inputGroup} ${focusedField === "code" ? styles.inputGroupFocused : ""}`}
             >
               <label className={styles.inputLabel}>
                 <Shield size={14} />
-                {t('验证码')}
+                {t("验证码")}
               </label>
               <div
                 className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -336,9 +336,9 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                   name="code"
                   value={emailForm.code}
                   onChange={onEmailChange}
-                  onFocus={() => onFocusField('code')}
+                  onFocus={() => onFocusField("code")}
                   onBlur={() => onFocusField(null)}
-                  placeholder={t('请输入6位验证码')}
+                  placeholder={t("请输入6位验证码")}
                   maxLength={6}
                   required
                 />
@@ -350,7 +350,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                   loading={sendingCode}
                   onClick={onResendBindCode}
                 >
-                  {countdown > 0 ? `${countdown}s` : t('获取验证码')}
+                  {countdown > 0 ? `${countdown}s` : t("获取验证码")}
                 </Button>
                 <div className={styles.inputGlow} />
               </div>
@@ -362,7 +362,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 className="flex-1"
                 onClick={() => onSetEditingEmail(false)}
               >
-                {t('返回修改')}
+                {t("返回修改")}
               </Button>
               <Button
                 type="submit"
@@ -370,7 +370,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 loading={loading}
                 icon={CheckCircle}
               >
-                {loading ? t('验证中...') : t('确认绑定')}
+                {loading ? t("验证中...") : t("确认绑定")}
               </Button>
             </div>
           </form>

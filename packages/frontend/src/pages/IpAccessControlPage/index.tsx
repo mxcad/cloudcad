@@ -4,22 +4,28 @@
 // https://www.mxdraw.com/
 /////////////////////////////////////////////////////////////////////////////
 
-import { useSearchParams } from 'react-router-dom';
-import { TabButton, Tabs } from '@/components/ui';
-import { SystemPermission } from '@/constants/permissions';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { usePermission } from '@/hooks/usePermission';
-import { t } from '@/languages';
-import IpBlacklistPage from '../IpBlacklistPage';
-import IpWhitelistPage from '../IpWhitelistPage';
-import SecurityAccessAttemptPage from '../SecurityAccessAttemptPage';
-import { IP_ACCESS_TABS, type IpAccessTab } from './types';
+import { useSearchParams } from "react-router-dom";
+import { TabButton, Tabs } from "@/components/ui";
+import { SystemPermission } from "@/constants/permissions";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { usePermission } from "@/hooks/usePermission";
+import { t } from "@/languages";
+import IpBlacklistPage from "../IpBlacklistPage";
+import IpWhitelistPage from "../IpWhitelistPage";
+import SecurityAccessAttemptPage from "../SecurityAccessAttemptPage";
+import { IP_ACCESS_TABS, type IpAccessTab } from "./types";
 
-const TAB_LABELS: Record<IpAccessTab, string> = {
-  blacklist: t('IP 黑名单'),
-  whitelist: t('管理员 IP 白名单'),
-  attempts: t('高危访问尝试'),
-};
+// 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新
+function getTabLabel(tab: IpAccessTab): string {
+  switch (tab) {
+    case "blacklist":
+      return t("IP 黑名单");
+    case "whitelist":
+      return t("管理员 IP 白名单");
+    default:
+      return t("高危访问尝试");
+  }
+}
 
 /** 各 Tab 所需权限位（高危尝试沿用白名单权限位，与后端 controller 一致） */
 const TAB_PERMISSIONS: Record<IpAccessTab, SystemPermission> = {
@@ -29,7 +35,7 @@ const TAB_PERMISSIONS: Record<IpAccessTab, SystemPermission> = {
 };
 
 /** 默认落点：管理员登录后原 /admin/ip-whitelist 的等价入口 */
-const DEFAULT_TAB: IpAccessTab = 'whitelist';
+const DEFAULT_TAB: IpAccessTab = "whitelist";
 
 /**
  * IP 访问控制——原「IP 黑名单」「管理员 IP 白名单」「高危访问尝试」三个独立菜单与页面
@@ -42,19 +48,19 @@ const DEFAULT_TAB: IpAccessTab = 'whitelist';
  * 失效对应列表完成，切回 Tab 即重新拉取，无需在此额外同步。
  */
 export default function IpAccessControlPage() {
-  useDocumentTitle(t('IP 访问控制'));
+  useDocumentTitle(t("IP 访问控制"));
   const { hasPermission } = usePermission();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const visibleTabs = IP_ACCESS_TABS.filter((tab) =>
-    hasPermission(TAB_PERMISSIONS[tab])
+    hasPermission(TAB_PERMISSIONS[tab]),
   );
   const firstVisible: IpAccessTab | undefined = visibleTabs[0];
   const defaultTab: IpAccessTab = visibleTabs.includes(DEFAULT_TAB)
     ? DEFAULT_TAB
     : (firstVisible ?? DEFAULT_TAB);
 
-  const rawTab = searchParams.get('tab');
+  const rawTab = searchParams.get("tab");
   const activeTab: IpAccessTab =
     visibleTabs.find((tab) => tab === rawTab) ?? defaultTab;
 
@@ -65,10 +71,10 @@ export default function IpAccessControlPage() {
       <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="flex-shrink-0 mb-4">
           <h1 className="text-2xl font-bold text-text-primary">
-            {t('IP 访问控制')}
+            {t("IP 访问控制")}
           </h1>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            {t('管理员登录白名单、IP 黑名单与高危访问尝试记录')}
+          <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
+            {t("管理员登录白名单、IP 黑名单与高危访问尝试记录")}
           </p>
         </div>
 
@@ -80,16 +86,16 @@ export default function IpAccessControlPage() {
                 active={activeTab === tab}
                 onClick={() => changeTab(tab)}
               >
-                {TAB_LABELS[tab]}
+                {getTabLabel(tab)}
               </TabButton>
             ))}
           </Tabs>
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
-          {activeTab === 'blacklist' && <IpBlacklistPage embedded />}
-          {activeTab === 'whitelist' && <IpWhitelistPage embedded />}
-          {activeTab === 'attempts' && <SecurityAccessAttemptPage embedded />}
+          {activeTab === "blacklist" && <IpBlacklistPage embedded />}
+          {activeTab === "whitelist" && <IpWhitelistPage embedded />}
+          {activeTab === "attempts" && <SecurityAccessAttemptPage embedded />}
         </div>
       </div>
     </div>

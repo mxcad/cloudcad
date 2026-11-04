@@ -10,6 +10,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -35,11 +36,12 @@ import { FeedbackRewardService } from './feedback-reward.service';
 import { FeedbackStatus } from './feedback.enums';
 import {
   AdoptFeedbackDto,
+  BatchDeleteFeedbackDto,
   IssueRewardDto,
-  RevokeRewardDto,
   UpdateFeedbackStatusDto,
 } from './dto/feedback.dto';
 import {
+  BatchDeleteFeedbackResultDto,
   FeedbackListResponseDto,
   FeedbackResponseDto,
   FeedbackRewardListResponseDto,
@@ -175,17 +177,31 @@ export class FeedbackAdminController {
     return this.rewardService.issue(id, dto, operatorId);
   }
 
-  /** 撤销奖励 */
-  @Post('rewards/:id/revoke')
-  @RequirePermissions([SystemPermission.SYSTEM_FEEDBACK_REWARD])
-  @ApiOperation({ summary: '撤销奖励（误采纳/作弊；已发放的会员回收由人工处理）' })
-  @ApiResponse({ status: 200, description: '撤销后奖励', type: FeedbackRewardResponseDto })
-  async revoke(
+  /** 删除反馈记录（级联删奖励凭据与附件；已发放会员不回收） */
+  @Delete(':id')
+  @RequirePermissions([SystemPermission.SYSTEM_FEEDBACK_MANAGE])
+  @ApiOperation({ summary: '删除反馈记录（级联删奖励凭据与附件；删除留审计；已发放会员不回收）' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  async remove(
     @Param('id') id: string,
-    @Body() dto: RevokeRewardDto,
     @Req() req: Request,
-  ): Promise<FeedbackRewardResponseDto> {
+  ): Promise<{ success: boolean }> {
     const operatorId = (req.user as { id: string }).id;
-    return this.rewardService.revoke(id, dto, operatorId);
+    return this.feedbackService.adminDelete(id, operatorId);
+  }
+
+  /** 批量删除反馈记录（复用单删语义，每条留审计；不存在的 ID 记入 notFoundIds） */
+  @Post('batch-delete')
+  @RequirePermissions([SystemPermission.SYSTEM_FEEDBACK_MANAGE])
+  @ApiOperation({
+    summary: '批量删除反馈记录（级联删奖励凭据与附件；删除留审计；不存在的 ID 不报错）',
+  })
+  @ApiResponse({ status: 200, description: '批量删除结果', type: BatchDeleteFeedbackResultDto })
+  async batchRemove(
+    @Body() dto: BatchDeleteFeedbackDto,
+    @Req() req: Request,
+  ): Promise<BatchDeleteFeedbackResultDto> {
+    const operatorId = (req.user as { id: string }).id;
+    return this.feedbackService.adminDeleteMany(dto.ids, operatorId);
   }
 }

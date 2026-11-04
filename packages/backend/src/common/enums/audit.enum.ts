@@ -113,6 +113,9 @@ export enum AuditAction {
   // resourceType=FEEDBACK，resourceId=attachmentId，params 记 type/kind）——
   FEEDBACK_ATTACHMENT_UPLOAD = 'FEEDBACK_ATTACHMENT_UPLOAD',
   FEEDBACK_ATTACHMENT_DELETE = 'FEEDBACK_ATTACHMENT_DELETE',
+  // —— 用户反馈记录：删除（管理端删除整条反馈，级联删奖励凭据与附件；
+  // resourceType=FEEDBACK，resourceId=feedbackId，params 记删除前状态/奖励状态/附件数）——
+  FEEDBACK_DELETE = 'FEEDBACK_DELETE',
 }
 
 /**

@@ -128,6 +128,8 @@ export class MxcadFileAccessService {
         if (!res.headersSent) res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });
       });
       fileStream.pipe(res);
+      // 客户端中断 → 销毁读流句柄，避免文件被一直占用
+      res.once('close', () => fileStream.destroy());
     } catch (error: unknown) {
       const err = error as { message?: string; status?: number; statusCode?: number };
       this.logger.error(`获取 filesData 文件失败: ${err?.message}`, error);
@@ -210,7 +212,11 @@ export class MxcadFileAccessService {
               this.logger.error(`文件流错误: ${error.message}`, error);
               if (!res.headersSent) res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.file_stream_error') ?? '文件流错误' });
             });
-            fileStream.pipe(res); return;
+            fileStream.pipe(res);
+            // 客户端中断 → 销毁读流句柄，避免文件被一直占用
+            res.once('close', () =>
+              (fileStream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.()
+            ); return;
           } catch (error) { this.logger.error(`获取存储文件流失败: ${error.message}`, error); throw error; }
         }
       }
@@ -412,6 +418,10 @@ export class MxcadFileAccessService {
       res.setHeader('Content-Type', 'application/octet-stream');
       setContentDisposition(res, path.basename(actualStorageKey), 'inline');
       fileStream.pipe(res);
+      // 客户端中断 → 销毁读流句柄，避免文件被一直占用
+      res.once('close', () =>
+        (fileStream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.()
+      );
     } catch (error) {
       this.logger.error(`[serveNonCadFile] 获取文件失败: ${error.message}`);
       if (!res.headersSent) res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });

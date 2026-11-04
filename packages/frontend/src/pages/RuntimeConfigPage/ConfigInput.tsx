@@ -11,19 +11,16 @@
  * 单位不再靠 key 白名单硬编码，一律读 `input.unit`。
  */
 
-import React from 'react';
-import { Eye, EyeOff, Braces } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { Select } from '@/components/ui/Select';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Button } from '@/components/ui/Button';
-import styles from './RuntimeConfigPage.module.css';
-import { BrandProfileForm } from './BrandProfileForm';
-import { BrandLogoInput } from './BrandLogoInput';
-import type { ConfigItem } from './types';
-import type { DraftValue } from './validate';
-import { t } from '@/languages';
+import React from "react";
+import { Eye, EyeOff, Braces } from "lucide-react";
+import { Input, Textarea, Select, Checkbox, Button } from "@/components/ui";
+
+import styles from "./RuntimeConfigPage.module.css";
+import { BrandProfileForm } from "./BrandProfileForm";
+import { BrandLogoInput } from "./BrandLogoInput";
+import type { ConfigItem } from "./types";
+import type { DraftValue } from "./validate";
+import { t } from "@/languages";
 
 interface ConfigInputProps {
   item: ConfigItem;
@@ -44,7 +41,7 @@ const CharCount: React.FC<{ length: number; max: number }> = ({
 }) => (
   <span
     className={styles.charCount}
-    style={length > max ? { color: 'var(--error)' } : undefined}
+    style={length > max ? { color: "var(--error)" } : undefined}
   >
     {length} / {max}
   </span>
@@ -61,10 +58,10 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   onFormatJson,
 }) => {
   const meta = item.input;
-  const text = typeof draft === 'string' ? draft : '';
+  const text = typeof draft === "string" ? draft : "";
 
   // ── 布尔：开关 ──
-  if (item.type === 'boolean') {
+  if (item.type === "boolean") {
     const checked = draft === true;
     return (
       <div data-testid="rc-input" className={styles.switchRow}>
@@ -75,7 +72,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           onChange={(e) => onChange(e.target.checked)}
         />
         <span className={styles.switchText}>
-          {checked ? t('已开启') : t('已关闭')}
+          {checked ? t("已开启") : t("已关闭")}
         </span>
       </div>
     );
@@ -90,9 +87,11 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           onChange={(value) => onChange(value)}
           options={meta.options.map((option) => ({
             value: option.value,
-            label: option.label,
+            label: t(option.label),
           }))}
-          placeholder={meta.placeholder ?? t('请选择')}
+          placeholder={
+            meta.placeholder ? t(meta.placeholder) : t("请选择")
+          }
           size="md"
           disabled={disabled}
         />
@@ -101,8 +100,8 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   }
 
   // ── JSON：`brandProfile` 用字段级表单（不手写 JSON），其余项走多行编辑 ──
-  if (item.type === 'json') {
-    if (item.key === 'brandProfile') {
+  if (item.type === "json") {
+    if (item.key === "brandProfile") {
       return (
         <div data-testid="rc-input">
           <BrandProfileForm
@@ -122,18 +121,18 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
             icon={Braces}
             onClick={onFormatJson}
             disabled={disabled}
-            tooltip={t('格式化 JSON')}
+            tooltip={t("格式化 JSON")}
           >
-            {t('格式化')}
+            {t("格式化")}
           </Button>
         </div>
         <Textarea
-          variant={invalid ? 'error' : 'default'}
+          variant={invalid ? "error" : "default"}
           size="sm"
           value={text}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          placeholder={meta?.placeholder ?? '{}'}
+          placeholder={meta?.placeholder ? t(meta.placeholder) : "{}"}
           className={styles.jsonArea}
           spellCheck={false}
         />
@@ -146,12 +145,14 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
     return (
       <div data-testid="rc-input" className={styles.controlBlock}>
         <Textarea
-          variant={invalid ? 'error' : 'default'}
+          variant={invalid ? "error" : "default"}
           size="sm"
           value={text}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          placeholder={meta?.placeholder ?? t('请输入...')}
+          placeholder={
+            meta?.placeholder ? t(meta.placeholder) : t("请输入...")
+          }
           maxLength={meta.maxLength}
         />
         {meta.maxLength !== undefined && (
@@ -164,11 +165,11 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   }
 
   // ── 数字：min / max / step + 单位后缀 ──
-  if (item.type === 'number') {
+  if (item.type === "number") {
     return (
       <div data-testid="rc-input" className={styles.numberRow}>
         <Input
-          variant={invalid ? 'error' : 'default'}
+          variant={invalid ? "error" : "default"}
           type="number"
           size="md"
           value={text}
@@ -177,10 +178,14 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           min={meta?.min}
           max={meta?.max}
           step={meta?.step}
-          placeholder={meta?.placeholder ?? t('请输入数字')}
+          placeholder={
+            meta?.placeholder ? t(meta.placeholder) : t("请输入数字")
+          }
           className={styles.numberInput}
         />
-        {meta?.unit && <span className={styles.unitSuffix}>{meta.unit}</span>}
+        {meta?.unit && (
+          <span className={styles.unitSuffix}>{t(meta.unit)}</span>
+        )}
       </div>
     );
   }
@@ -190,13 +195,15 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
     return (
       <div data-testid="rc-input" className={styles.controlRow}>
         <Input
-          variant={invalid ? 'error' : 'default'}
-          type={secretVisible ? 'text' : 'password'}
+          variant={invalid ? "error" : "default"}
+          type={secretVisible ? "text" : "password"}
           size="md"
           value={text}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          placeholder={meta?.placeholder ?? t('••••••••')}
+          placeholder={
+            meta?.placeholder ? t(meta.placeholder) : t("••••••••")
+          }
           maxLength={meta.maxLength}
           rightNode={
             <button
@@ -204,8 +211,8 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
               tabIndex={-1}
               onClick={onToggleSecret}
               className={styles.visibilityToggle}
-              aria-label={secretVisible ? t('隐藏值') : t('显示值')}
-              title={secretVisible ? t('隐藏值') : t('显示值')}
+              aria-label={secretVisible ? t("隐藏值") : t("显示值")}
+              title={secretVisible ? t("隐藏值") : t("显示值")}
             >
               {secretVisible ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -222,7 +229,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   }
 
   // ── brandLogo：文本输入 + Logo 上传（#499 拆为独立项后保留原上传入口） ──
-  if (item.key === 'brandLogo') {
+  if (item.key === "brandLogo") {
     return (
       <div data-testid="rc-input" className={styles.controlRow}>
         <BrandLogoInput value={text} disabled={disabled} onChange={onChange} />
@@ -234,15 +241,17 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   return (
     <div data-testid="rc-input" className={styles.controlRow}>
       <Input
-        variant={invalid ? 'error' : 'default'}
+        variant={invalid ? "error" : "default"}
         type="text"
         size="md"
-        value={text}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        placeholder={meta?.placeholder ?? t('请输入...')}
-        maxLength={meta?.maxLength}
-      />
+          value={text}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          placeholder={
+            meta?.placeholder ? t(meta.placeholder) : t("请输入...")
+          }
+          maxLength={meta?.maxLength}
+        />
       {meta?.maxLength !== undefined && (
         <span className={styles.charCount}>
           {text.length} / {meta.maxLength}

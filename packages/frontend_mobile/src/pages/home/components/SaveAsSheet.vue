@@ -17,6 +17,12 @@ const props = withDefaults(
     currentFileName?: string;
     currentNodeId?: string;
     /**
+     * 源图纸文件哈希：后端据此从 uploads 复制外部参照（对齐 PC sourceFileHash）。
+     * hash 打开的公开图纸其 fileId 是 hash 串（非真实节点 id），后端按 nodeId
+     * 查不到节点目录，必须靠本字段走 uploads 复制分支。
+     */
+    currentFileHash?: string;
+    /**
      * 面板顶部提示：面板是被动弹出的（保存失败转另存为）时必须给出原因，
      * 否则用户不知道自己为什么在这。提示常驻表单顶部，不随 Toast 消失。
      */
@@ -219,6 +225,9 @@ async function handleSave() {
       // 源节点 ID：后端据此复制外部参照 preloading 数据，让「另存为」的副本
       // 保留原图纸的外部参照根（PC SaveAs 传同样的字段）
       sourceNodeId: props.currentNodeId || undefined,
+      // 源图纸哈希：后端据此从 uploads 复制外部参照，与 sourceNodeId 互补
+      // （hash 打开场景 fileId 是 hash 串，查不到节点目录，靠它兜底）
+      sourceFileHash: props.currentFileHash || undefined,
     });
 
     if (result.success) {

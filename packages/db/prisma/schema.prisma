@@ -50,6 +50,7 @@ model User {
   /// TOTP 双因素启用标志（ADMIN 角色生效；启用后管理员登录入口必须通过动态码校验）
   totpEnabled          Boolean          @default(false)
   auditLogs            AuditLog[]
+  userActivities       UserActivity[]
   ownedNodes           FileSystemNode[] @relation("NodeOwner")
   projectMembers       ProjectMember[]
   role                 Role             @relation(fields: [roleId], references: [id])
@@ -283,6 +284,20 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
   @@map("audit_logs")
+}
+
+// 用户活动信号（运营统计 DAU/MAU 数据源之一，ADR-0086）：
+// 高频读操作（USER_LOGIN/FILE_UPLOAD/FILE_DOWNLOAD）成功记录按 ADR-0045 不进
+// audit_logs，其成功事件在此降级留痕；DAU/MAU = audit_logs ∪ user_activity 去重用户
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("user_activity")
 }
 
 model UploadSession {
@@ -602,6 +617,8 @@ enum AuditAction {
   // —— 用户反馈附件：上传 / 删除（证据文件管理留痕，ADR-0085）——
   FEEDBACK_ATTACHMENT_UPLOAD
   FEEDBACK_ATTACHMENT_DELETE
+  // —— 用户反馈：删除记录（级联删奖励/附件，附件物理文件由附件服务先清理）——
+  FEEDBACK_DELETE
 }
 
 enum ResourceType {

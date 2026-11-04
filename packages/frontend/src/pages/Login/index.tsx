@@ -3,24 +3,24 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useBrandConfig } from '@/contexts/BrandContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
-import { useMembership } from '@/hooks/useMembership';
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useBrandConfig } from "@/contexts/BrandContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useRuntimeConfig } from "@/contexts/RuntimeConfigContext";
+import { useMembership } from "@/hooks/useMembership";
 import {
   getAppBrandConfig,
   getDefaultAppBrandConfig,
   getCopyrightLine,
   type AppBrandConfig,
-} from '@/constants/appConfig';
-import { Tab, Tabs, Button } from '@/components/ui';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { InteractiveBackground } from '@/components/InteractiveBackground';
+} from "@/constants/appConfig";
+import { Tab, Tabs, Button } from "@/components/ui";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { InteractiveBackground } from "@/components/InteractiveBackground";
 import {
   CheckCircle,
   AlertCircle,
@@ -31,25 +31,25 @@ import {
   Phone,
   Gift,
   ChevronRight,
-} from 'lucide-react';
-import { useLoginForm } from './hooks/useLoginForm';
-import { getReturnUrl } from '@/config/clientSetup';
-import { isAccessTokenExpired } from '@/utils/tokenUtils';
-import { read, write, erase } from '@/lib/browserStorage';
+} from "lucide-react";
+import { useLoginForm } from "./hooks/useLoginForm";
+import { getReturnUrl } from "@/config/clientSetup";
+import { isAccessTokenExpired } from "@/utils/tokenUtils";
+import { read, write, erase } from "@/lib/browserStorage";
 import {
   authControllerGetProfile,
   authSetupControllerGetSetupStatus,
-} from '@/api-sdk';
-import { t } from '@/languages';
-import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
-import styles from './Login.module.css';
-import { LoginHeader } from './components/LoginHeader';
-import { FirstAdminSetupForm } from './components/FirstAdminSetupForm';
-import { AccountLoginForm } from './components/AccountLoginForm';
-import { PhoneLoginForm } from './components/PhoneLoginForm';
-import { SupportModal } from './components/SupportModal';
-import { WechatLoginButton } from './components/WechatLoginButton';
-import type { LoginTab } from './hooks/useLoginForm';
+} from "@/api-sdk";
+import { t } from "@/languages";
+import { QUOTA_GUIDE_EVENT } from "@/utils/quotaUpgradeGuide";
+import styles from "./Login.module.css";
+import { LoginHeader } from "./components/LoginHeader";
+import { FirstAdminSetupForm } from "./components/FirstAdminSetupForm";
+import { AccountLoginForm } from "./components/AccountLoginForm";
+import { PhoneLoginForm } from "./components/PhoneLoginForm";
+import { SupportModal } from "./components/SupportModal";
+import { WechatLoginButton } from "./components/WechatLoginButton";
+import type { LoginTab } from "./hooks/useLoginForm";
 
 interface LocationState {
   from?: string;
@@ -62,7 +62,7 @@ interface LocationState {
  * 装配层：组装子组件并使用 useLoginForm hook 管理所有状态和业务逻辑。
  */
 export const Login: React.FC = () => {
-  useDocumentTitle(t('登录'));
+  useDocumentTitle(t("登录"));
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -80,21 +80,26 @@ export const Login: React.FC = () => {
 
   // 解析 URL 参数中的应用 ID (如 ?id=cadview)
   const searchParams = new URLSearchParams(location.search);
-  const appId = searchParams.get('id')?.toLowerCase() || '';
+  const appId = searchParams.get("id")?.toLowerCase() || "";
 
   // 获取对应应用的品牌配置
   const appBrandConfig: AppBrandConfig = appId
     ? (getAppBrandConfig(appId) ?? getDefaultAppBrandConfig())
     : getDefaultAppBrandConfig();
 
-  const appName = appBrandConfig.title || config?.title || 'CloudCAD';
+  const appName = appBrandConfig.title || config?.title || "CloudCAD";
   const appTagline = appBrandConfig.tagline;
-  const appLogo = appBrandConfig.logo || config?.logo || '/logo.png';
+  const appLogo = appBrandConfig.logo || config?.logo || "/logo.png";
 
   const form = useLoginForm();
   const { setError: setFormError } = form;
   // 稳定引用（useState setter），供 wechat callbacks 注册使用（form 整体每次渲染都是新对象，不能进依赖）
-  const { setSuccess: setFormSuccess, setSupportModalVariant, setSupportModalCleanupDays, setShowSupportModal } = form;
+  const {
+    setSuccess: setFormSuccess,
+    setSupportModalVariant,
+    setSupportModalCleanupDays,
+    setShowSupportModal,
+  } = form;
   const redirectPerformed = useRef(false);
   const redirectTokenRef = useRef<string | null>(null);
 
@@ -130,10 +135,10 @@ export const Login: React.FC = () => {
       wechatAutoRegister,
       navigateTo: (path, opts) => navigate(path, opts),
       // 注销冷静期内自动恢复：登录成功提示后由表单成功消息展示
-      onRestored: () => setFormSuccess(t('您的账户已自动恢复，注销已取消')),
+      onRestored: () => setFormSuccess(t("您的账户已自动恢复，注销已取消")),
       // 注销冷静期已过：弹客服信息弹框（联系客服恢复 + 数据彻底删除告知）
       onDeactivated: (cleanupDays) => {
-        setSupportModalVariant('deactivated');
+        setSupportModalVariant("deactivated");
         setSupportModalCleanupDays(cleanupDays || 30);
         setShowSupportModal(true);
       },
@@ -153,11 +158,11 @@ export const Login: React.FC = () => {
   // 提取桌面端 EXE OAuth 回调参数
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const redirectUri = params.get('redirect_uri');
+    const redirectUri = params.get("redirect_uri");
     if (redirectUri) {
-      write('desktop_redirect_uri', redirectUri, 'session');
-      const state = params.get('state');
-      if (state) write('desktop_redirect_state', state, 'session');
+      write("desktop_redirect_uri", redirectUri, "session");
+      const state = params.get("state");
+      if (state) write("desktop_redirect_state", state, "session");
     }
   }, []);
 
@@ -166,7 +171,7 @@ export const Login: React.FC = () => {
     const state = location.state as LocationState | null;
     if (state?.message) {
       form.setSuccess(state.message);
-      window.history.replaceState({}, '');
+      window.history.replaceState({}, "");
     }
   }, [location.state]);
 
@@ -181,7 +186,7 @@ export const Login: React.FC = () => {
       redirectPerformed.current = true;
 
       // 桌面端 EXE OAuth 回调（优先于普通 redirect）— 验证 token 后同时触发回调 + 页面跳转
-      const desktopRedirectUri = read('desktop_redirect_uri', 'session');
+      const desktopRedirectUri = read("desktop_redirect_uri", "session");
       if (desktopRedirectUri) {
         if (isAccessTokenExpired()) {
           return;
@@ -193,15 +198,15 @@ export const Login: React.FC = () => {
               return;
             }
             // 验证通过，触发 EXE 回调
-            const state = read('desktop_redirect_state', 'session');
-            erase('desktop_redirect_uri', 'session');
-            erase('desktop_redirect_state', 'session');
-            const accessToken = read('accessToken');
-            const refreshToken = read('refreshToken');
+            const state = read("desktop_redirect_state", "session");
+            erase("desktop_redirect_uri", "session");
+            erase("desktop_redirect_state", "session");
+            const accessToken = read("accessToken");
+            const refreshToken = read("refreshToken");
             let redirectUrl = desktopRedirectUri;
-            let hasQuery = redirectUrl.includes('?');
+            let hasQuery = redirectUrl.includes("?");
             if (accessToken) {
-              redirectUrl += `${hasQuery ? '&' : '?'}access_token=${encodeURIComponent(accessToken)}`;
+              redirectUrl += `${hasQuery ? "&" : "?"}access_token=${encodeURIComponent(accessToken)}`;
               hasQuery = true;
             }
             if (refreshToken)
@@ -215,19 +220,19 @@ export const Login: React.FC = () => {
 
       // 检测是否是移动端 window.open 打开的新标签（跨域 redirect 模式）
       const params = new URLSearchParams(window.location.search);
-      const redirectParam = params.get('redirect');
+      const redirectParam = params.get("redirect");
       if (redirectParam) {
         try {
           const redirectUrl = new URL(redirectParam);
           if (redirectUrl.origin !== window.location.origin) {
-            const accessToken = read('accessToken');
+            const accessToken = read("accessToken");
             if (accessToken) {
-              redirectUrl.searchParams.set('accessToken', accessToken);
-              const refreshToken = read('refreshToken');
+              redirectUrl.searchParams.set("accessToken", accessToken);
+              const refreshToken = read("refreshToken");
               if (refreshToken)
-                redirectUrl.searchParams.set('refreshToken', refreshToken);
-              const user = read('user');
-              if (user) redirectUrl.searchParams.set('user', user);
+                redirectUrl.searchParams.set("refreshToken", refreshToken);
+              const user = read("user");
+              if (user) redirectUrl.searchParams.set("user", user);
               window.location.href = redirectUrl.toString();
               return;
             }
@@ -238,15 +243,13 @@ export const Login: React.FC = () => {
       }
 
       // 设备授权待办 — 从 sessionStorage 恢复，优先于普通 redirect
-      const deviceUserCode = read('device_auth_user_code', 'session');
+      const deviceUserCode = read("device_auth_user_code", "session");
       if (deviceUserCode) {
-        const deviceClientId =
-          read('device_auth_client_id', 'session') || '';
-        const deviceRedirect =
-          read('device_auth_redirect', 'session') || '';
-        erase('device_auth_user_code', 'session');
-        erase('device_auth_client_id', 'session');
-        let deviceUrl = `/device?user_code=${encodeURIComponent(deviceUserCode)}${deviceClientId ? `&client_id=${encodeURIComponent(deviceClientId)}` : ''}`;
+        const deviceClientId = read("device_auth_client_id", "session") || "";
+        const deviceRedirect = read("device_auth_redirect", "session") || "";
+        erase("device_auth_user_code", "session");
+        erase("device_auth_client_id", "session");
+        let deviceUrl = `/device?user_code=${encodeURIComponent(deviceUserCode)}${deviceClientId ? `&client_id=${encodeURIComponent(deviceClientId)}` : ""}`;
         if (deviceRedirect) {
           deviceUrl += `&redirect=${encodeURIComponent(deviceRedirect)}`;
         }
@@ -260,20 +263,20 @@ export const Login: React.FC = () => {
         redirectParam ||
         returnUrl ||
         (location.state as LocationState)?.from ||
-        '/';
+        "/";
       navigate(from, { replace: true });
 
       // 检测待办 VIP 购买意图（游客使用会员功能时触发，登录后自动弹出购买弹窗）
-      const pendingVipPurchase = read('pendingVipPurchase', 'session');
+      const pendingVipPurchase = read("pendingVipPurchase", "session");
       if (pendingVipPurchase) {
-        erase('pendingVipPurchase', 'session');
+        erase("pendingVipPurchase", "session");
         try {
           const reason = JSON.parse(pendingVipPurchase);
           // 回来时先判断当前账号是否已是会员：已是会员则购买意图作废，不再弹窗
           if (membership?.isVip) return;
           setTimeout(() => {
             window.dispatchEvent(
-              new CustomEvent(QUOTA_GUIDE_EVENT, { detail: reason })
+              new CustomEvent(QUOTA_GUIDE_EVENT, { detail: reason }),
             );
           }, 100);
         } catch {
@@ -281,7 +284,14 @@ export const Login: React.FC = () => {
         }
       }
     }
-  }, [isAuthenticated, authLoading, navigate, location, token, membership?.isVip]);
+  }, [
+    isAuthenticated,
+    authLoading,
+    navigate,
+    location,
+    token,
+    membership?.isVip,
+  ]);
 
   const handleTabSwitch = (tab: LoginTab) => {
     form.setActiveTab(tab);
@@ -290,12 +300,12 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className={styles.loginPage} data-theme={isDark ? 'dark' : 'light'}>
+    <div className={styles.loginPage} data-theme={isDark ? "dark" : "light"}>
       <InteractiveBackground />
 
       <div
         className={styles.themeToggleWrapper}
-        style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+        style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
       >
         <LanguageSwitcher />
         <ThemeToggle />
@@ -318,17 +328,17 @@ export const Login: React.FC = () => {
                 runtimeConfig.registerGiftMonths > 0 && (
                   <button
                     type="button"
-                    onClick={() => navigate('/register')}
+                    onClick={() => navigate("/register")}
                     className="flex items-center justify-center gap-2 w-full mb-4 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer"
                     style={{
-                      background: 'var(--accent-100)',
-                      color: 'var(--accent-700)',
+                      background: "var(--accent-100)",
+                      color: "var(--accent-700)",
                     }}
                     data-testid="register-gift-banner"
                   >
                     <Gift size={16} className="shrink-0" />
                     <span>
-                      {t('注册即送 VIP1 免费试用 {months} 个月', {
+                      {t("注册即送 VIP1 免费试用 {months} 个月", {
                         months: String(runtimeConfig.registerGiftMonths),
                       })}
                     </span>
@@ -340,20 +350,20 @@ export const Login: React.FC = () => {
               {smsEnabled && (
                 <Tabs>
                   <Tab
-                    active={form.activeTab === 'account'}
+                    active={form.activeTab === "account"}
                     tabVariant="primary"
                     icon={Mail}
-                    onClick={() => handleTabSwitch('account')}
+                    onClick={() => handleTabSwitch("account")}
                   >
-                    {t('账号登录')}
+                    {t("账号登录")}
                   </Tab>
                   <Tab
-                    active={form.activeTab === 'phone'}
+                    active={form.activeTab === "phone"}
                     tabVariant="primary"
                     icon={Phone}
-                    onClick={() => handleTabSwitch('phone')}
+                    onClick={() => handleTabSwitch("phone")}
                   >
-                    {t('手机登录')}
+                    {t("手机登录")}
                   </Tab>
                 </Tabs>
               )}
@@ -374,7 +384,7 @@ export const Login: React.FC = () => {
               )}
 
               {/* 账号登录表单 */}
-              {form.activeTab === 'account' && (
+              {form.activeTab === "account" && (
                 <AccountLoginForm
                   formData={form.accountForm.watch()}
                   loading={form.loading}
@@ -384,8 +394,8 @@ export const Login: React.FC = () => {
                   getAccountLoginPlaceholder={form.getAccountLoginPlaceholder}
                   onChange={(e) =>
                     form.accountForm.setValue(
-                      e.target.name as 'account' | 'password',
-                      e.target.value
+                      e.target.name as "account" | "password",
+                      e.target.value,
                     )
                   }
                   onFocus={form.setFocusedField}
@@ -394,12 +404,12 @@ export const Login: React.FC = () => {
                     form.setShowPassword(!form.showPassword)
                   }
                   onSubmit={form.handleAccountSubmit}
-                  onForgotPassword={() => navigate('/forgot-password')}
+                  onForgotPassword={() => navigate("/forgot-password")}
                 />
               )}
 
               {/* 手机登录表单 */}
-              {form.activeTab === 'phone' && (
+              {form.activeTab === "phone" && (
                 <PhoneLoginForm
                   phoneForm={form.phoneFormHook.watch()}
                   loading={form.loading}
@@ -408,8 +418,8 @@ export const Login: React.FC = () => {
                   focusedField={form.focusedField}
                   onChange={(e) =>
                     form.phoneFormHook.setValue(
-                      e.target.name as 'phone' | 'code',
-                      e.target.value
+                      e.target.name as "phone" | "code",
+                      e.target.value,
                     )
                   }
                   onFocus={form.setFocusedField}
@@ -422,13 +432,13 @@ export const Login: React.FC = () => {
               {/* 注册链接 */}
               <div className={styles.formFooter}>
                 <p className={styles.registerText}>
-                  {t('还没有账户？')}
+                  {t("还没有账户？")}
                   <Button
                     variant="secondary"
                     size="xs"
-                    onClick={() => navigate('/register')}
+                    onClick={() => navigate("/register")}
                   >
-                    {t('立即注册')}
+                    {t("立即注册")}
                   </Button>
                 </p>
               </div>
@@ -443,21 +453,21 @@ export const Login: React.FC = () => {
                 <div
                   className={styles.featureDot}
                   data-testid="feature-dot"
-                  data-tooltip={t('高性能 CAD 在线预览')}
+                  data-tooltip={t("高性能 CAD 在线预览")}
                 >
                   <Cpu size={14} />
                 </div>
                 <div
                   className={styles.featureDot}
                   data-testid="feature-dot"
-                  data-tooltip={t('多用户实时协同编辑')}
+                  data-tooltip={t("多用户实时协同编辑")}
                 >
                   <Boxes size={14} />
                 </div>
                 <div
                   className={styles.featureDot}
                   data-testid="feature-dot"
-                  data-tooltip={t('企业级数据安全保障')}
+                  data-tooltip={t("企业级数据安全保障")}
                 >
                   <ShieldCheck size={14} />
                 </div>
@@ -468,13 +478,13 @@ export const Login: React.FC = () => {
 
         {/* 版权信息 */}
         <p className={styles.copyright}>
-          {getCopyrightLine(appName)} ·{' '}
+          {getCopyrightLine(appName)} ·{" "}
           <Link to="/privacy" className={styles.legalLink}>
-            {t('隐私政策')}
-          </Link>{' '}
-          ·{' '}
+            {t("隐私政策")}
+          </Link>{" "}
+          ·{" "}
           <Link to="/terms" className={styles.legalLink}>
-            {t('用户协议')}
+            {t("用户协议")}
           </Link>
         </p>
       </div>

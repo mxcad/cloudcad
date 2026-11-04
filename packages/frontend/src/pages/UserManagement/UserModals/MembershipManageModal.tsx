@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { t } from '@/languages';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { dateOnlyToIso, isoToDateOnly, todayStartIso } from '@/utils/dateUtils';
-import { Loader2, Crown, Minus, Plus } from 'lucide-react';
-import { vipControllerGetActiveTiers } from '@/api-sdk';
-import type { SelectOption } from '@/components/ui/Select';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { FREE_TIER_LEVEL } from '@/constants/vip';
-import styles from '../UserManagement.module.css';
+import React, { useState, useEffect, useMemo } from "react";
+import { t } from "@/languages";
+import { Button, Modal, Select, DatePicker } from "@/components/ui";
+import type { SelectOption } from "@/components/ui";
 
+import { dateOnlyToIso, isoToDateOnly, todayStartIso } from "@/utils/dateUtils";
+import { Loader2, Crown, Minus, Plus } from "lucide-react";
+import { vipControllerGetActiveTiers } from "@/api-sdk";
+
+import { getErrorMessage } from "@/utils/errorHandler";
+import { FREE_TIER_LEVEL } from "@/constants/vip";
+import styles from "../UserManagement.module.css";
+
+// 存天数 + 插值参数，label 由消费方渲染期 t() 计算，避免模块加载期烘焙初始语言
 const PRESET_DURATIONS = [
-  { days: 7, label: t('{n} 天', { n: '7' }) },
-  { days: 30, label: t('{n} 天', { n: '30' }) },
-  { days: 90, label: t('{n} 天', { n: '90' }) },
-  { days: 180, label: t('{n} 天', { n: '180' }) },
-  { days: 365, label: t('{n} 天', { n: '365' }) },
+  { days: 7, n: "7" },
+  { days: 30, n: "30" },
+  { days: 90, n: "90" },
+  { days: 180, n: "180" },
+  { days: 365, n: "365" },
 ];
 
 const ADJUST_QUICK_DAYS = [7, 30, 90, 180, 365];
@@ -48,7 +48,11 @@ const toTierLevel = (value: number | string | null | undefined): number => {
 interface MembershipManageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { tierLevel: number; expiresAt?: string; adjustDays?: number }) => Promise<void>;
+  onSubmit: (data: {
+    tierLevel: number;
+    expiresAt?: string;
+    adjustDays?: number;
+  }) => Promise<void>;
   loading: boolean;
   currentMembership?: {
     tierLevel?: number;
@@ -67,19 +71,19 @@ export function MembershipManageModal({
   userName,
   error,
 }: MembershipManageModalProps) {
-  const [tierLevel, setTierLevel] = useState('0');
-  const [durationMode, setDurationMode] = useState<'preset' | 'custom' | 'adjust'>(
-    'preset'
-  );
+  const [tierLevel, setTierLevel] = useState("0");
+  const [durationMode, setDurationMode] = useState<
+    "preset" | "custom" | "adjust"
+  >("preset");
   const [presetDays, setPresetDays] = useState(30);
-  const [customDate, setCustomDate] = useState('');
+  const [customDate, setCustomDate] = useState("");
   // 计数器模型：signedDays 是「调整量」（有符号天数）的唯一事实源，
   // +/− 按钮、快捷天数、输入框全部读写它，每次点击立即生效
   const [signedDays, setSignedDays] = useState(30);
   // 输入框草稿（string）：允许中间态输入（如 "-"、"清空"），blur 时规范化回钳制值
-  const [daysDraft, setDaysDraft] = useState('30');
+  const [daysDraft, setDaysDraft] = useState("30");
   const [tierOptions, setTierOptions] = useState<SelectOption[]>([
-    { value: '0', label: t('免费用户') },
+    { value: "0", label: t("免费用户") },
   ]);
   const [tiersLoading, setTiersLoading] = useState(false);
   const [tiersError, setTiersError] = useState<string | null>(null);
@@ -102,7 +106,7 @@ export function MembershipManageModal({
       ...tierOptions,
       {
         value: String(currentTierLevel),
-        label: t('VIP{level}', { level: String(currentTierLevel) }),
+        label: t("VIP{level}", { level: String(currentTierLevel) }),
       },
     ];
   }, [tierOptions, currentTierLevel]);
@@ -111,15 +115,15 @@ export function MembershipManageModal({
     if (isOpen) {
       setTierLevel(String(currentTierLevel));
       if (currentTierLevel > 0 && currentMembership?.expiresAt) {
-        setDurationMode('custom');
+        setDurationMode("custom");
         setCustomDate(currentMembership.expiresAt.slice(0, 10));
       } else {
-        setDurationMode('preset');
+        setDurationMode("preset");
         setPresetDays(30);
-        setCustomDate('');
+        setCustomDate("");
       }
       setSignedDays(30);
-      setDaysDraft('30');
+      setDaysDraft("30");
     }
   }, [isOpen, currentTierLevel, currentMembership?.expiresAt]);
 
@@ -135,7 +139,7 @@ export function MembershipManageModal({
         if (cancelled) return;
         if (result.error) throw result.error;
         const tiers = ((result.data ?? []) as VipTierDto[]).filter(
-          (tier) => tier && typeof tier.level === 'number'
+          (tier) => tier && typeof tier.level === "number",
         );
         // 后端守卫保证 level 0（系统默认等级）恒上架存在，直接使用接口数据即可；
         // 此处防御异常（如库中记录被手动删除），缺失时补一条免费选项
@@ -144,11 +148,11 @@ export function MembershipManageModal({
           // level 0（免费档）直接显示「免费用户」，避免「VIP0」中突兀的数字 0
           label:
             tier.level === FREE_TIER_LEVEL
-              ? t('免费用户')
-              : t('VIP{level}', { level: String(tier.level) }),
+              ? t("免费用户")
+              : t("VIP{level}", { level: String(tier.level) }),
         }));
         if (!tiers.some((tier) => tier.level === FREE_TIER_LEVEL)) {
-          options.unshift({ value: '0', label: t('免费用户') });
+          options.unshift({ value: "0", label: t("免费用户") });
         }
         // 当前等级已下架时补充为只读选项，保证下拉能显示现有会员等级
         if (
@@ -157,16 +161,16 @@ export function MembershipManageModal({
         ) {
           options.push({
             value: String(currentTierLevel),
-            label: `${t('VIP{level}', { level: String(currentTierLevel) })}（${t('已下架')}）`,
+            label: `${t("VIP{level}", { level: String(currentTierLevel) })}（${t("已下架")}）`,
           });
         }
         setTierOptions(options);
       })
       .catch((err) => {
         if (cancelled) return;
-        setTiersError(getErrorMessage(err) || t('获取会员列表失败'));
+        setTiersError(getErrorMessage(err) || t("获取会员列表失败"));
         // 降级：仅保留免费选项，避免展示未经验证的硬编码等级
-        setTierOptions([{ value: '0', label: t('免费用户') }]);
+        setTierOptions([{ value: "0", label: t("免费用户") }]);
       })
       .finally(() => {
         if (!cancelled) setTiersLoading(false);
@@ -189,7 +193,7 @@ export function MembershipManageModal({
   // base=此刻时为 0（只能延长）；base 为未来到期时间时为负数（可回拨到不早于现在）
   const minSignedDays = useMemo(
     () => Math.ceil((Date.now() - adjustBase.getTime()) / DAY_MS),
-    [adjustBase]
+    [adjustBase],
   );
 
   const clampSignedDays = (v: number) =>
@@ -197,7 +201,7 @@ export function MembershipManageModal({
 
   // 调整时长预览：状态被钳制恒合法，新到期时间永不早于此刻
   const adjustPreview = useMemo(() => {
-    if (durationMode !== 'adjust' || Number(tierLevel) === 0) return null;
+    if (durationMode !== "adjust" || Number(tierLevel) === 0) return null;
     if (signedDays === 0) return null;
     const now = new Date();
     const currentExpiry = currentMembership?.expiresAt
@@ -210,7 +214,13 @@ export function MembershipManageModal({
       newDate,
       signedDays,
     };
-  }, [durationMode, tierLevel, signedDays, adjustBase, currentMembership?.expiresAt]);
+  }, [
+    durationMode,
+    tierLevel,
+    signedDays,
+    adjustBase,
+    currentMembership?.expiresAt,
+  ]);
 
   // 计数器式调整：每次点击立即 ±1 天，方向由所点按钮决定，无隐式切换
   const handleAdjustStep = (delta: number) => {
@@ -241,7 +251,7 @@ export function MembershipManageModal({
       return;
     }
 
-    if (durationMode === 'adjust') {
+    if (durationMode === "adjust") {
       // 防御：signedDays 已被钳制在 [minSignedDays, MAX] 内（新到期不早于此刻），0 天无意义
       if (signedDays === 0) return;
       await onSubmit({ tierLevel: level, adjustDays: signedDays });
@@ -249,11 +259,11 @@ export function MembershipManageModal({
     }
 
     let expiresAt: string | undefined;
-    if (durationMode === 'preset') {
+    if (durationMode === "preset") {
       const date = new Date();
       date.setDate(date.getDate() + presetDays);
       expiresAt = date.toISOString();
-    } else if (durationMode === 'custom') {
+    } else if (durationMode === "custom") {
       if (!customDate) return;
       expiresAt = new Date(customDate).toISOString();
     }
@@ -270,30 +280,32 @@ export function MembershipManageModal({
       title={
         <span className={styles.modalTitleWithIcon}>
           <Crown size={20} />
-          {t('管理会员 - {name}', { name: userName })}
+          {t("管理会员 - {name}", { name: userName })}
         </span>
       }
       className="max-w-md"
       footer={
         <div className={styles.modalFooter}>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={
               loading ||
-              (durationMode === 'adjust' && Number(tierLevel) > 0 && signedDays === 0)
+              (durationMode === "adjust" &&
+                Number(tierLevel) > 0 &&
+                signedDays === 0)
             }
             className={styles.submitBtn}
           >
             {loading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                {t('处理中...')}
+                {t("处理中...")}
               </>
             ) : (
-              t('保存')
+              t("保存")
             )}
           </Button>
         </div>
@@ -305,18 +317,18 @@ export function MembershipManageModal({
         )}
         <div className={styles.formGroup}>
           <label className={styles.formLabel}>
-            {t('VIP 等级')} <span className={styles.required}>*</span>
+            {t("VIP 等级")} <span className={styles.required}>*</span>
           </label>
           <Select
             value={tierLevel}
             onChange={(value) => {
               setTierLevel(value);
-              if (value === '0') {
-                setDurationMode('preset');
+              if (value === "0") {
+                setDurationMode("preset");
               }
             }}
             options={tierSelectOptions}
-            placeholder={t('请选择等级')}
+            placeholder={t("请选择等级")}
             loading={tiersLoading}
             disabled={tiersLoading}
           />
@@ -325,52 +337,52 @@ export function MembershipManageModal({
         {Number(tierLevel) > 0 && (
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>
-              {t('会员时长')} <span className={styles.required}>*</span>
+              {t("会员时长")} <span className={styles.required}>*</span>
             </label>
             <div className={styles.durationModeTabs}>
               <Button
-                variant={durationMode === 'preset' ? 'primary' : 'secondary'}
+                variant={durationMode === "preset" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setDurationMode('preset')}
+                onClick={() => setDurationMode("preset")}
                 type="button"
               >
-                {t('预设时长')}
+                {t("预设时长")}
               </Button>
               <Button
-                variant={durationMode === 'custom' ? 'primary' : 'secondary'}
+                variant={durationMode === "custom" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setDurationMode('custom')}
+                onClick={() => setDurationMode("custom")}
                 type="button"
               >
-                {t('自定义日期')}
+                {t("自定义日期")}
               </Button>
               <Button
-                variant={durationMode === 'adjust' ? 'primary' : 'secondary'}
+                variant={durationMode === "adjust" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setDurationMode('adjust')}
+                onClick={() => setDurationMode("adjust")}
                 type="button"
               >
-                {t('调整时长')}
+                {t("调整时长")}
               </Button>
             </div>
 
-            {durationMode === 'preset' && (
+            {durationMode === "preset" && (
               <div className={styles.presetDurations}>
                 {PRESET_DURATIONS.map((d) => (
                   <Button
                     key={d.days}
-                    variant={presetDays === d.days ? 'primary' : 'secondary'}
+                    variant={presetDays === d.days ? "primary" : "secondary"}
                     size="sm"
                     onClick={() => setPresetDays(d.days)}
                     type="button"
                   >
-                    {d.label}
+                    {t("{n} 天", { n: d.n })}
                   </Button>
                 ))}
               </div>
             )}
 
-            {durationMode === 'custom' && (
+            {durationMode === "custom" && (
               <DatePicker
                 size="md"
                 value={dateOnlyToIso(customDate)}
@@ -379,7 +391,7 @@ export function MembershipManageModal({
               />
             )}
 
-            {durationMode === 'adjust' && (
+            {durationMode === "adjust" && (
               <div className={styles.adjustDurationSection}>
                 {/* 计数器：±1 天每次点击立即生效，到底/到顶自动禁用对应按钮 */}
                 <div className={styles.adjustStepper}>
@@ -388,7 +400,7 @@ export function MembershipManageModal({
                     className={styles.adjustStepBtn}
                     onClick={() => handleAdjustStep(-1)}
                     disabled={signedDays <= minSignedDays}
-                    aria-label={t('减少一天')}
+                    aria-label={t("减少一天")}
                   >
                     <Minus size={16} />
                   </button>
@@ -398,15 +410,15 @@ export function MembershipManageModal({
                     onChange={(e) => handleDaysDraftChange(e.target.value)}
                     onBlur={normalizeDaysDraft}
                     className={styles.adjustDaysInput}
-                    aria-label={t('调整天数')}
+                    aria-label={t("调整天数")}
                   />
-                  <span className={styles.adjustDaysUnit}>{t('天')}</span>
+                  <span className={styles.adjustDaysUnit}>{t("天")}</span>
                   <button
                     type="button"
                     className={styles.adjustStepBtn}
                     onClick={() => handleAdjustStep(1)}
                     disabled={signedDays >= MAX_ADJUST_DAYS}
-                    aria-label={t('增加一天')}
+                    aria-label={t("增加一天")}
                   >
                     <Plus size={16} />
                   </button>
@@ -417,7 +429,7 @@ export function MembershipManageModal({
                   {ADJUST_QUICK_DAYS.map((days) => (
                     <Button
                       key={days}
-                      variant={signedDays === days ? 'primary' : 'secondary'}
+                      variant={signedDays === days ? "primary" : "secondary"}
                       size="sm"
                       onClick={() => {
                         setSignedDays(days);
@@ -425,7 +437,7 @@ export function MembershipManageModal({
                       }}
                       type="button"
                     >
-                      {days} {t('天')}
+                      {days} {t("天")}
                     </Button>
                   ))}
                 </div>
@@ -435,18 +447,18 @@ export function MembershipManageModal({
                   <div className={styles.adjustPreview}>
                     {adjustPreview.currentExpiry && (
                       <div className={styles.adjustPreviewCurrent}>
-                        {t('当前到期：{date}', {
+                        {t("当前到期：{date}", {
                           date: adjustPreview.currentExpiry.toLocaleDateString(),
                         })}
                       </div>
                     )}
                     {!adjustPreview.currentExpiry && (
                       <div className={styles.adjustPreviewCurrent}>
-                        {t('当前无到期时间，从今天起算')}
+                        {t("当前无到期时间，从今天起算")}
                       </div>
                     )}
                     <div className={styles.adjustPreviewNew}>
-                      {t('新到期时间：{date}', {
+                      {t("新到期时间：{date}", {
                         date: adjustPreview.newDate.toLocaleDateString(),
                       })}
                     </div>
@@ -459,7 +471,7 @@ export function MembershipManageModal({
 
         {Number(tierLevel) === 0 && currentTierLevel > 0 && (
           <div className={styles.formNotice}>
-            {t('将移除该用户的 VIP 会员资格（当前 VIP{level}）', {
+            {t("将移除该用户的 VIP 会员资格（当前 VIP{level}）", {
               level: String(currentTierLevel),
             })}
           </div>

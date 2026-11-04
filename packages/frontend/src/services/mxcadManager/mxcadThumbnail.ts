@@ -384,6 +384,7 @@ export async function detectRegionBorder(
  *   视图缩放，本函数内部 createCanvasImageData 会把视口 zoomW 到 region 改变缩放，
  *   此时再 detectRegionBorder 就失真了。未传入（undefined，向后兼容）且 region 存在
  *   时才在此兜底检测（此时序已不准，调用方应显式传入）。
+ *   无 region（默认整图框）时恒 hasBorder=true（整图框天然不描边），不走算法。
  */
 export async function generatePosterImage(
   region?: ThumbnailRegion | null,
@@ -418,21 +419,17 @@ export async function generatePosterImage(
       false
     );
 
-    // 截图区域（用户框选区域或整图内容包围盒）是否正好框住图纸的直角方形边框：
-    // 是则海报省略圆角描边（截图边缘天然直角）。**与指定区域同套绘制**——无 region
-    // （整图内容包围盒）也用整图包围盒检测，内容包围盒 = 图纸边框时省略描边，不另走
-    // 「恒有描边」分支。hasBorder 由调用方在框选结束瞬间算好传入（viewCoordLong2Cad
-    // 实时，出图 zoomW 后再算会失真）；未传入才在此兜底检测（此时仍是 createCanvasImageData
-    // 之前，视图未被 zoomW，时序准确）。
-    const border =
-      typeof hasBorder === 'boolean'
+    // 截图区域是否需要描边：
+    // - 无 region（默认整图框）：整图框天然不需要描边，恒 hasBorder=true（不描边），不走算法。
+    // - 有 region（用户框选）：按四边算法 detectRegionBorder 判定，框住图纸直角方形边框则
+    //   省略圆角描边（截图边缘天然直角）。hasBorder 由调用方在框选结束瞬间算好传入
+    //   （viewCoordLong2Cad 实时，出图 zoomW 后再算会失真）；未传入才在此兜底检测（此时仍是
+    //   createCanvasImageData 之前，视图未被 zoomW，时序准确）。
+    const border = region
+      ? typeof hasBorder === 'boolean'
         ? hasBorder
-        : await detectRegionBorder(
-            region ?? {
-              minPt: { x: minPt.x, y: minPt.y },
-              maxPt: { x: maxPt.x, y: maxPt.y },
-            }
-          );
+        : await detectRegionBorder(region)
+      : true;
 
     // 黑底截图（与黑色海报背景统一，CAD 深色显示），完成/取消后恢复原背景
     const bakViewColor = mxcad.getViewBackgroundColor();

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Menu } from '@/components/ui/Menu';
-import { EmptyContextMenu } from '@/components/common/EmptyContextMenu';
-import { t } from '@/languages';
+import React from "react";
+import { Menu } from "@/components/ui";
+import { EmptyContextMenu } from "@/components/common/EmptyContextMenu";
+import { t } from "@/languages";
 import {
   Trash2,
   RefreshCw,
@@ -10,10 +10,10 @@ import {
   Scissors,
   FilePlus,
   Clipboard,
-} from 'lucide-react';
-import type { FileSystemNode } from '@/types/filesystem';
-import { FileSystemNodeContextMenu } from './FileSystemNodeContextMenu';
-import type { FileSystemNodePermissionProps } from './hooks/useFileSystemNodePermissionProps';
+} from "lucide-react";
+import type { FileSystemNode } from "@/types/filesystem";
+import { FileSystemNodeContextMenu } from "./FileSystemNodeContextMenu";
+import type { FileSystemNodePermissionProps } from "./hooks/useFileSystemNodePermissionProps";
 
 export interface FileSystemContextMenuProps {
   contextMenuPos: { x: number; y: number } | null;
@@ -31,7 +31,7 @@ export interface FileSystemContextMenuProps {
   clipboardHasItems: boolean;
   isSearchResult?: boolean;
   getNodePermissionProps: (
-    node: FileSystemNode
+    node: FileSystemNode,
   ) => FileSystemNodePermissionProps;
   onFileOpen: (node: FileSystemNode) => void;
   onDownload?: (node: FileSystemNode) => void;
@@ -122,7 +122,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                   onClose();
                 }}
               >
-                {t('删除 {count} 个选中项', { count: selectedNodes.size })}
+                {t("删除 {count} 个选中项", { count: selectedNodes.size })}
               </Menu.Item>
             )}
             {!isAtRoot && !isTrashView && onBatchMove && canBatchMove && (
@@ -132,7 +132,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                   onClose();
                 }}
               >
-                {t('剪切')}
+                {t("剪切")}
               </Menu.Item>
             )}
             {!isAtRoot && !isTrashView && onBatchCopy && canBatchCopy && (
@@ -142,7 +142,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                   onClose();
                 }}
               >
-                {t('复制')}
+                {t("复制")}
               </Menu.Item>
             )}
             {onBatchRestore && canRestoreFile && (
@@ -153,7 +153,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                   onClose();
                 }}
               >
-                {t('恢复 {count} 个选中项', { count: selectedNodes.size })}
+                {t("恢复 {count} 个选中项", { count: selectedNodes.size })}
               </Menu.Item>
             )}
           </>
@@ -195,7 +195,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                 onClose();
               }}
             >
-              {t('清空回收站')}
+              {t("清空回收站")}
             </Menu.Item>
           )}
           <Menu.Separator />
@@ -206,7 +206,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
               onClose();
             }}
           >
-            {t('刷新')}
+            {t("刷新")}
           </Menu.Item>
         </>
       ) : isAtRoot ? (
@@ -220,7 +220,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                 onClose();
               }}
             >
-              {t('删除')}
+              {t("删除")}
             </Menu.Item>
           )}
           {onCreateProject && (
@@ -231,7 +231,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                 onClose();
               }}
             >
-              {t('新建项目')}
+              {t("新建项目")}
             </Menu.Item>
           )}
           <Menu.Separator />
@@ -242,7 +242,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
               onClose();
             }}
           >
-            {t('刷新')}
+            {t("刷新")}
           </Menu.Item>
         </>
       ) : (
@@ -257,7 +257,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                     onClose();
                   }}
                 >
-                  {t('复制')}
+                  {t("复制")}
                 </Menu.Item>
               )}
               {onBatchMove && canBatchMove && (
@@ -268,7 +268,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                     onClose();
                   }}
                 >
-                  {t('剪切')}
+                  {t("剪切")}
                 </Menu.Item>
               )}
               {onBatchDelete && canBatchDelete && (
@@ -280,7 +280,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                     onClose();
                   }}
                 >
-                  {t('删除')}
+                  {t("删除")}
                 </Menu.Item>
               )}
               <Menu.Separator />
@@ -294,7 +294,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                 onClose();
               }}
             >
-              {t('新建图纸')}
+              {t("新建图纸")}
             </Menu.Item>
           )}
           {canCreate && (
@@ -305,7 +305,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                 onClose();
               }}
             >
-              {t('新建文件夹')}
+              {t("新建文件夹")}
             </Menu.Item>
           )}
 
@@ -317,7 +317,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
                 onClose();
               }}
             >
-              {t('粘贴')}
+              {t("粘贴")}
             </Menu.Item>
           )}
           <Menu.Separator />
@@ -328,7 +328,7 @@ export const FileSystemContextMenu: React.FC<FileSystemContextMenuProps> = ({
               onClose();
             }}
           >
-            {t('刷新')}
+            {t("刷新")}
           </Menu.Item>
         </>
       )}

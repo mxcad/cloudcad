@@ -32,6 +32,7 @@ function renderTable(props: Partial<Parameters<typeof SelectableTable<Row>>[0]> 
       onRubberBandSelect={props.onRubberBandSelect ?? onRubberBandSelect}
       onPageChange={props.onPageChange ?? onPageChange}
       onScrollPageChange={props.onScrollPageChange}
+      enableScrollPagination={props.enableScrollPagination}
       paginationMeta={
         'paginationMeta' in props
           ? props.paginationMeta
@@ -213,6 +214,50 @@ describe('SelectableTable', () => {
     expect(scroll).not.toBeNull();
     // relative：框选 overlay 以滚动容器为 containing block（缺省导致选区偏移）
     expect(scroll.className).toContain('relative');
+  });
+
+  it('滚动分页默认开启：传 onPageChange（无 onScrollPageChange）时滚到底触发翻页', async () => {
+    const rows60 = Array.from({ length: 60 }, (_, i) => ({
+      id: `u${i}`,
+      name: `User${i}`,
+    }));
+    const { container, onPageChange } = renderTable({
+      rows: rows60,
+      paginationMeta: { total: 60, page: 1, limit: 20, totalPages: 3 },
+      onScrollPageChange: undefined,
+    });
+    const scrollContainer = container.querySelector(
+      '[data-testid="selectable-table-scroll"]'
+    ) as HTMLElement;
+    // 滚到底（triggerEdge = max(300, 200×0.6)=300；scrollHeight=1800，clientHeight=200）
+    mockScrollGeometry(scrollContainer, 60, 1300);
+    await act(async () => {
+      // 内容替换屏蔽窗（SETTLE_BLOCK_MS=100）结束后滚动才触发边界翻页
+      await new Promise((resolve) => setTimeout(resolve, 110));
+      fireEvent.scroll(scrollContainer);
+    });
+    // 未接累积回调时向下滚动退化为按钮翻页（replace）
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it('enableScrollPagination={false} 关闭滚动分页：滚到底不触发翻页', async () => {
+    const rows60 = Array.from({ length: 60 }, (_, i) => ({
+      id: `u${i}`,
+      name: `User${i}`,
+    }));
+    const { container, onPageChange } = renderTable({
+      rows: rows60,
+      paginationMeta: { total: 60, page: 1, limit: 20, totalPages: 3 },
+      enableScrollPagination: false,
+    });
+    const scrollContainer = container.querySelector(
+      '[data-testid="selectable-table-scroll"]'
+    ) as HTMLElement;
+    mockScrollGeometry(scrollContainer, 60, 1300);
+    await act(async () => {
+      fireEvent.scroll(scrollContainer);
+    });
+    expect(onPageChange).not.toHaveBeenCalled();
   });
 
   it('滚动分页：页脚页码跟随视口所在页（tbody 测量），而非最近请求页', async () => {

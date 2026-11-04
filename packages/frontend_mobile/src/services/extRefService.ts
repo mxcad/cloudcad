@@ -15,8 +15,9 @@ export interface ExtRefFile {
 
 export interface PreloadingData {
   hash: string;
-  images: string[];
-  externalReference: string[];
+  /** 与 SDK PreloadingDataDto 一致：PreloadingFileInfoDto[] 对象数组 */
+  images: Array<{ name: string; size: number; type: string }>;
+  externalReference: Array<{ name: string; size: number; type: string }>;
   tz?: boolean;
 }
 

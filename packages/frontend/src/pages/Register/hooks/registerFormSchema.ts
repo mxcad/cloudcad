@@ -11,22 +11,29 @@ import {
  * Step 1 schema — basic info (username, optional nickname, conditional email).
  * Email validation is conditionally required based on runtime config.
  */
+// 消息一律函数式（{ error: () => t(...) }）：模块级 t() 会在 en-US pack
+// 未就绪时烘焙成中文且切语言后不刷新；zod v4 的 message 参数类型只收 string，
+// error 才收函数（位置参数函数形式运行时也不生效）
 export const step1Schema = z.object({
   username: z
     .string()
-    .min(1, t('请输入用户名'))
-    .min(3, t('用户名至少3个字符'))
-    .max(20, t('用户名最多20个字符'))
-    .regex(/^[a-zA-Z0-9_]+$/, t('用户名只能包含字母、数字和下划线')),
+    .min(1, { error: () => t('请输入用户名') })
+    .min(3, { error: () => t('用户名至少3个字符') })
+    .max(20, { error: () => t('用户名最多20个字符') })
+    .regex(/^[a-zA-Z0-9_]+$/, {
+      error: () => t('用户名只能包含字母、数字和下划线'),
+    }),
   nickname: z
     .string()
-    .max(50, t('昵称最多50个字符'))
+    .max(50, { error: () => t('昵称最多50个字符') })
     .optional()
     .or(z.literal('')),
   email: z.string().optional().or(z.literal('')),
   agreedToTerms: z
     .boolean()
-    .refine((v) => v === true, t('请先阅读并同意《用户协议》和《隐私政策》')),
+    .refine((v) => v === true, {
+      error: () => t('请先阅读并同意《用户协议》和《隐私政策》'),
+    }),
 });
 
 /**

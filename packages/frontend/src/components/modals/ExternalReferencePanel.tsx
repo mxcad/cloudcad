@@ -1,8 +1,7 @@
-import React from 'react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Tag } from '../ui/Tag';
-import { ExternalReferenceFile } from '../../types/filesystem';
+import React from "react";
+import { Modal, Button, Tag } from "@/components/ui";
+
+import { ExternalReferenceFile } from "../../types/filesystem";
 import {
   Upload,
   Download,
@@ -10,16 +9,16 @@ import {
   FileText,
   Eye,
   Replace,
-} from 'lucide-react';
-import { t } from '@/languages';
-import { Z_LAYERS } from '@/constants/layers';
-import { formatBytes as formatFileSize } from '@cloudcad/platform';
+} from "lucide-react";
+import { t } from "@/languages";
+import { Z_LAYERS } from "@/constants/layers";
+import { formatBytes as formatFileSize } from "@cloudcad/platform";
 
 interface ExternalReferencePanelProps {
   isOpen: boolean;
   files: ExternalReferenceFile[];
   loading: boolean;
-  mode: 'blocking' | 'active';
+  mode: "blocking" | "active";
   onSelectAndUpload: () => void;
   onReplace: (file: ExternalReferenceFile) => void;
   onDownload: (file: ExternalReferenceFile) => void;
@@ -49,32 +48,32 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
 
   const cardCount = files.length;
   const missingCount = files.filter(
-    (f) => !f.exists && f.uploadState !== 'success'
+    (f) => !f.exists && f.uploadState !== "success",
   ).length;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('外部参照管理')}
+      title={t("外部参照管理")}
       size="lg"
       zIndex={Z_LAYERS.MODAL}
       footer={
         <div className="flex items-center justify-between w-full gap-2">
-          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
             {missingCount > 0
-              ? t('还有 {count} 个文件未处理', { count: missingCount })
+              ? t("还有 {count} 个文件未处理", { count: missingCount })
               : files.length > 0
-                ? t('所有文件已处理')
-                : ''}
+                ? t("所有文件已处理")
+                : ""}
           </span>
-          {mode === 'blocking' ? (
+          {mode === "blocking" ? (
             <Button variant="secondary" size="sm" onClick={onComplete}>
-              {t('继续打开')}
+              {t("继续打开")}
             </Button>
           ) : (
             <Button variant="secondary" size="sm" onClick={onClose}>
-              {t('关闭')}
+              {t("关闭")}
             </Button>
           )}
         </div>
@@ -86,14 +85,14 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
             <RefreshCw
               size={20}
               className="animate-spin"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             />
           </div>
         ) : files.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <FileText size={36} style={{ color: 'var(--text-muted)' }} />
-            <p style={{ color: 'var(--text-tertiary)' }} className="text-sm">
-              {t('暂无外部参照文件')}
+            <FileText size={36} style={{ color: "var(--text-muted)" }} />
+            <p style={{ color: "var(--text-tertiary)" }} className="text-sm">
+              {t("暂无外部参照文件")}
             </p>
           </div>
         ) : (
@@ -101,12 +100,12 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
             <div className="flex items-center justify-between">
               <span
                 className="text-xs font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('共 {count} 个文件', { count: cardCount })}
+                {t("共 {count} 个文件", { count: cardCount })}
                 {missingCount > 0 && (
-                  <span className="ml-1" style={{ color: 'var(--warning)' }}>
-                    {t('，{count} 个缺失', { count: missingCount })}
+                  <span className="ml-1" style={{ color: "var(--warning)" }}>
+                    {t("，{count} 个缺失", { count: missingCount })}
                   </span>
                 )}
               </span>
@@ -115,39 +114,39 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
             <div className="max-h-72 overflow-y-auto space-y-2">
               {files.map((file) => {
                 const isMissing =
-                  !file.exists && file.uploadState !== 'success';
+                  !file.exists && file.uploadState !== "success";
 
                 return (
                   <div
                     key={file.name}
                     className="flex items-center gap-3 p-3 rounded-lg"
-                    style={{ background: 'var(--bg-tertiary)' }}
+                    style={{ background: "var(--bg-tertiary)" }}
                   >
                     <div
                       className="w-2 h-2 rounded-full shrink-0"
                       style={{
                         backgroundColor:
-                          file.uploadState === 'success' || file.exists
-                            ? 'var(--success)'
-                            : file.uploadState === 'fail'
-                              ? 'var(--error)'
-                              : file.uploadState === 'uploading'
-                                ? 'var(--info)'
-                                : 'var(--warning)',
+                          file.uploadState === "success" || file.exists
+                            ? "var(--success)"
+                            : file.uploadState === "fail"
+                              ? "var(--error)"
+                              : file.uploadState === "uploading"
+                                ? "var(--info)"
+                                : "var(--warning)",
                       }}
                     />
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <Tag
-                          variant={file.type === 'img' ? 'info' : 'primary'}
+                          variant={file.type === "img" ? "info" : "primary"}
                           size="xs"
                         >
-                          {file.type === 'img' ? t('图片') : t('图纸')}
+                          {file.type === "img" ? t("图片") : t("图纸")}
                         </Tag>
                         <span
                           className="text-sm font-medium truncate block"
-                          style={{ color: 'var(--text-primary)' }}
+                          style={{ color: "var(--text-primary)" }}
                           title={file.name}
                         >
                           {file.name}
@@ -155,15 +154,15 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
                       </div>
                       <span
                         className="text-xs"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: "var(--text-tertiary)" }}
                       >
                         {formatFileSize(file.size)}
-                        {file.uploadState === 'uploading' && (
+                        {file.uploadState === "uploading" && (
                           <span
                             className="ml-2"
-                            style={{ color: 'var(--info)' }}
+                            style={{ color: "var(--info)" }}
                           >
-                            {t('上传中 {progress}%', {
+                            {t("上传中 {progress}%", {
                               progress: Math.round(file.progress),
                             })}
                           </span>
@@ -172,17 +171,17 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      {file.uploadState === 'uploading' && (
+                      {file.uploadState === "uploading" && (
                         <div className="w-16">
                           <div
                             className="h-1 rounded-full overflow-hidden"
-                            style={{ background: 'var(--bg-elevated)' }}
+                            style={{ background: "var(--bg-elevated)" }}
                           >
                             <div
                               className="h-full rounded-full transition-all duration-300"
                               style={{
                                 width: `${file.progress}%`,
-                                background: 'var(--primary-500)',
+                                background: "var(--primary-500)",
                               }}
                             />
                           </div>
@@ -196,7 +195,7 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
                           icon={Upload}
                           onClick={() => onReplace(file)}
                         >
-                          {t('上传')}
+                          {t("上传")}
                         </Button>
                       ) : (
                         <>
@@ -206,7 +205,7 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
                             icon={Eye}
                             onClick={() => handleView(file)}
                           >
-                            {t('查看')}
+                            {t("查看")}
                           </Button>
                           <Button
                             variant="outline"
@@ -214,7 +213,7 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
                             icon={Replace}
                             onClick={() => onReplace(file)}
                           >
-                            {t('替换')}
+                            {t("替换")}
                           </Button>
                           <Button
                             variant="outline"
@@ -222,7 +221,7 @@ export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({
                             icon={Download}
                             onClick={() => onDownload(file)}
                           >
-                            {t('下载')}
+                            {t("下载")}
                           </Button>
                         </>
                       )}

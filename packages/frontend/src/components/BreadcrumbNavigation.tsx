@@ -4,21 +4,19 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
-} from 'react';
-import { ChevronRightIcon, FolderIcon } from './FileIcons';
-import { BreadcrumbItem } from '../types/filesystem';
-import { TruncateText } from './ui/TruncateText';
-import { Tooltip } from './ui/Tooltip';
-import { Menu } from './ui/Menu';
-import { Input } from './ui/Input';
-import { ArrowLeft, Pencil, Check, X } from 'lucide-react';
-import { t } from '@/languages';
+} from "react";
+import { ChevronRightIcon, FolderIcon } from "./FileIcons";
+import { BreadcrumbItem } from "../types/filesystem";
+import { TruncateText, Tooltip, Menu, Input } from "@/components/ui";
+
+import { ArrowLeft, Pencil, Check, X } from "lucide-react";
+import { t } from "@/languages";
 
 interface BreadcrumbNavigationProps {
   breadcrumbs: BreadcrumbItem[];
   onNavigate: (crumb: BreadcrumbItem, element: HTMLButtonElement) => void;
   /** 展现模式 */
-  variant?: 'default' | 'library' | 'panel';
+  variant?: "default" | "library" | "panel";
   /** 是否可编辑（default 模式下生效） */
   editable?: boolean;
   /** 编辑时是否保留根节点名称（项目管理模式为 true） */
@@ -34,7 +32,7 @@ interface BreadcrumbNavigationProps {
 export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   breadcrumbs,
   onNavigate,
-  variant = 'default',
+  variant = "default",
   editable = false,
   preserveRootInEdit = false,
   onBack,
@@ -47,15 +45,15 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   const editTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState('');
+  const [editValue, setEditValue] = useState("");
 
   const [visibleCount, setVisibleCount] = useState(0);
   const [needsCollapse, setNeedsCollapse] = useState(false);
 
   // 显示用路径（包含根目录名称）
   const displayPathString = useMemo(
-    () => '/' + breadcrumbs.map((b) => b.name).join(' / '),
-    [breadcrumbs]
+    () => "/" + breadcrumbs.map((b) => b.name).join(" / "),
+    [breadcrumbs],
   );
 
   // 编辑用路径
@@ -65,11 +63,11 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   const editPathString = useMemo(() => {
     const getName = (b: BreadcrumbItem) => b.editName || b.name;
     if (preserveRootInEdit) {
-      return breadcrumbs.map(getName).join(' / ');
+      return breadcrumbs.map(getName).join(" / ");
     }
     return breadcrumbs.length <= 1
-      ? '/'
-      : '/' + breadcrumbs.slice(1).map(getName).join(' / ');
+      ? "/"
+      : "/" + breadcrumbs.slice(1).map(getName).join(" / ");
   }, [breadcrumbs, preserveRootInEdit]);
 
   const startEditing = useCallback(() => {
@@ -87,7 +85,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
 
   const cancelEditing = useCallback(() => {
     setIsEditing(false);
-    setEditValue('');
+    setEditValue("");
   }, []);
 
   const submitEditing = useCallback(() => {
@@ -97,7 +95,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
       // 其他模式：去掉开头的"/"，因为后端使用" > "分隔
       const pathForSubmit = preserveRootInEdit
         ? trimmed
-        : trimmed.replace(/^\//, '');
+        : trimmed.replace(/^\//, "");
       onPathSubmit?.(pathForSubmit);
     }
     setIsEditing(false);
@@ -105,25 +103,25 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
 
   const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         submitEditing();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         cancelEditing();
       }
     },
-    [submitEditing, cancelEditing]
+    [submitEditing, cancelEditing],
   );
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || variant !== 'panel') return;
+    if (!container || variant !== "panel") return;
 
     const calculateVisible = () => {
       const containerWidth = container.clientWidth;
       const reservedWidth = 220;
       const availableWidth = containerWidth - reservedWidth;
 
-      const items = container.querySelectorAll('[data-breadcrumb-item]');
+      const items = container.querySelectorAll("[data-breadcrumb-item]");
       let totalWidth = 0;
       let count = 0;
 
@@ -145,11 +143,11 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
     calculateVisible();
     const ro = new ResizeObserver(calculateVisible);
     ro.observe(container);
-    window.addEventListener('resize', calculateVisible);
+    window.addEventListener("resize", calculateVisible);
 
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', calculateVisible);
+      window.removeEventListener("resize", calculateVisible);
     };
   }, [breadcrumbs, variant]);
 
@@ -171,7 +169,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
 
   if (breadcrumbs.length === 0 && !isEditing) {
     // panel 模式空面包屑仍保留「返回」按钮（如个人空间根目录）
-    if (variant !== 'panel') return null;
+    if (variant !== "panel") return null;
   }
 
   if (isEditing && editable) {
@@ -187,20 +185,20 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
           wrapperClassName="flex-1"
           className="min-w-[200px]"
         />
-        <Tooltip content={t('确认')}>
+        <Tooltip content={t("确认")}>
           <button
             onClick={submitEditing}
             className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]"
-            style={{ color: 'var(--primary-600)' }}
+            style={{ color: "var(--primary-600)" }}
           >
             <Check size={16} />
           </button>
         </Tooltip>
-        <Tooltip content={t('取消')}>
+        <Tooltip content={t("取消")}>
           <button
             onClick={cancelEditing}
             className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             <X size={16} />
           </button>
@@ -217,7 +215,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   const renderCrumb = (
     crumb: BreadcrumbItem,
     index: number,
-    isLast: boolean
+    isLast: boolean,
   ) => (
     <React.Fragment key={crumb.id}>
       {separator(index)}
@@ -232,10 +230,10 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
         className={`flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg transition-all duration-200 whitespace-nowrap
           ${
             isLast
-              ? variant === 'panel'
-                ? 'text-slate-900 font-semibold cursor-default'
-                : 'text-slate-900 font-medium cursor-default'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer'
+              ? variant === "panel"
+                ? "text-slate-900 font-semibold cursor-default"
+                : "text-slate-900 font-medium cursor-default"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
           }
         `}
         disabled={isLast}
@@ -276,10 +274,10 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
           />
         )}
         <TruncateText
-          maxWidth={variant === 'panel' ? 100 : 80}
-          smMaxWidth={variant === 'panel' ? 120 : 120}
-          mdMaxWidth={variant === 'panel' ? 150 : 150}
-          lgMaxWidth={variant === 'panel' ? 180 : 200}
+          maxWidth={variant === "panel" ? 100 : 80}
+          smMaxWidth={variant === "panel" ? 120 : 120}
+          mdMaxWidth={variant === "panel" ? 150 : 150}
+          lgMaxWidth={variant === "panel" ? 180 : 200}
           className="text-slate-900"
         >
           {crumb.name}
@@ -293,15 +291,15 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
       ref={containerRef}
       className="flex items-center gap-0.5 text-xs sm:text-sm whitespace-nowrap"
     >
-      {variant === 'panel' && (
+      {variant === "panel" && (
         <>
           <button
             onClick={onBack}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
-            title={t('返回上一级')}
+            title={t("返回上一级")}
           >
             <ArrowLeft size={14} />
-            <span>{t('返回')}</span>
+            <span>{t("返回")}</span>
           </button>
           {(breadcrumbs.length > 0 || !!onBackToProjects) && (
             <ChevronRightIcon
@@ -315,7 +313,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
                 onClick={onBackToProjects}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all whitespace-nowrap"
               >
-                {t('项目列表')}
+                {t("项目列表")}
               </button>
               {breadcrumbs.length > 0 && (
                 <ChevronRightIcon
@@ -328,7 +326,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
         </>
       )}
 
-      {variant === 'panel' &&
+      {variant === "panel" &&
       needsCollapse &&
       collapsedBreadcrumb.visible[0] ? (
         <>
@@ -349,7 +347,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
                   <Menu.Item
                     key={item.id}
                     onClick={() =>
-                      onNavigate(item, document.createElement('button'))
+                      onNavigate(item, document.createElement("button"))
                     }
                   >
                     {item.name}
@@ -365,21 +363,21 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
             return renderCrumb(
               item,
               breadcrumbs.length - collapsedBreadcrumb.visible.length + 1 + idx,
-              isLast
+              isLast,
             );
           })}
         </>
-      ) : variant === 'library' ? (
+      ) : variant === "library" ? (
         breadcrumbs.map((crumb, index) =>
-          renderCrumb(crumb, index, index === breadcrumbs.length - 1)
+          renderCrumb(crumb, index, index === breadcrumbs.length - 1),
         )
       ) : (
         <>
           {breadcrumbs.map((crumb, index) =>
-            renderCrumb(crumb, index, index === breadcrumbs.length - 1)
+            renderCrumb(crumb, index, index === breadcrumbs.length - 1),
           )}
           {editable && breadcrumbs.length > 0 && (
-            <Tooltip content={t('编辑路径')}>
+            <Tooltip content={t("编辑路径")}>
               <button
                 onClick={startEditing}
                 className="ml-1 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex-shrink-0"

@@ -1,9 +1,9 @@
-import React, { useCallback, useRef } from 'react';
-import { Check, Copy, Link2 } from 'lucide-react';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { useCopy, type UseCopyOptions } from '@/hooks/useCopy';
-import { t } from '@/languages';
+import React, { useCallback, useRef } from "react";
+import { Check, Copy, Link2 } from "lucide-react";
+import { Input, Button } from "@/components/ui";
+
+import { useCopy, type UseCopyOptions } from "@/hooks/useCopy";
+import { t } from "@/languages";
 
 export interface ShareLinkBarProps {
   /** 完整可复制链接（已含 origin） */
@@ -13,7 +13,7 @@ export interface ShareLinkBarProps {
   /** 列表/批量行内不显示提示文案，默认显示 */
   showHint?: boolean;
   /** 复制反馈配置（toast 文案等）；「手动复制」降级由本组件内置 */
-  copyOptions?: Omit<UseCopyOptions, 'onUnrecoverable'>;
+  copyOptions?: Omit<UseCopyOptions, "onUnrecoverable">;
 }
 
 /**
@@ -53,10 +53,10 @@ export const ShareLinkBar: React.FC<ShareLinkBarProps> = ({
     <>
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          width: "100%",
         }}
       >
         <Input
@@ -74,19 +74,19 @@ export const ShareLinkBar: React.FC<ShareLinkBarProps> = ({
           icon={copied ? Check : Copy}
           onClick={handleCopy}
         >
-          {copied ? t('已复制') : t('复制')}
+          {copied ? t("已复制") : t("复制")}
         </Button>
       </div>
       {showHint && (
         <div
           style={{
-            width: '100%',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-tertiary)',
-            textAlign: 'center',
+            width: "100%",
+            fontSize: "var(--text-xs)",
+            color: "var(--text-tertiary)",
+            textAlign: "center",
           }}
         >
-          {t('若按钮复制不可用，可手动选中上方链接复制')}
+          {t("若按钮复制不可用，可手动选中上方链接复制")}
         </div>
       )}
     </>

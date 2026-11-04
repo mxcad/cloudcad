@@ -1,11 +1,10 @@
-import { Plus, RefreshCw, Edit2, Trash2, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Tag } from '@/components/ui/Tag';
-import { t } from '@/languages';
-import { formatYuan } from '../constants';
-import { FREE_TIER_LEVEL } from '@/constants/vip';
-import type { VipTierItem } from '../types';
+import { Plus, RefreshCw, Edit2, Trash2, XCircle } from "lucide-react";
+import { Button, Card, Tag } from "@/components/ui";
+
+import { t } from "@/languages";
+import { formatYuan } from "../constants";
+import { FREE_TIER_LEVEL } from "@/constants/vip";
+import type { VipTierItem } from "../types";
 
 interface TiersTabProps {
   tiers: VipTierItem[];
@@ -40,7 +39,7 @@ export function TiersTab({
             icon={RefreshCw}
             onClick={onRefresh}
           >
-            {t('刷新')}
+            {t("刷新")}
           </Button>
           <Button
             variant="primary"
@@ -49,7 +48,7 @@ export function TiersTab({
             onClick={onCreate}
             disabled={!canWrite}
           >
-            {t('新增等级')}
+            {t("新增等级")}
           </Button>
         </div>
       </div>
@@ -58,8 +57,8 @@ export function TiersTab({
           <div
             className="w-8 h-8 rounded-full animate-spin"
             style={{
-              border: '3px solid var(--border-default)',
-              borderTopColor: 'var(--primary-500)',
+              border: "3px solid var(--border-default)",
+              borderTopColor: "var(--primary-500)",
             }}
           />
         </div>
@@ -74,18 +73,18 @@ export function TiersTab({
                       {item.name} (VIP{item.level})
                     </span>
                     {item.level === FREE_TIER_LEVEL ? (
-                      <Tag variant="info">{t('系统默认')}</Tag>
+                      <Tag variant="info">{t("系统默认")}</Tag>
                     ) : item.isActive ? (
-                      <Tag variant="success">{t('上架')}</Tag>
+                      <Tag variant="success">{t("上架")}</Tag>
                     ) : (
-                      <Tag variant="neutral">{t('已下架')}</Tag>
+                      <Tag variant="neutral">{t("已下架")}</Tag>
                     )}
                   </div>
                   <p
                     className="text-sm mt-1"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    style={{ color: "var(--text-tertiary)" }}
                   >
-                    {t('月基础价')}: {formatYuan(item.baseMonthlyPrice)}
+                    {t("月基础价")}: {formatYuan(item.baseMonthlyPrice)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -96,7 +95,7 @@ export function TiersTab({
                     onClick={() => onEdit(item)}
                     disabled={!canWrite}
                   >
-                    {t('编辑')}
+                    {t("编辑")}
                   </Button>
                   {/* 系统默认等级（level 0）不可下架/删除，仅可编辑权益配置 */}
                   {item.level !== FREE_TIER_LEVEL && item.isActive && (
@@ -107,7 +106,7 @@ export function TiersTab({
                       onClick={() => onDeactivate(item)}
                       disabled={!canWrite}
                     >
-                      {t('下架')}
+                      {t("下架")}
                     </Button>
                   )}
                   {item.level !== FREE_TIER_LEVEL && !item.isActive && (
@@ -118,7 +117,7 @@ export function TiersTab({
                       onClick={() => onDelete(item)}
                       disabled={!canWrite}
                     >
-                      {t('删除')}
+                      {t("删除")}
                     </Button>
                   )}
                 </div>
@@ -128,9 +127,9 @@ export function TiersTab({
           {tiers.length === 0 && (
             <p
               className="text-center py-8"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('暂无数据')}
+              {t("暂无数据")}
             </p>
           )}
         </div>

@@ -32,16 +32,12 @@ import {
   libraryControllerCreateBlockFolder,
   libraryControllerBatchDeleteDrawingNodes,
   libraryControllerBatchDeleteBlockNodes,
-  downloadControllerDownloadNodeWithFormat,
 } from '@/api-sdk';
-import { sanitizeFileName } from '../../utils/fileUtils';
 import { getErrorMessage } from '../../utils/errorHandler';
 import { t } from '@/languages';
+import { fillTemplate } from '@/utils/i18nFill';
 import { triggerBlobDownload } from '../../utils/download';
-import {
-  canExportDownload,
-  handleVipFeatureRequiredError,
-} from '../../utils/vipFeatureGuide';
+import { downloadNodeWithFormat } from '@/services/download/downloadNodeWithFormat';
 import { useMembership } from '@/hooks/useMembership';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
@@ -190,9 +186,11 @@ export function useLibraryOperations({
     [libraryType, showToast]
   );
 
-  // 下载节点（支持多格式）— mxweb 走公开库下载端点（免登录：分享 URL / CAD 编辑器需公共访问），
-  // 其余格式（pdf/dwg/dxf）走真实转换（download-with-format，登录 + LIBRARY_*_MANAGE 权限），
-  // 与编辑器侧 useDownloadFormatModal.ts:92-104 对齐；转换受 quota.conversion_window_count 限频
+  // 下载节点（支持多格式）— 会员门控 + 同步分发收敛到单一命令模块
+  // （services/download/downloadNodeWithFormat.ts）：mxweb 走公开库下载端点
+  // （免登录：分享 URL / CAD 编辑器需公共访问），其余格式（pdf/dwg/dxf）走真实转换
+  // （download-with-format）。此前的「与编辑器侧 useDownloadFormatModal.ts:92-104 对齐」
+  // 注释与四处手写门控分支已随收敛删除，门控只有 assertExportDownloadAllowed 一处。
   const handleDownloadWithFormat = useCallback(
     async (
       nodeId: string,
@@ -205,56 +203,19 @@ export function useLibraryOperations({
       },
       dwgOptions?: { dwgVersion: number }
     ) => {
-      // 导出下载方向（mxweb → 其他格式）预检：非 VIP 且开关未开放时弹购买引导，不发请求
-      if (
-        format !== 'mxweb' &&
-        !canExportDownload(
-          !!membership?.isVip,
-          config.freeExportDownloadEnabled
-        )
-      ) {
-        await handleVipFeatureRequiredError();
-        return;
-      }
-      try {
-        const { data: blobData, error } =
-          format === 'mxweb'
-            ? libraryType === 'drawing'
-              ? await libraryControllerDownloadDrawingNode({
-                  path: { nodeId },
-                  parseAs: 'blob',
-                })
-              : await libraryControllerDownloadBlockNode({
-                  path: { nodeId },
-                  parseAs: 'blob',
-                })
-            : await downloadControllerDownloadNodeWithFormat({
-                path: { nodeId },
-                query: { format, ...pdfOptions, ...dwgOptions },
-                parseAs: 'blob',
-              });
-        if (error) throw error;
-
-        const blob =
-          blobData instanceof Blob
-            ? blobData
-            : new Blob([blobData as unknown as BlobPart]);
-        const fileName =
-          sanitizeFileName(nodeName).replace(/\.[^.]+$/, '') + `.${format}`;
-        triggerBlobDownload(blob, fileName);
-
-        showToast(t('已下载：{fileName}', { fileName }), 'success');
-      } catch (error) {
-        console.error('下载失败:', error);
-        showToast(getErrorMessage(error), 'error');
-      }
+      await downloadNodeWithFormat({
+        nodeId,
+        nodeName,
+        format,
+        isVip: !!membership?.isVip,
+        freeExportDownloadEnabled: config.freeExportDownloadEnabled,
+        libraryType,
+        pdfOptions,
+        dwgOptions,
+        showToast,
+      });
     },
-    [
-      libraryType,
-      showToast,
-      membership?.isVip,
-      config.freeExportDownloadEnabled,
-    ]
+    [libraryType, showToast, membership?.isVip, config.freeExportDownloadEnabled]
   );
 
   // 删除节点
@@ -473,13 +434,17 @@ export function useLibraryOperations({
         const result = data as BatchOperationResponseDto;
         if (result.failedCount > 0) {
           showToast(
-            t(
-              `成功移动 ${result.successCount} 项，${result.failedCount} 项失败`
-            ),
+            fillTemplate('成功移动 {success} 项，{failed} 项失败', {
+              success: String(result.successCount),
+              failed: String(result.failedCount),
+            }),
             'warning'
           );
         } else {
-          showToast(t(`成功移动 ${nodeIds.length} 个项目`), 'success');
+          showToast(
+            t('成功移动 {count} 个项目', { count: String(nodeIds.length) }),
+            'success'
+          );
         }
         refreshNodes();
       } catch (error) {
@@ -515,13 +480,17 @@ export function useLibraryOperations({
         const result = data as BatchOperationResponseDto;
         if (result.failedCount > 0) {
           showToast(
-            t(
-              `成功复制 ${result.successCount} 项，${result.failedCount} 项失败`
-            ),
+            fillTemplate('成功复制 {success} 项，{failed} 项失败', {
+              success: String(result.successCount),
+              failed: String(result.failedCount),
+            }),
             'warning'
           );
         } else {
-          showToast(t(`成功复制 ${nodeIds.length} 个项目`), 'success');
+          showToast(
+            t('成功复制 {count} 个项目', { count: String(nodeIds.length) }),
+            'success'
+          );
         }
         refreshNodes();
         return {

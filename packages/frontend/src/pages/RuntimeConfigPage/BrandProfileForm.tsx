@@ -25,34 +25,34 @@
  * 与固定路径字段语义不同。
  */
 
-import React, { useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import styles from './RuntimeConfigPage.module.css';
+import React, { useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { Button, Input } from "@/components/ui";
+
+import styles from "./RuntimeConfigPage.module.css";
 import {
   commit,
   isJsonObject,
   parseDraft,
   setByPath,
   type JsonObject,
-} from './brandProfileDraft';
-import type { DraftValue } from './validate';
-import { t } from '@/languages';
+} from "./brandProfileDraft";
+import type { DraftValue } from "./validate";
+import { t } from "@/languages";
 
 /** 与后端 `BrandConfig` 各字符串字段一致的长度上限 */
 const MAX_LEN = 200;
 
 /** 法务签约主体按语言配置（法务侧唯一必须本地化的字段） */
 const LEGAL_LANGUAGES = [
-  { code: 'zh-CN', label: '简体中文' },
-  { code: 'zh-TW', label: '繁體中文' },
-  { code: 'en-US', label: 'English' },
-  { code: 'ko-KR', label: '한국어' },
+  { code: "zh-CN", label: "简体中文" },
+  { code: "zh-TW", label: "繁體中文" },
+  { code: "en-US", label: "English" },
+  { code: "ko-KR", label: "한국어" },
 ] as const;
 
 function readString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
+  return typeof value === "string" ? value : "";
 }
 
 interface FieldProps {
@@ -76,7 +76,7 @@ const Field: React.FC<FieldProps> = ({
   onChange,
 }) => (
   <div
-    className={`${styles.brandField} ${full ? styles.brandFieldFull : ''}`.trim()}
+    className={`${styles.brandField} ${full ? styles.brandFieldFull : ""}`.trim()}
   >
     <span className={styles.brandFieldLabel}>
       {label}
@@ -108,7 +108,7 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
   onChange,
 }) => {
   const value = useMemo(() => parseDraft(draft), [draft]);
-  const [newAppId, setNewAppId] = useState('');
+  const [newAppId, setNewAppId] = useState("");
 
   const legal = isJsonObject(value.legal) ? value.legal : {};
   const identities = isJsonObject(legal.identities) ? legal.identities : {};
@@ -125,16 +125,16 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
       commit(draft, (obj) => {
         if (!isJsonObject(obj.apps)) obj.apps = {};
         (obj.apps as JsonObject)[appId] = {};
-      })
+      }),
     );
-    setNewAppId('');
+    setNewAppId("");
   };
 
   const removeApp = (appId: string) => {
     onChange(
       commit(draft, (obj) => {
         if (isJsonObject(obj.apps)) delete (obj.apps as JsonObject)[appId];
-      })
+      }),
     );
   };
 
@@ -142,22 +142,28 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
     <div data-testid="rc-brand-profile-form" className={styles.brandForm}>
       <div className={styles.brandSection}>
         <div className={styles.brandSectionHead}>
-          <h4 className={styles.brandSectionTitle}>签约主体（按语言）</h4>
+          <h4 className={styles.brandSectionTitle}>
+            {t("签约主体（按语言）")}
+          </h4>
           <span className={styles.brandSectionHint}>
-            {t('法务侧唯一必须本地化的字段；留空用内置默认值')}
+            {t("法务侧唯一必须本地化的字段；留空用内置默认值")}
           </span>
         </div>
         <div className={styles.brandFields}>
           {LEGAL_LANGUAGES.map(({ code, label }) => (
             <Field
               key={code}
-              label={`签约主体（${label}）`}
+              label={t("签约主体（{lang}）", { lang: label })}
               value={readString(
-                isJsonObject(identities[code]) ? (identities[code] as JsonObject).entityName : ''
+                isJsonObject(identities[code])
+                  ? (identities[code] as JsonObject).entityName
+                  : "",
               )}
               disabled={disabled}
-              placeholder="留空用内置默认值"
-              onChange={(v) => setField(['legal', 'identities', code, 'entityName'], v)}
+              placeholder={t("留空用内置默认值")}
+              onChange={(v) =>
+                setField(["legal", "identities", code, "entityName"], v)
+              }
             />
           ))}
         </div>
@@ -165,13 +171,15 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
 
       <div className={styles.brandSection}>
         <div className={styles.brandSectionHead}>
-          <h4 className={styles.brandSectionTitle}>按应用覆盖（apps）</h4>
+          <h4 className={styles.brandSectionTitle}>{t("按应用覆盖（apps）")}</h4>
           <span className={styles.brandSectionHint}>
-            {t('按应用 ID 覆盖标题/标语/Logo，登录页按 URL 参数匹配')}
+            {t("按应用 ID 覆盖标题/标语/Logo，登录页按 URL 参数匹配")}
           </span>
         </div>
         {Object.keys(apps).length === 0 && (
-          <span className={styles.brandSectionHint}>{t('未配置按应用覆盖')}</span>
+          <span className={styles.brandSectionHint}>
+            {t("未配置按应用覆盖")}
+          </span>
         )}
         {Object.entries(apps).map(([appId, app]) => (
           <div key={appId} className={styles.brandSection}>
@@ -183,32 +191,32 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
                 icon={Trash2}
                 disabled={disabled}
                 onClick={() => removeApp(appId)}
-                tooltip={t('移除该应用覆盖')}
+                tooltip={t("移除该应用覆盖")}
                 data-testid="rc-brand-remove-app"
               >
-                {t('移除')}
+                {t("移除")}
               </Button>
             </div>
             <div className={styles.brandFields}>
               <Field
-                label="标题"
-                value={readString(isJsonObject(app) ? app.title : '')}
+                label={t("标题")}
+                value={readString(isJsonObject(app) ? app.title : "")}
                 disabled={disabled}
-                onChange={(v) => setField(['apps', appId, 'title'], v)}
+                onChange={(v) => setField(["apps", appId, "title"], v)}
               />
               <Field
-                label="标语"
-                value={readString(isJsonObject(app) ? app.tagline : '')}
+                label={t("标语")}
+                value={readString(isJsonObject(app) ? app.tagline : "")}
                 disabled={disabled}
-                onChange={(v) => setField(['apps', appId, 'tagline'], v)}
+                onChange={(v) => setField(["apps", appId, "tagline"], v)}
               />
               <Field
                 label="Logo"
-                value={readString(isJsonObject(app) ? app.logo : '')}
+                value={readString(isJsonObject(app) ? app.logo : "")}
                 disabled={disabled}
                 placeholder="/logo.png"
                 full
-                onChange={(v) => setField(['apps', appId, 'logo'], v)}
+                onChange={(v) => setField(["apps", appId, "logo"], v)}
               />
             </div>
           </div>
@@ -220,7 +228,7 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
             value={newAppId}
             onChange={(e) => setNewAppId(e.target.value)}
             disabled={disabled}
-            placeholder="应用 ID，如 mxcadweb"
+            placeholder={t("应用 ID，如 mxcadweb")}
             maxLength={50}
             spellCheck={false}
           />
@@ -232,7 +240,7 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
             onClick={addApp}
             data-testid="rc-brand-add-app"
           >
-            {t('添加应用')}
+            {t("添加应用")}
           </Button>
         </div>
       </div>

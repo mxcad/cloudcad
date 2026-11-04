@@ -1,13 +1,13 @@
-import React, { useCallback, useMemo, useRef } from 'react';
-import { Loader2, AlertTriangle } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
-import { Button } from '@/components/ui/Button';
-import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
-import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
-import { useScrollPagination } from '@/hooks/common/useScrollPagination';
-import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
-import { t } from '@/languages';
-import type { FileSystemNode } from '@/types/filesystem';
+import React, { useCallback, useMemo, useRef } from "react";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { Pagination, Button } from "@/components/ui";
+
+import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
+import { useRubberBandSelection } from "@/hooks/common/useRubberBandSelection";
+import { useScrollPagination } from "@/hooks/common/useScrollPagination";
+import { useDelayedLoading } from "@/hooks/common/useDelayedLoading";
+import { t } from "@/languages";
+import type { FileSystemNode } from "@/types/filesystem";
 
 export interface FileListGridRenderContext {
   isRubberBanding: boolean;
@@ -16,7 +16,7 @@ export interface FileListGridRenderContext {
 
 interface FileListGridItemsProps {
   nodes: FileSystemNode[];
-  viewMode: 'grid' | 'list';
+  viewMode: "grid" | "list";
   loading: boolean;
   loadingView?: React.ReactNode;
   emptyView?: React.ReactNode;
@@ -24,7 +24,7 @@ interface FileListGridItemsProps {
   renderItem: (
     node: FileSystemNode,
     index: number,
-    context: FileListGridRenderContext
+    context: FileListGridRenderContext,
   ) => React.ReactNode;
   rubberBanding: boolean;
   rubberBandJustEndedRef: React.MutableRefObject<boolean>;
@@ -69,12 +69,12 @@ const FileListGridItems = React.memo(function FileListGridItems({
           ref={itemContainerRef}
           data-view-mode={viewMode}
           className={
-            viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
-              : 'divide-y'
+            viewMode === "grid"
+              ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2"
+              : "divide-y"
           }
           style={
-            viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
+            viewMode !== "grid" ? { borderColor: "var(--border-subtle)" } : {}
           }
         >
           {nodes.map((node, index) => (
@@ -91,7 +91,7 @@ const FileListGridItems = React.memo(function FileListGridItems({
 
 interface FileListGridProps {
   nodes: FileSystemNode[];
-  viewMode: 'grid' | 'list';
+  viewMode: "grid" | "list";
   selectedNodes: Set<string>;
   loading?: boolean;
   loadingView?: React.ReactNode;
@@ -108,7 +108,9 @@ interface FileListGridProps {
   onRubberBandSelect?: (nodeIds: string[]) => void;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
-  onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
+  onScrollPageChange?: (page: number, direction: "prev" | "next") => void;
+  /** 关闭滚动分页（默认开启；传 false 仅保留按钮分页） */
+  enableScrollPagination?: boolean;
   /** 翻页/后台刷新失败信息（列表已有内容时显示为底部失败条，不整页替换） */
   loadError?: string | null;
   /** 失败条重试回调（如 react-query refetch） */
@@ -122,7 +124,7 @@ interface FileListGridProps {
   renderItem: (
     node: FileSystemNode,
     index: number,
-    context: FileListGridRenderContext
+    context: FileListGridRenderContext,
   ) => React.ReactNode;
 }
 
@@ -140,6 +142,7 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
   onPageChange,
   onPageSizeChange,
   onScrollPageChange,
+  enableScrollPagination,
   loadError,
   onRetryLoadMore,
   minLoadedPage,
@@ -177,11 +180,19 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
       // totalPages 初始 0：无分页信息时不显示「已经是最后一页」（防误报）
       totalPages: paginationMeta?.totalPages ?? 0,
       loading,
-      enabled: !!onScrollPageChange,
+      // 滚动分页默认开启：有分页信息且提供了滚动累积回调或按钮翻页回调即启用；
+      // enableScrollPagination={false} 显式关闭（仅保留按钮分页）
+      enabled:
+        enableScrollPagination !== false &&
+        (!!onScrollPageChange || !!onPageChange),
       shouldSkip: () => rubberBandRef.current !== null,
       loadError,
       minLoadedPage,
-      onPageChange: (page, direction) => onScrollPageChange?.(page, direction),
+      onPageChange: (page, direction) => {
+        // 优先累积回调（追加/前插）；未接累积时向下滚动退化为按钮翻页（单页 replace 模型）
+        if (onScrollPageChange) onScrollPageChange(page, direction);
+        else if (direction === "next") onPageChange?.(page);
+      },
     });
 
   // 页脚页码/上一页/下一页按钮：通知控制器（数据到位后居中定位）并透传翻页
@@ -190,13 +201,13 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
       jumpTo(page);
       onPageChange?.(page);
     },
-    [jumpTo, onPageChange]
+    [jumpTo, onPageChange],
   );
 
   // 用 useMemo 稳定 Pagination 的 meta 对象，避免每次渲染创建新引用
   const paginationMetaMemo = useMemo(
     () => (paginationMeta ? { ...paginationMeta, page: visiblePage } : null),
-    [paginationMeta, visiblePage]
+    [paginationMeta, visiblePage],
   );
 
   return (
@@ -206,8 +217,8 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
         ref={scrollContainerRef}
         className="relative flex-1 min-h-0 overflow-y-auto"
         style={{
-          userSelect: 'none',
-          WebkitTouchCallout: 'none',
+          userSelect: "none",
+          WebkitTouchCallout: "none",
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -221,16 +232,16 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
         {/* 内容包装：有操作栏时 min-h-full 撑满滚动容器（内容不足一屏时 mt-auto 把操作栏
             推到底部=页面底部；内容超出时操作栏随内容滚动并在视口底部吸底）。
             无操作栏时不撑满（保持原生滚动分页测量） */}
-        <div className={bottomBar ? 'min-h-full flex flex-col' : undefined}>
+        <div className={bottomBar ? "min-h-full flex flex-col" : undefined}>
           {/* 顶部加载指示（向上滚动加载进行中） */}
           {showTopLoader && (
             <div
               data-testid="top-loader"
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <Loader2 size={14} className="animate-spin" />
-              <span>{t('加载中...')}</span>
+              <span>{t("加载中...")}</span>
             </div>
           )}
           <FileListGridItems
@@ -250,16 +261,16 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
             <div
               data-testid="bottom-loader"
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <Loader2 size={14} className="animate-spin" />
-              <span>{t('加载中...')}</span>
+              <span>{t("加载中...")}</span>
             </div>
           ) : loadError && nodes.length > 0 ? (
             <div
               data-testid="load-more-error"
               className="flex items-center justify-center gap-2 py-3 text-xs"
-              style={{ color: 'var(--error)' }}
+              style={{ color: "var(--error)" }}
             >
               <AlertTriangle size={14} className="shrink-0" />
               <span className="max-w-[60%] truncate" title={loadError}>
@@ -267,7 +278,7 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
               </span>
               {onRetryLoadMore && (
                 <Button variant="outline" size="xs" onClick={onRetryLoadMore}>
-                  {t('重试')}
+                  {t("重试")}
                 </Button>
               )}
             </div>
@@ -275,9 +286,9 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
             <div
               data-testid="last-page"
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
-              <span>{t('已经是最后一页')}</span>
+              <span>{t("已经是最后一页")}</span>
             </div>
           ) : null}
           {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=页面底部），
@@ -295,7 +306,7 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
       {paginationMetaMemo && onPageChange && (
         <div
           className="flex-shrink-0 px-6 py-4"
-          style={{ borderTop: '1px solid var(--border-subtle)' }}
+          style={{ borderTop: "1px solid var(--border-subtle)" }}
         >
           <Pagination
             // 指示器展示视口所在页（visiblePage），而非最近请求页，保证与可视内容同步

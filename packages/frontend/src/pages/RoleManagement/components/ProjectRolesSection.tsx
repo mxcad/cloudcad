@@ -1,9 +1,9 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui';
-import { t } from '@/languages';
-import styles from '../RoleManagement.module.css';
-import { RoleCard } from './RoleCard';
-import type { ProjectRoleTemplate } from '../types';
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "../RoleManagement.module.css";
+import { RoleCard } from "./RoleCard";
+import type { ProjectRoleTemplate } from "../types";
 
 interface ProjectRolesSectionProps {
   roles: ProjectRoleTemplate[];
@@ -34,9 +34,9 @@ export function ProjectRolesSection({
     <div className={styles.rolesSection}>
       <div className={styles.sectionHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>{t('项目角色模板')}</h2>
+          <h2 className={styles.sectionTitle}>{t("项目角色模板")}</h2>
           <p className={styles.sectionSubtitle}>
-            {t('创建项目时的默认角色，不影响已有项目')}
+            {t("创建项目时的默认角色，不影响已有项目")}
           </p>
         </div>
         {canCreate && (
@@ -47,7 +47,7 @@ export function ProjectRolesSection({
             onClick={onCreate}
             loading={loading}
           >
-            {t('新建模板')}
+            {t("新建模板")}
           </Button>
         )}
       </div>

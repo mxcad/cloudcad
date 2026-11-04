@@ -64,7 +64,7 @@ export const DropIndicator: React.FC<DropIndicatorProps> = ({
         </svg>
         <p className="drop-indicator-text">
           {fileCount > 1
-            ? t(`松开即可上传 ${fileCount} 个文件`)
+            ? t('松开即可上传 {count} 个文件', { count: String(fileCount) })
             : t('松开即可打开图纸')}
         </p>
       </div>

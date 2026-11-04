@@ -458,7 +458,7 @@ feedback:
   content_too_long: 피드백 내용이 너무 깁니다. 줄여 주세요.
   code_not_found: 피드백을 찾을 수 없거나 조회 코드가 잘못되었습니다.
   not_found: 피드백을 찾을 수 없습니다.
-  status_locked_adopted: 채택된 피드백은 상태를 변경할 수 없습니다. 철회하려면 보상을 처리하세요.
+  status_locked_adopted: 채택된 피드백은 상태를 변경할 수 없습니다.
   reject_reason_required: 거부 사유를 입력해야 합니다.
   already_adopted: 이 피드백은 이미 채택되었습니다.
   reward_exists: 이 피드백에 대한 보상 기록이 이미 존재합니다.

@@ -5,11 +5,10 @@ import {
   showLoadingToast,
   closeToast,
   showImagePreview,
+  showConfirmDialog,
 } from 'vant'
 import { t } from '@/languages'
 import FloatingPopup from '@/components/FloatingPopup.vue'
-import { openMxWeb } from '@/plugins/mxcad/openMxWeb'
-import { useOpenGuard } from '@/composables/useOpenGuard'
 import { handleApiError } from '@/utils/apiConfig'
 import {
   fetchExtRefList,
@@ -40,8 +39,6 @@ const show = ref(true)
 const loading = ref(!props.initialFiles)
 const refreshing = ref(false)
 const files = ref<ExtRefItem[]>(props.initialFiles ? [...props.initialFiles] : [])
-
-const { guardBeforeOpen } = useOpenGuard()
 
 const missingCount = computed(
   () => files.value.filter((f) => !f.exists && f.uploadState !== 'success').length
@@ -75,7 +72,7 @@ async function onRefresh() {
   await loadList()
 }
 
-/** 查看：图片走预览；图纸就地打开 mxweb（替换当前图纸，先过未保存守卫）。 */
+/** 查看：图片走预览；图纸先提示会在新标签页打开，确认后在浏览器新标签页打开。 */
 async function onView(f: ExtRefItem) {
   if (f.type === 'img') {
     showLoadingToast({ message: t('正在加载...'), forbidClick: true })
@@ -89,11 +86,13 @@ async function onView(f: ExtRefItem) {
     }
     return
   }
-  const ok = await guardBeforeOpen()
-  if (!ok) return
+  try {
+    await showConfirmDialog({ message: t('查看会在新标签页打开') })
+  } catch {
+    return
+  }
   const url = getExtRefDrawingUrl(props.ctx, f.name)
-  const opened = await openMxWeb(url)
-  if (!opened) handleApiError(new Error('open failed'), t('打开外部参照失败'))
+  window.open(url, '_blank')
 }
 
 async function onDownload(f: ExtRefItem) {
@@ -165,6 +164,9 @@ function onClose() {
     v-model:show="show"
     :title="t('管理外部参照')"
     :closeable="false"
+    :fixed-height="true"
+    :draggable="false"
+    :content-draggable="false"
     @close="onClose"
   >
     <div class="extref-manage">
@@ -249,7 +251,7 @@ function onClose() {
                 : ''
           }}
         </span>
-        <van-button size="small" @click="onClose">{{ t('关闭') }}</van-button>
+        <van-button size="small" @click="onClose">{{ t('继续打开') }}</van-button>
       </div>
     </template>
   </FloatingPopup>

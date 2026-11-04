@@ -3,8 +3,8 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Button } from '@/components/ui';
-import { t } from '@/languages';
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
 
 /**
  * CAD 编辑器懒加载链失败后的回退 UI。
@@ -18,10 +18,10 @@ export function CadLoadFailedFallback() {
   return (
     <div
       className="fixed inset-0 flex flex-col items-center justify-center"
-      style={{ background: 'var(--bg-primary)' }}
+      style={{ background: "var(--bg-primary)" }}
     >
-      <p style={{ color: 'var(--text-primary)' }}>
-        {t('CAD 编辑器加载失败，请刷新页面重试')}
+      <p style={{ color: "var(--text-primary)" }}>
+        {t("CAD 编辑器加载失败，请刷新页面重试")}
       </p>
       <Button
         variant="primary"
@@ -29,7 +29,7 @@ export function CadLoadFailedFallback() {
         className="mt-4"
         onClick={() => window.location.reload()}
       >
-        {t('刷新页面')}
+        {t("刷新页面")}
       </Button>
     </div>
   );

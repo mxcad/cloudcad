@@ -1,10 +1,10 @@
-import { ArrowRight } from 'lucide-react';
-import { FileText } from 'lucide-react';
-import { Section } from '@/components/ui/Section';
-import { FileItem } from '@/components/FileItem';
-import { toFileSystemNode, FileSystemNode } from '@/types/filesystem';
-import type { FileSystemNodeDto } from '@/api-sdk';
-import { t } from '@/languages';
+import { ArrowRight } from "lucide-react";
+import { FileText } from "lucide-react";
+import { Section } from "@/components/ui";
+import { FileItem } from "@/components/FileItem";
+import { toFileSystemNode, FileSystemNode } from "@/types/filesystem";
+import type { FileSystemNodeDto } from "@/api-sdk";
+import { t } from "@/languages";
 
 interface RecentFilesSectionProps {
   loading: boolean;
@@ -20,14 +20,14 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = ({
   onEnter,
 }) => (
   <Section
-    title={t('最近文件')}
+    title={t("最近文件")}
     actions={
       <button
         onClick={onViewAll}
         className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
-        style={{ color: 'var(--primary-500)' }}
+        style={{ color: "var(--primary-500)" }}
       >
-        {t('查看全部')}
+        {t("查看全部")}
         <ArrowRight size={14} />
       </button>
     }
@@ -48,15 +48,15 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = ({
     ) : (
       <div
         className="text-center py-8 rounded-xl"
-        style={{ background: 'var(--bg-tertiary)' }}
+        style={{ background: "var(--bg-tertiary)" }}
       >
         <FileText
           size={32}
-          style={{ color: 'var(--text-muted)' }}
+          style={{ color: "var(--text-muted)" }}
           className="mx-auto mb-2"
         />
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {t('暂无文件，上传您的第一个图纸')}
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("暂无文件，上传您的第一个图纸")}
         </p>
       </div>
     )}

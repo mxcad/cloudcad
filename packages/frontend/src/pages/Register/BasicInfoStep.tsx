@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   User,
   Mail,
@@ -7,15 +7,15 @@ import {
   Sparkles,
   ArrowRight,
   Loader2,
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { t } from '@/languages';
-import { Button } from '@/components/ui/Button';
-import { UseFormRegister } from 'react-hook-form';
-import { RegisterFormValues } from './hooks/registerFormSchema';
-import { FieldErrors } from './types';
-import { FieldErrorMessage } from './FieldErrorMessage';
-import styles from './register.module.css';
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { t } from "@/languages";
+import { Button } from "@/components/ui";
+import { UseFormRegister } from "react-hook-form";
+import { RegisterFormValues } from "./hooks/registerFormSchema";
+import { FieldErrors } from "./types";
+import { FieldErrorMessage } from "./FieldErrorMessage";
+import styles from "./register.module.css";
 
 interface BasicInfoStepProps {
   register: UseFormRegister<RegisterFormValues>;
@@ -37,15 +37,15 @@ interface BasicInfoStepProps {
 const inputGroupCls = (
   styles: Record<string, string>,
   focused: boolean,
-  hasError: boolean
+  hasError: boolean,
 ): string => {
-  return `${styles.inputGroup} ${focused ? styles.inputGroupFocused : ''} ${
-    hasError ? styles.inputGroupError : ''
+  return `${styles.inputGroup} ${focused ? styles.inputGroupFocused : ""} ${
+    hasError ? styles.inputGroupError : ""
   }`;
 };
 
 const iconCls = (styles: Record<string, string>, active: boolean): string => {
-  return `${styles.inputIcon} ${active ? styles.inputIconActive : ''}`;
+  return `${styles.inputIcon} ${active ? styles.inputIconActive : ""}`;
 };
 
 export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
@@ -69,30 +69,30 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
       <div
         className={inputGroupCls(
           styles,
-          focusedField === 'username',
-          !!fieldErrors.username
+          focusedField === "username",
+          !!fieldErrors.username,
         )}
       >
         <label htmlFor="username" className={styles.inputLabel}>
-          {t('用户名')} <span className={styles.required}>*</span>
+          {t("用户名")} <span className={styles.required}>*</span>
         </label>
         <div className={styles.inputWrapper}>
           <User
             size={18}
-            className={iconCls(styles, focusedField === 'username')}
+            className={iconCls(styles, focusedField === "username")}
           />
           <input
             id="username"
             type="text"
             required
             className={styles.inputField}
-            placeholder={t('请输入用户名')}
-            {...register('username')}
+            placeholder={t("请输入用户名")}
+            {...register("username")}
             aria-invalid={!!fieldErrors.username}
             aria-describedby={
-              fieldErrors.username ? 'username-error' : undefined
+              fieldErrors.username ? "username-error" : undefined
             }
-            onFocus={() => setFocusedField('username')}
+            onFocus={() => setFocusedField("username")}
           />
           <div className={styles.inputGlow} />
         </div>
@@ -106,29 +106,29 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
       <div
         className={inputGroupCls(
           styles,
-          focusedField === 'nickname',
-          !!fieldErrors.nickname
+          focusedField === "nickname",
+          !!fieldErrors.nickname,
         )}
       >
         <label htmlFor="nickname" className={styles.inputLabel}>
-          {t('昵称')}
+          {t("昵称")}
         </label>
         <div className={styles.inputWrapper}>
           <Sparkles
             size={18}
-            className={iconCls(styles, focusedField === 'nickname')}
+            className={iconCls(styles, focusedField === "nickname")}
           />
           <input
             id="nickname"
             type="text"
             className={styles.inputField}
-            placeholder={t('请输入昵称（可选）')}
-            {...register('nickname')}
+            placeholder={t("请输入昵称（可选）")}
+            {...register("nickname")}
             aria-invalid={!!fieldErrors.nickname}
             aria-describedby={
-              fieldErrors.nickname ? 'nickname-error' : undefined
+              fieldErrors.nickname ? "nickname-error" : undefined
             }
-            onFocus={() => setFocusedField('nickname')}
+            onFocus={() => setFocusedField("nickname")}
           />
           <div className={styles.inputGlow} />
         </div>
@@ -143,12 +143,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
         <div
           className={inputGroupCls(
             styles,
-            focusedField === 'email',
-            !!fieldErrors.email
+            focusedField === "email",
+            !!fieldErrors.email,
           )}
         >
           <label htmlFor="email" className={styles.inputLabel}>
-            {t('邮箱地址')}{' '}
+            {t("邮箱地址")}{" "}
             {requireEmailVerification && (
               <span className={styles.required}>*</span>
             )}
@@ -156,7 +156,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           <div className={styles.inputWrapper}>
             <Mail
               size={18}
-              className={iconCls(styles, focusedField === 'email')}
+              className={iconCls(styles, focusedField === "email")}
             />
             <input
               id="email"
@@ -164,11 +164,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
               autoComplete="email"
               required={requireEmailVerification}
               className={styles.inputField}
-              placeholder={t('请输入邮箱地址')}
-              {...register('email')}
+              placeholder={t("请输入邮箱地址")}
+              {...register("email")}
               aria-invalid={!!fieldErrors.email}
-              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-              onFocus={() => setFocusedField('email')}
+              aria-describedby={fieldErrors.email ? "email-error" : undefined}
+              onFocus={() => setFocusedField("email")}
             />
             <div className={styles.inputGlow} />
           </div>
@@ -185,12 +185,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           <div
             className={inputGroupCls(
               styles,
-              focusedField === 'phone',
-              !!fieldErrors.phone
+              focusedField === "phone",
+              !!fieldErrors.phone,
             )}
           >
             <label htmlFor="phone" className={styles.inputLabel}>
-              {t('手机号')}{' '}
+              {t("手机号")}{" "}
               {requirePhoneVerification && (
                 <span className={styles.required}>*</span>
               )}
@@ -198,7 +198,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             <div className={styles.inputWrapper}>
               <Phone
                 size={18}
-                className={iconCls(styles, focusedField === 'phone')}
+                className={iconCls(styles, focusedField === "phone")}
               />
               <input
                 id="phone"
@@ -208,12 +208,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
                 required={requirePhoneVerification}
                 maxLength={11}
                 className={styles.inputField}
-                placeholder={t('请输入手机号')}
+                placeholder={t("请输入手机号")}
                 value={phoneForm.phone}
                 onChange={handlePhoneChange}
                 aria-invalid={!!fieldErrors.phone}
-                aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
-                onFocus={() => setFocusedField('phone')}
+                aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
+                onFocus={() => setFocusedField("phone")}
                 onBlur={() => setFocusedField(null)}
               />
               <div className={styles.inputGlow} />
@@ -228,12 +228,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           <div
             className={inputGroupCls(
               styles,
-              focusedField === 'code',
-              !!fieldErrors.code
+              focusedField === "code",
+              !!fieldErrors.code,
             )}
           >
             <label htmlFor="code" className={styles.inputLabel}>
-              {t('验证码')}{' '}
+              {t("验证码")}{" "}
               {requirePhoneVerification && (
                 <span className={styles.required}>*</span>
               )}
@@ -243,7 +243,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             >
               <MessageSquare
                 size={18}
-                className={iconCls(styles, focusedField === 'code')}
+                className={iconCls(styles, focusedField === "code")}
               />
               <input
                 id="code"
@@ -253,12 +253,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
                 required={requirePhoneVerification}
                 maxLength={6}
                 className={`${styles.inputField} ${styles.inputFieldHasButton}`}
-                placeholder={t('请输入验证码')}
+                placeholder={t("请输入验证码")}
                 value={phoneForm.code}
                 onChange={handlePhoneChange}
                 aria-invalid={!!fieldErrors.code}
-                aria-describedby={fieldErrors.code ? 'code-error' : undefined}
-                onFocus={() => setFocusedField('code')}
+                aria-describedby={fieldErrors.code ? "code-error" : undefined}
+                onFocus={() => setFocusedField("code")}
                 onBlur={() => setFocusedField(null)}
               />
               <button
@@ -274,7 +274,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
                 ) : countdown > 0 ? (
                   `${countdown}s`
                 ) : (
-                  t('获取验证码')
+                  t("获取验证码")
                 )}
               </button>
               <div className={styles.inputGlow} />
@@ -293,7 +293,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           「请先阅读并同意…」对用户是纯重复、无可执行信息 */}
       <div
         className={`${styles.agreementGroup} ${
-          fieldErrors.agreedToTerms ? styles.agreementGroupError : ''
+          fieldErrors.agreedToTerms ? styles.agreementGroupError : ""
         }`}
       >
         <label className={styles.agreementLabel}>
@@ -301,17 +301,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             id="agreedToTerms"
             type="checkbox"
             className={styles.agreementCheckbox}
-            {...register('agreedToTerms')}
+            {...register("agreedToTerms")}
             aria-invalid={!!fieldErrors.agreedToTerms}
           />
           <span className={styles.agreementText}>
-            {t('我已阅读并同意')}
+            {t("我已阅读并同意")}
             <Link to="/terms" className={styles.agreementLink}>
-              《{t('用户协议')}》
+              《{t("用户协议")}》
             </Link>
-            {t('和')}
+            {t("和")}
             <Link to="/privacy" className={styles.agreementLink}>
-              《{t('隐私政策')}》
+              《{t("隐私政策")}》
             </Link>
           </span>
         </label>
@@ -325,7 +325,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
         onClick={onNext}
         icon={ArrowRight}
       >
-        {t('下一步')}
+        {t("下一步")}
       </Button>
     </div>
   );

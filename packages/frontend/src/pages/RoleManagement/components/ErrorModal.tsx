@@ -1,8 +1,8 @@
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui';
-import { Modal } from '@/components/ui/Modal';
-import { t } from '@/languages';
-import styles from '../RoleManagement.module.css';
+import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui";
+import { Modal } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "../RoleManagement.module.css";
 
 interface ErrorModalProps {
   isOpen: boolean;
@@ -15,8 +15,8 @@ export function ErrorModal({ isOpen, message, onClose }: ErrorModalProps) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('提示')}
-      footer={<Button onClick={onClose}>{t('确定')}</Button>}
+      title={t("提示")}
+      footer={<Button onClick={onClose}>{t("确定")}</Button>}
     >
       <div className={styles.errorModalContent}>
         <AlertCircle size={24} className={styles.errorIcon} />

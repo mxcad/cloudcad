@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Loader2,
   CheckCircle2,
@@ -8,49 +8,53 @@ import {
   ExternalLink,
   RotateCcw,
   RefreshCw,
-} from 'lucide-react';
-import { t } from '@/languages';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { formatDateTime, getRelativeTime } from '@/utils/dateUtils';
+} from "lucide-react";
+import { t } from "@/languages";
+import { describeConversionError } from "@/lib/conversionError";
+import { Tooltip } from "@/components/ui";
+import { formatDateTime, getRelativeTime } from "@/utils/dateUtils";
 import type {
   ConversionTask,
   ConversionTaskStatus,
-} from '@/stores/conversionQueueStore';
-import { CLOUD_LIST_CAP } from '@/stores/conversionQueueStore';
+} from "@/stores/conversionQueueStore";
+import { CLOUD_LIST_CAP } from "@/stores/conversionQueueStore";
 
 /**
- * 转换任务状态元信息（标签 + 图标 + 行类名）
+ * 转换任务状态元信息（标签 + 图标 + 行类名）。
+ * 函数式取值：label 渲染期走 t()（模块级烘焙会在 en-US pack 未就绪时回退 zh-CN）
  */
-const STATUS_META: Record<
+function getStatusMeta(): Record<
   ConversionTaskStatus,
   { label: string; icon: React.ReactNode; className: string }
-> = {
-  pending: {
-    label: t('排队中'),
-    icon: <Loader2 size={14} className="conv-icon" />,
-    className: 'pending',
-  },
-  processing: {
-    label: t('转换中'),
-    icon: <Loader2 size={14} className="conv-icon spin" />,
-    className: 'processing',
-  },
-  completed: {
-    label: t('完成'),
-    icon: <CheckCircle2 size={14} className="conv-icon" />,
-    className: 'completed',
-  },
-  failed: {
-    label: t('转换失败'),
-    icon: <AlertCircle size={14} className="conv-icon" />,
-    className: 'failed',
-  },
-  cancelled: {
-    label: t('已取消'),
-    icon: <XCircle size={14} className="conv-icon" />,
-    className: 'cancelled',
-  },
-};
+> {
+  return {
+    pending: {
+      label: t("排队中"),
+      icon: <Loader2 size={14} className="conv-icon" />,
+      className: "pending",
+    },
+    processing: {
+      label: t("转换中"),
+      icon: <Loader2 size={14} className="conv-icon spin" />,
+      className: "processing",
+    },
+    completed: {
+      label: t("完成"),
+      icon: <CheckCircle2 size={14} className="conv-icon" />,
+      className: "completed",
+    },
+    failed: {
+      label: t("转换失败"),
+      icon: <AlertCircle size={14} className="conv-icon" />,
+      className: "failed",
+    },
+    cancelled: {
+      label: t("已取消"),
+      icon: <XCircle size={14} className="conv-icon" />,
+      className: "cancelled",
+    },
+  };
+}
 
 /**
  * 转换 Tab 组件
@@ -100,18 +104,18 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
   // 「重试」可用性单一判据：content-error（内容性永久失败，同输入重试注定再失败）
   // 不提供重试；本地记录无后端任务可重试。live 区与历史区共用。
   const canRetryTask = (task: ConversionTask): boolean =>
-    task.errorCategory !== 'content-error' &&
-    task.status === 'failed' &&
-    task.source === 'cloud' &&
+    task.errorCategory !== "content-error" &&
+    task.status === "failed" &&
+    task.source === "cloud" &&
     !!task.taskId;
 
   // 「重新转换」可用性（#4c）：已 COMPLETED 的云端 CAD 节点（有 nodeId 且非 mxweb——
   // mxweb 本就是原生格式，重转无意义，后端亦 no-op）。live 区与历史区共用。
   const canReconvertTask = (task: ConversionTask): boolean =>
-    task.status === 'completed' &&
-    task.source === 'cloud' &&
+    task.status === "completed" &&
+    task.source === "cloud" &&
     !!task.nodeId &&
-    !task.name?.toLowerCase().endsWith('.mxweb');
+    !task.name?.toLowerCase().endsWith(".mxweb");
 
   return (
     <>
@@ -126,19 +130,21 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           搜索过滤掉全部行时显示「无匹配结果」 */}
       {filteredTasks.length === 0 && filteredHistory.length === 0 && (
         <div className="conversion-empty">
-          {search ? t('无匹配结果') : t('暂无转换任务')}
+          {search ? t("无匹配结果") : t("暂无转换任务")}
         </div>
       )}
       {filteredTasks.map((task) => {
-        const meta = STATUS_META[task.status];
+        const meta = getStatusMeta()[task.status];
         const canCancel =
-          task.status === 'pending' &&
-          task.source === 'cloud' &&
-          !!task.taskId;
+          task.status === "pending" && task.source === "cloud" && !!task.taskId;
         const canOpen =
-          task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
-        // 失败性质由后端结构化下发（errorCategory），重试可用性见 canRetryTask
-        const isContentError = task.errorCategory === 'content-error';
+          task.status === "completed" && (!!task.nodeId || !!task.fileHash);
+        // 失败性质由后端结构化下发（errorCategory），重试可用性见 canRetryTask。
+        // 失败行 title 透出真实原因（「文件内容问题」vs「引擎/服务异常」），走唯一映射出口。
+        const failureInfo =
+          task.status === "failed"
+            ? describeConversionError(task.errorCategory, task.error)
+            : undefined;
         const canRetry = canRetryTask(task);
         const canReconvert = canReconvertTask(task);
         return (
@@ -151,27 +157,23 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                 </span>
                 <span
                   className={`conversion-row-status ${meta.className}`}
-                  title={
-                    isContentError
-                      ? t('该文件转换失败，请检查文件内容')
-                      : undefined
-                  }
+                  title={failureInfo?.message}
                 >
                   {meta.label}
-                  {task.status === 'processing' &&
-                    typeof task.progress === 'number' &&
+                  {task.status === "processing" &&
+                    typeof task.progress === "number" &&
                     ` ${Math.round(task.progress)}%`}
                   {/* S6-5：排队中任务显示排队位置（「第 N 位」），仅 queuePosition 有意义时 */}
-                  {task.status === 'pending' &&
-                    typeof task.queuePosition === 'number' &&
-                    ` ${t('第 {n} 位', { n: task.queuePosition })}`}
-                  {task.source === 'local' && ` · ${t('本地')}`}
+                  {task.status === "pending" &&
+                    typeof task.queuePosition === "number" &&
+                    ` ${t("第 {n} 位", { n: task.queuePosition })}`}
+                  {task.source === "local" && ` · ${t("本地")}`}
                   {/* 相对时间：让用户判断记录新鲜度（进行中=已耗时，历史=转换时刻） */}
                   <span
                     className="conversion-row-time"
                     title={formatDateTime(task.createdAt)}
                   >
-                    {' · '}
+                    {" · "}
                     {getRelativeTime(task.createdAt)}
                   </span>
                 </span>
@@ -179,16 +181,16 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
             </div>
             <div className="conversion-row-actions">
               {canCancel && (
-                <Tooltip content={t('取消')}>
-                  <button aria-label={t('取消')} onClick={() => onCancel(task)}>
+                <Tooltip content={t("取消")}>
+                  <button aria-label={t("取消")} onClick={() => onCancel(task)}>
                     <X size={13} />
                   </button>
                 </Tooltip>
               )}
               {canRetry && (
-                <Tooltip content={t('重试转换')}>
+                <Tooltip content={t("重试转换")}>
                   <button
-                    aria-label={t('重试转换')}
+                    aria-label={t("重试转换")}
                     onClick={() => onRetry(task)}
                   >
                     <RotateCcw size={13} />
@@ -196,16 +198,16 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                 </Tooltip>
               )}
               {canOpen && (
-                <Tooltip content={t('打开')}>
-                  <button aria-label={t('打开')} onClick={() => onOpen(task)}>
+                <Tooltip content={t("打开")}>
+                  <button aria-label={t("打开")} onClick={() => onOpen(task)}>
                     <ExternalLink size={13} />
                   </button>
                 </Tooltip>
               )}
               {canReconvert && (
-                <Tooltip content={t('重新转换')}>
+                <Tooltip content={t("重新转换")}>
                   <button
-                    aria-label={t('重新转换')}
+                    aria-label={t("重新转换")}
                     onClick={() => onReconvert(task)}
                   >
                     <RefreshCw size={13} />
@@ -220,19 +222,19 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           记录被静默截断，给出提示避免用户误判为「记录丢失」 */}
       {cloudTruncated && (
         <div className="conversion-loadmore">
-          {t('仅显示最近 {n} 条进行中/失败记录', { n: CLOUD_LIST_CAP })}
+          {t("仅显示最近 {n} 条进行中/失败记录", { n: CLOUD_LIST_CAP })}
         </div>
       )}
       {/* 有 live 任务且有历史时，插入「历史记录」分隔条，帮助用户区分当前任务与历史 */}
       {filteredTasks.length > 0 && filteredHistory.length > 0 && (
         <div className="conversion-divider">
-          <span>{t('历史记录')}</span>
+          <span>{t("历史记录")}</span>
         </div>
       )}
       {filteredHistory.map((task) => {
-        const meta = STATUS_META[task.status];
+        const meta = getStatusMeta()[task.status];
         const canOpen =
-          task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
+          task.status === "completed" && (!!task.nodeId || !!task.fileHash);
         // 失败记录从 live 区移入历史区后仍要可重试（与 live 区同一判据）
         const canRetry = canRetryTask(task);
         const canReconvert = canReconvertTask(task);
@@ -249,13 +251,13 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                 </span>
                 <span className={`conversion-row-status ${meta.className}`}>
                   {meta.label}
-                  {task.source === 'local' && ` · ${t('本地')}`}
+                  {task.source === "local" && ` · ${t("本地")}`}
                   {/* 相对时间：历史列表核心上下文（何时转换），弱化样式提示转换时刻 */}
                   <span
                     className="conversion-row-time"
                     title={formatDateTime(task.createdAt)}
                   >
-                    {' · '}
+                    {" · "}
                     {getRelativeTime(task.createdAt)}
                   </span>
                 </span>
@@ -263,9 +265,9 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
             </div>
             <div className="conversion-row-actions">
               {canRetry && (
-                <Tooltip content={t('重试转换')}>
+                <Tooltip content={t("重试转换")}>
                   <button
-                    aria-label={t('重试转换')}
+                    aria-label={t("重试转换")}
                     onClick={() => onRetry(task)}
                   >
                     <RotateCcw size={13} />
@@ -273,16 +275,16 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                 </Tooltip>
               )}
               {canOpen && (
-                <Tooltip content={t('打开')}>
-                  <button aria-label={t('打开')} onClick={() => onOpen(task)}>
+                <Tooltip content={t("打开")}>
+                  <button aria-label={t("打开")} onClick={() => onOpen(task)}>
                     <ExternalLink size={13} />
                   </button>
                 </Tooltip>
               )}
               {canReconvert && (
-                <Tooltip content={t('重新转换')}>
+                <Tooltip content={t("重新转换")}>
                   <button
-                    aria-label={t('重新转换')}
+                    aria-label={t("重新转换")}
                     onClick={() => onReconvert(task)}
                   >
                     <RefreshCw size={13} />
@@ -298,12 +300,12 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
       {historyLoading ? (
         <div className="conversion-loadmore">
           <Loader2 size={13} className="conv-icon spin" />
-          {t('加载中...')}
+          {t("加载中...")}
         </div>
       ) : historyHasMore && filteredHistory.length > 0 ? (
-        <div className="conversion-loadmore">{t('加载更多...')}</div>
+        <div className="conversion-loadmore">{t("加载更多...")}</div>
       ) : !historyHasMore && historyCount > 0 ? (
-        <div className="conversion-loadmore">{t('没有更多')}</div>
+        <div className="conversion-loadmore">{t("没有更多")}</div>
       ) : null}
     </>
   );

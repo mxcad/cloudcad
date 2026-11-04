@@ -253,6 +253,13 @@ export const CONVERSION_FAILURE_CATEGORIES = [
   'not-started',
   /** 引擎输出无法解析：截断 / 畸形 / 缺 code 字段 */
   'output-unparseable',
+  /**
+   * 目标产物文件被占用/不可写（引擎写已存在的被锁文件报 write file error，code 2）。
+   * 占用是瞬态（持有方释放后重试可成功），故归可重试——不应被误判为 content-error
+   * 永久失败。实例 2026-11-03：移动端无缓存打开「01海绵城市专篇设计说明_t3.dwg」，
+   * 旧产物 4b298d….dwg.mxweb 被某进程句柄占用，引擎无法覆盖写 → 裸 write file error。
+   */
+  'file-locked',
   /** 引擎返回非 0 code：确定性内容失败，同一输入重试注定再失败 */
   'content-error',
   /** 未归类：HTTP 边界外的失败、上游提交超时等 */
@@ -272,7 +279,7 @@ export type ConversionFailureCategory =
  * 也不要永久判死（与既有 `!message → true` 的语义一致）。
  */
 export const TRANSIENT_FAILURE_CATEGORIES: readonly ConversionFailureCategory[] =
-  ['timeout', 'killed', 'not-started', 'output-unparseable', 'unknown'];
+  ['timeout', 'killed', 'not-started', 'output-unparseable', 'file-locked', 'unknown'];
 
 /**
  * 判定失败分类是否瞬态（可重试）。

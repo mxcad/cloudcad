@@ -23,9 +23,9 @@ export interface ActiveUsersSectionProps {
  * 活跃用户区块：DAU/MAU/粘性 KPI 卡（当前实时值，与统计区间无关）
  * + 区间 DAU/MAU 双折线趋势。
  *
- * 口径说明（与后端一致，CONTEXT.md）：活跃 = 任意审计事件（成功登录/
- * 文件/项目/节点操作等）；切日为东八区自然日；MAU 为近 30 天滚动窗口
- * （含锚定日）。指标名 hover 显示完整定义。
+ * 口径说明（与后端一致，CONTEXT.md）：活跃 = 成功登录（user_activity）
+ * 或任意审计事件（文件/项目/节点操作等，audit_logs）；切日为东八区自然日；
+ * MAU 为近 30 天滚动窗口（含锚定日）。指标名 hover 显示完整定义。
  */
 export const ActiveUsersSection: React.FC<ActiveUsersSectionProps> = ({
   stats,
@@ -44,7 +44,7 @@ export const ActiveUsersSection: React.FC<ActiveUsersSectionProps> = ({
         <div>
           <h2>{t('活跃用户统计')}</h2>
           <p>
-            {t('活跃 = 产生过任意审计记录的操作（登录/文件/项目等）；按东八区自然日切日；MAU 为近 30 天滚动窗口')}
+            {t('活跃 = 成功登录或产生过审计记录的操作（文件/项目/节点等）；按东八区自然日切日；MAU 为近 30 天滚动窗口')}
           </p>
         </div>
       </div>

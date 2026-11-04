@@ -5,9 +5,15 @@
  *（项目/图纸/图块列表、分类树）延迟到 mxcad-app 引擎就绪 + 本次图纸打开终态之后
  * 再加载，避免与图纸 mxweb 下载抢带宽、与引擎初始化抢主线程。
  *
- * 放行条件（engineReady 为前提，任一满足即放行）：
+ * 放行条件（任一满足即放行）：
  * - !isActive：非 CAD 路由，编辑器不可见，不门控
- * - 无图纸入口：主页空白模式 / 协同链接
+ * - 无图纸入口：主页空白模式且无任何图纸打开意图（不等引擎就绪，库列表与引擎
+ *   初始化并行，让图纸缩略图提前渲染）。「无图纸入口」必须是 isHomeMode && 无
+ *   hash/nodeId 直开——`?hash=`、`?nodeId=` 的 pathname 也是 /cad-editor
+ *   （isHomeRoute 只认 pathname），但它们是真实图纸打开（useCadFileLoader 按
+ *   fileHash/节点下载 mxweb），若误判为无图纸入口会提前放行库列表，与图纸 mxweb
+ *   下载抢带宽。协同链接（isCollabLink）图纸由 auto-join 加载、不走 useCadFileLoader，
+ *   无此竞争，仍可放行。其余有图纸打开场景仍以 engineReady 为前提。
  * - opensSettled：已观察到打开、引擎已回报 openFileComplete，且当前无在途打开
  * - error：打开失败已上报（失败后抽屉仍要用得起来）
  * - 兜底：引擎就绪满超时仍无终态，放行让用户能用侧边栏换图纸自救
@@ -54,6 +60,13 @@ export interface UseSidebarContentReadyOptions {
   isActive: boolean;
   /** 主页空白模式（无图纸入口） */
   isHomeMode: boolean;
+  /**
+   * 有图纸打开意图（?hash= 或 ?nodeId= 直开）：pathname 为 /cad-editor 时
+   * isHomeRoute 也返回 true，必须排除，否则「无图纸入口」误判提前放行库列表，
+   * 与图纸 mxweb 下载抢带宽。协同链接（isCollabLink）由 auto-join 加载图纸，
+   * 不走 useCadFileLoader，不在此列。
+   */
+  hasDrawingOpenIntent: boolean;
   /** 协同链接（图纸由 auto-join 加载，无 useCadFileLoader 打开动作） */
   isCollabLink: boolean;
   /** 打开失败信息 */
@@ -63,6 +76,7 @@ export interface UseSidebarContentReadyOptions {
 export function useSidebarContentReady({
   isActive,
   isHomeMode,
+  hasDrawingOpenIntent,
   isCollabLink,
   error,
 }: UseSidebarContentReadyOptions): boolean {
@@ -70,8 +84,13 @@ export function useSidebarContentReady({
 
   // probe 闭包读取最新依赖快照：effect 只随 isActive 重启，
   // 依赖变化（error）不能触发重启，否则 everHadOpen 会归零
-  const depsRef = useRef({ isHomeMode, isCollabLink, error });
-  depsRef.current = { isHomeMode, isCollabLink, error };
+  const depsRef = useRef({
+    isHomeMode,
+    hasDrawingOpenIntent,
+    isCollabLink,
+    error,
+  });
+  depsRef.current = { isHomeMode, hasDrawingOpenIntent, isCollabLink, error };
 
   useEffect(() => {
     if (!isActive) {
@@ -89,7 +108,8 @@ export function useSidebarContentReady({
     const probe = async () => {
       if (stopped) return;
       const { mxcadManager } = await import('../services/mxcadManager');
-      const { isHomeMode, isCollabLink, error } = depsRef.current;
+      const { isHomeMode, hasDrawingOpenIntent, isCollabLink, error } =
+        depsRef.current;
 
       const engineReady = mxcadManager.isReady();
       const { inFlight, settled } = mxcadManager.getOpenState();
@@ -102,13 +122,18 @@ export function useSidebarContentReady({
         ? OPEN_STALL_FALLBACK_MS
         : NO_OPEN_FALLBACK_MS;
 
-      const next = engineReady && (
-        isHomeMode ||
+      // 无图纸入口（主页空白且无 hash/nodeId 直开）/协同链接不等引擎就绪：库列表与
+      // 引擎初始化并行，让图纸缩略图（LCP）提前渲染。有图纸打开场景（hash/nodeId 直开、
+      // 节点打开）仍等 engineReady && opensSettled，避免与图纸 mxweb 下载抢带宽、与引擎
+      // 初始化抢主线程。isHomeMode 只认 pathname，?hash=/?nodeId= 也是 /cad-editor，
+      // 必须用 hasDrawingOpenIntent 排除，否则 hash 直开会被误判为无图纸入口。
+      const next =
+        (isHomeMode && !hasDrawingOpenIntent) ||
         isCollabLink ||
-        opensSettled ||
-        error !== null ||
-        (readyAt > 0 && Date.now() - readyAt >= stallLimit)
-      );
+        (engineReady &&
+          (opensSettled ||
+            error !== null ||
+            (readyAt > 0 && Date.now() - readyAt >= stallLimit)));
 
       if (next !== ready) {
         ready = next;

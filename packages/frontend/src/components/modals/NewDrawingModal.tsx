@@ -1,10 +1,9 @@
-import React from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Input } from '@/components/ui/Input';
-import { t } from '@/languages';
+import React from "react";
+import { Button, Modal, Input } from "@/components/ui";
 
-const MXWEB_SUFFIX = '.mxweb';
+import { t } from "@/languages";
+
+const MXWEB_SUFFIX = ".mxweb";
 
 interface NewDrawingModalProps {
   isOpen: boolean;
@@ -24,7 +23,7 @@ export const NewDrawingModal: React.FC<NewDrawingModalProps> = ({
   onCreate,
 }) => {
   const handleClose = () => {
-    onDrawingNameChange('');
+    onDrawingNameChange("");
     onClose();
   };
 
@@ -39,13 +38,13 @@ export const NewDrawingModal: React.FC<NewDrawingModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={t('新建图纸')}
+      title={t("新建图纸")}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            {t('取消')}
+            {t("取消")}
           </Button>
-          <Button onClick={onCreate}>{t('创建')}</Button>
+          <Button onClick={onCreate}>{t("创建")}</Button>
         </>
       }
     >
@@ -53,26 +52,26 @@ export const NewDrawingModal: React.FC<NewDrawingModalProps> = ({
         <div>
           <label
             className="block font-medium mb-1"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('名称')}
+            {t("名称")}
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <div style={{ flex: 1 }}>
               <Input
                 value={drawingName}
                 onChange={(e) => handleNameChange(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && onCreate()}
-                placeholder={t('请输入图纸名称')}
+                onKeyPress={(e) => e.key === "Enter" && onCreate()}
+                placeholder={t("请输入图纸名称")}
                 autoFocus
               />
             </div>
             <span
               style={{
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--text-tertiary)',
-                whiteSpace: 'nowrap',
-                userSelect: 'none',
+                fontSize: "var(--font-size-sm)",
+                color: "var(--text-tertiary)",
+                whiteSpace: "nowrap",
+                userSelect: "none",
               }}
             >
               {MXWEB_SUFFIX}

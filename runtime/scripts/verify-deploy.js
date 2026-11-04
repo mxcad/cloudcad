@@ -137,7 +137,10 @@ function getConversionServiceConfig() {
   const redisPort = envConfig.REDIS_PORT || '6379';
   const redisDb = envConfig.REDIS_DB || '0';
   const redisPassword = envConfig.REDIS_PASSWORD || '';
-  const auth = redisPassword ? `:${redisPassword}@` : '';
+  // 密码含 URL 特殊字符（@/#/% 等）必须 encodeURIComponent，消费端（redis-client.ts）
+  // 按同规则 decode 还原——缺编码会 ERR invalid password（2026-11-04 部署事故），
+  // 与 start.js getConversionServiceConfig 保持同一拼串语义。
+  const auth = redisPassword ? `:${encodeURIComponent(redisPassword)}@` : '';
   const env = {
     NODE_ENV: 'production',
     CONVERSION_SERVICE_PORT: String(PORTS.conversion),

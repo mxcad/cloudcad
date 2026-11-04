@@ -1,23 +1,18 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Tag } from '../ui/Tag';
-import { File, Folder, Download, Package, Settings2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { Modal, Button, Input, Tag } from "@/components/ui";
+
+import { File, Folder, Download, Package, Settings2 } from "lucide-react";
 import {
   useBatchDownloadStore,
   BatchFileItem,
-} from '@/stores/useBatchDownloadStore';
-import { useBatchDownload } from '@/hooks/file-system';
-import {
-  canExportDownload,
-  handleVipFeatureRequiredError,
-} from '@/utils/vipFeatureGuide';
-import { useMembership } from '@/hooks/useMembership';
-import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
-import { t } from '@/languages';
-import { Z_LAYERS } from '@/constants/layers';
-import { DOWNLOAD_FORMATS, FORMAT_LABELS } from './downloadFormats';
+} from "@/stores/useBatchDownloadStore";
+import { useBatchDownload } from "@/hooks/file-system";
+import { assertExportDownloadAllowed } from "@/services/download/downloadNodeWithFormat";
+import { useMembership } from "@/hooks/useMembership";
+import { useRuntimeConfig } from "@/contexts/RuntimeConfigContext";
+import { t } from "@/languages";
+import { Z_LAYERS } from "@/constants/layers";
+import { DOWNLOAD_FORMATS, FORMAT_LABELS } from "./downloadFormats";
 type Format = (typeof DOWNLOAD_FORMATS)[number];
 
 interface FileEntry {
@@ -27,21 +22,21 @@ interface FileEntry {
 }
 
 const DWG_VERSIONS = [
-  { value: 23, label: 'CAD 2000 (R15)' },
-  { value: 25, label: 'CAD 2004 (R16)' },
-  { value: 27, label: 'CAD 2007 (R17)' },
-  { value: 29, label: 'CAD 2010 (R18)' },
-  { value: 33, label: 'CAD 2018 (R22)' },
+  { value: 23, label: "CAD 2000 (R15)" },
+  { value: 25, label: "CAD 2004 (R16)" },
+  { value: 27, label: "CAD 2007 (R17)" },
+  { value: 29, label: "CAD 2010 (R18)" },
+  { value: 33, label: "CAD 2018 (R22)" },
 ];
 
 interface BatchDownloadDialogProps {
   isOpen: boolean;
   onClose: () => void;
   projectId?: string;
-  libraryType?: 'drawing' | 'block';
+  libraryType?: "drawing" | "block";
   showToast?: (
     message: string,
-    type: 'success' | 'error' | 'info' | 'warning'
+    type: "success" | "error" | "info" | "warning",
   ) => void;
 }
 
@@ -58,10 +53,10 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
     Record<string, Format[]>
   >({});
   const [dwgVersion, setDwgVersion] = useState(23);
-  const [pdfWidth, setPdfWidth] = useState('2000');
-  const [pdfHeight, setPdfHeight] = useState('2000');
-  const [pdfColorPolicy, setPdfColorPolicy] = useState<'mono' | 'color'>(
-    'mono'
+  const [pdfWidth, setPdfWidth] = useState("2000");
+  const [pdfHeight, setPdfHeight] = useState("2000");
+  const [pdfColorPolicy, setPdfColorPolicy] = useState<"mono" | "color">(
+    "mono",
   );
   const [loading, setLoading] = useState(false);
   const {
@@ -71,7 +66,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
     pollTaskUntilDone,
     syncIndividualTerminal,
   } = useBatchDownload(showToast);
-  const isFolder = dialogMode === 'folder';
+  const isFolder = dialogMode === "folder";
   const membership = useMembership();
   const { config } = useRuntimeConfig();
 
@@ -79,9 +74,9 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
   const hasExportFormat = useMemo(
     () =>
       Object.values(selectedFormats).some((formats) =>
-        formats.some((f) => f !== 'mxweb')
+        formats.some((f) => f !== "mxweb"),
       ),
-    [selectedFormats]
+    [selectedFormats],
   );
 
   const fileEntries: FileEntry[] = useMemo(() => {
@@ -89,7 +84,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
       return [
         {
           nodeId: folderDialogNodeId,
-          fileName: folderDialogName || '',
+          fileName: folderDialogName || "",
           isFolder: true,
         },
       ];
@@ -105,7 +100,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
     if (isOpen) {
       const defaults: Record<string, Format[]> = {};
       fileEntries.forEach((f) => {
-        defaults[f.nodeId] = ['mxweb'];
+        defaults[f.nodeId] = ["mxweb"];
       });
       setSelectedFormats(defaults);
     }
@@ -121,8 +116,8 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
   }, [selectedFormats]);
 
   const hasDwgOrDxf =
-    globalFormats.includes('dwg') || globalFormats.includes('dxf');
-  const hasPdf = globalFormats.includes('pdf');
+    globalFormats.includes("dwg") || globalFormats.includes("dxf");
+  const hasPdf = globalFormats.includes("pdf");
 
   const toggleGlobalFormat = (format: Format) => {
     const isSelected = globalFormats.includes(format);
@@ -152,15 +147,18 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
   const resolveAndSubmit = async () => {
     if (!hasSelection) {
-      showToast?.(t('请至少选择一个文件格式'), 'warning');
+      showToast?.(t("请至少选择一个文件格式"), "warning");
       return;
     }
     // 导出下载方向（dwg/dxf/pdf）会员预检：非 VIP 且开关未开放时弹购买引导，不发请求
+    // （门控收敛到 assertExportDownloadAllowed 唯一出口，与单节点下载同口径）
     if (
-      hasExportFormat &&
-      !canExportDownload(!!membership?.isVip, config.freeExportDownloadEnabled)
+      !(await assertExportDownloadAllowed(
+        hasExportFormat,
+        !!membership?.isVip,
+        config.freeExportDownloadEnabled,
+      ))
     ) {
-      await handleVipFeatureRequiredError();
       return;
     }
     setLoading(true);
@@ -209,16 +207,19 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
   const handleSubmitIndividual = async () => {
     if (!hasSelection) {
-      showToast?.(t('请至少选择一个文件格式'), 'warning');
+      showToast?.(t("请至少选择一个文件格式"), "warning");
       return;
     }
     if (individualProgress) return; // 在途防连点，不该 toast
     // 导出下载方向（dwg/dxf/pdf）会员预检：非 VIP 且开关未开放时弹购买引导，不发请求
+    // （门控收敛到 assertExportDownloadAllowed 唯一出口，与单节点下载同口径）
     if (
-      hasExportFormat &&
-      !canExportDownload(!!membership?.isVip, config.freeExportDownloadEnabled)
+      !(await assertExportDownloadAllowed(
+        hasExportFormat,
+        !!membership?.isVip,
+        config.freeExportDownloadEnabled,
+      ))
     ) {
-      await handleVipFeatureRequiredError();
       return;
     }
 
@@ -271,7 +272,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
       const created = await createIndividualTask(
         batchItems,
         projectId,
-        libraryType
+        libraryType,
       );
       if (created) {
         pollCancelRef.current = false;
@@ -281,16 +282,16 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
           created.taskId,
           (completed, total) => setIndividualProgress({ completed, total }),
           () => pollCancelRef.current,
-          false // 保留任务记录在 Download Tab 中，用户可看到下载历史
+          false, // 保留任务记录在 Download Tab 中，用户可看到下载历史
         );
         setIndividualProgress(null);
         if (!done) return; // 用户中途关闭：handleClose 已做终态兜底回写
         individualTaskIdRef.current = null; // 正常完成：任务已移除，无需再兜底
-        if (done.status === 'COMPLETED') {
+        if (done.status === "COMPLETED") {
           await downloadAllItems({
             taskId: created.taskId,
-            status: 'COMPLETED',
-            mode: 'individual',
+            status: "COMPLETED",
+            mode: "individual",
             itemNames: created.itemNames,
             totalCount: batchItems.length,
             completedCount: batchItems.length,
@@ -298,7 +299,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
             createdAt: new Date().toISOString(),
           });
         } else {
-          showToast?.(t('逐个下载失败，请稍后重试'), 'error');
+          showToast?.(t("逐个下载失败，请稍后重试"), "error");
         }
       }
     }
@@ -308,11 +309,11 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
   const title = isFolder ? (
     <span className="flex items-center gap-2">
-      <Folder size={16} style={{ color: 'var(--primary-500)' }} />
-      {t('下载')} {folderDialogName} {t('文件夹')}
+      <Folder size={16} style={{ color: "var(--primary-500)" }} />
+      {t("下载")} {folderDialogName} {t("文件夹")}
     </span>
   ) : (
-    t('批量下载')
+    t("批量下载")
   );
 
   return (
@@ -330,7 +331,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
             onClick={handleClose}
             className="w-full sm:w-auto"
           >
-            {t('取消')}
+            {t("取消")}
           </Button>
           {!isFolder && (
             <Button
@@ -343,8 +344,8 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
             >
               <Download className="w-4 h-4 mr-1" />
               {individualProgress
-                ? `${t('转换中')} ${individualProgress.completed}/${individualProgress.total}`
-                : t('逐个下载')}
+                ? `${t("转换中")} ${individualProgress.completed}/${individualProgress.total}`
+                : t("逐个下载")}
             </Button>
           )}
           <Button
@@ -355,7 +356,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
             className="w-full sm:w-auto"
           >
             <Package className="w-4 h-4 mr-1" />
-            {t('打包 ZIP')}
+            {t("打包 ZIP")}
           </Button>
         </div>
       }
@@ -364,9 +365,9 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
         <div>
           <label
             className="block text-xs font-medium mb-1.5"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('选择格式')}
+            {t("选择格式")}
           </label>
           <div className="flex flex-wrap gap-1.5">
             {DOWNLOAD_FORMATS.map((format) => (
@@ -374,7 +375,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                 key={format}
                 size="xs"
                 onClick={() => toggleGlobalFormat(format)}
-                variant={globalFormats.includes(format) ? 'primary' : 'neutral'}
+                variant={globalFormats.includes(format) ? "primary" : "neutral"}
               >
                 {FORMAT_LABELS[format]}
               </Tag>
@@ -386,17 +387,17 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
           <div
             className="rounded-lg p-3"
             style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-default)",
             }}
           >
             <div className="flex items-center gap-1.5 mb-2">
-              <Settings2 size={14} style={{ color: 'var(--text-tertiary)' }} />
+              <Settings2 size={14} style={{ color: "var(--text-tertiary)" }} />
               <span
                 className="text-xs font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('格式参数')}
+                {t("格式参数")}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -404,18 +405,18 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                 <div className="flex flex-col gap-1">
                   <label
                     className="text-xs"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    style={{ color: "var(--text-tertiary)" }}
                   >
-                    {t('图纸版本')}
+                    {t("图纸版本")}
                   </label>
                   <select
                     value={dwgVersion}
                     onChange={(e) => setDwgVersion(Number(e.target.value))}
                     className="text-xs rounded-md px-2 py-1.5 w-full"
                     style={{
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-primary)',
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-default)",
+                      color: "var(--text-primary)",
                     }}
                   >
                     {DWG_VERSIONS.map((v) => (
@@ -431,9 +432,9 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                   <div className="flex flex-col gap-1">
                     <label
                       className="text-xs"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      {t('PDF 宽度')}
+                      {t("PDF 宽度")}
                     </label>
                     <Input
                       type="number"
@@ -444,9 +445,9 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                   <div className="flex flex-col gap-1">
                     <label
                       className="text-xs"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      {t('PDF 高度')}
+                      {t("PDF 高度")}
                     </label>
                     <Input
                       type="number"
@@ -457,24 +458,24 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                   <div className="flex flex-col gap-1">
                     <label
                       className="text-xs"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      {t('颜色策略')}
+                      {t("颜色策略")}
                     </label>
                     <select
                       value={pdfColorPolicy}
                       onChange={(e) =>
-                        setPdfColorPolicy(e.target.value as 'mono' | 'color')
+                        setPdfColorPolicy(e.target.value as "mono" | "color")
                       }
                       className="text-xs rounded-md px-2 py-1.5 w-full"
                       style={{
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        color: 'var(--text-primary)',
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--border-default)",
+                        color: "var(--text-primary)",
                       }}
                     >
-                      <option value="mono">{t('黑白')}</option>
-                      <option value="color">{t('彩色')}</option>
+                      <option value="mono">{t("黑白")}</option>
+                      <option value="color">{t("彩色")}</option>
                     </select>
                   </div>
                 </>
@@ -485,7 +486,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
         <div
           className="border-t"
-          style={{ borderColor: 'var(--border-default)' }}
+          style={{ borderColor: "var(--border-default)" }}
         />
 
         <div className="max-h-60 sm:max-h-80 overflow-y-auto space-y-2 touch-pan-y">
@@ -496,8 +497,8 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                 key={item.nodeId}
                 className="rounded-lg p-2 sm:p-2.5"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-default)',
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-default)",
                 }}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -505,25 +506,25 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                     className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded"
                     style={{
                       background: item.isFolder
-                        ? 'var(--primary-100)'
-                        : 'var(--bg-elevated)',
+                        ? "var(--primary-100)"
+                        : "var(--bg-elevated)",
                     }}
                   >
                     {item.isFolder ? (
                       <Folder
                         size={14}
-                        style={{ color: 'var(--primary-500)' }}
+                        style={{ color: "var(--primary-500)" }}
                       />
                     ) : (
                       <File
                         size={12}
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: "var(--text-tertiary)" }}
                       />
                     )}
                   </span>
                   <span
                     className="text-xs sm:text-sm truncate flex-1"
-                    style={{ color: 'var(--text-primary)' }}
+                    style={{ color: "var(--text-primary)" }}
                   >
                     {item.fileName}
                   </span>
@@ -535,7 +536,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
                       size="xs"
                       onClick={() => toggleFileFormat(item.nodeId, format)}
                       variant={
-                        fileFormats.includes(format) ? 'primary' : 'neutral'
+                        fileFormats.includes(format) ? "primary" : "neutral"
                       }
                     >
                       {FORMAT_LABELS[format]}
@@ -550,9 +551,9 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
         {!hasSelection && fileEntries.length > 0 && (
           <p
             className="text-xs sm:text-sm text-center"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
-            {t('请至少选择一个文件格式')}
+            {t("请至少选择一个文件格式")}
           </p>
         )}
       </div>

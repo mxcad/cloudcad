@@ -1,5 +1,5 @@
 import { log } from '../lib/utils';
-import RedisClient, { RedisError } from '../lib/redis-client';
+import RedisClient, { RedisError, maskRedisUrl } from '../lib/redis-client';
 
 const TASKS_HASH_KEY = 'fworkflow:tasks';
 // 终态任务保留上限：超出后按入队顺序淘汰最旧的终态记录（内存 + Redis 同步删除），
@@ -137,7 +137,8 @@ class TaskStore {
         }
       }
       this._redis = client;
-      log(`[TaskStore] Redis 就绪 (${url}), 已加载 ${this.tasks.size} 个存量任务`);
+      // 日志必须脱敏：URL 含明文密码，直接打印会把 requirepass 泄露到 data/logs/（2026-11-04 审计）
+      log(`[TaskStore] Redis 就绪 (${maskRedisUrl(url)}), 已加载 ${this.tasks.size} 个存量任务`);
     } catch (err) {
       this._redis = null;
       this._fallback = true;

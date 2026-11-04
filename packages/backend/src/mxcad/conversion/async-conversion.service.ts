@@ -17,6 +17,7 @@ import type {
   ConversionResult,
 } from '../../function-executor/function-executor.interface';
 import { FileStatus } from '../../common/enums/file-status.enum';
+import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { FileDownloadExportService } from '../../file-system/file-download/file-download-export.service';
@@ -416,6 +417,7 @@ export class AsyncConversionService {
     taskId?: string;
     taskStatus?: string;
     error?: string;
+    errorCategory?: ConversionFailureCategory;
   }> {
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId, deletedAt: null },
@@ -428,18 +430,28 @@ export class AsyncConversionService {
 
     let taskStatus: string | undefined;
     let error: string | undefined;
+    let errorCategory: ConversionFailureCategory | undefined;
 
-    if (
-      node.taskId &&
-      (fileStatus === FileStatus.PROCESSING ||
-        fileStatus === FileStatus.UPLOADING)
-    ) {
+    const inProgress =
+      fileStatus === FileStatus.PROCESSING ||
+      fileStatus === FileStatus.UPLOADING;
+
+    if (node.taskId && (inProgress || fileStatus === FileStatus.FAILED)) {
       try {
         const status = await this.executor.getTaskStatus(node.taskId);
-        taskStatus = status.status;
-        error = status.error;
+        if (inProgress) {
+          // 进行中节点：解析实时任务状态 + 错误
+          taskStatus = status.status;
+          error = status.error;
+        } else {
+          // FAILED 节点据任务记录取 error + 失败性质分类，供前端区分
+          // 「文件内容问题」vs「引擎/服务异常」。节点 fileStatus 为终态真相，
+          // taskStatus 不覆盖；任务记录丢失（404）时 catch 降级，error 保持 undefined。
+          error = status.error;
+          errorCategory = status.errorCategory;
+        }
       } catch {
-        taskStatus = 'UNKNOWN';
+        if (inProgress) taskStatus = 'UNKNOWN';
       }
     }
 
@@ -448,6 +460,7 @@ export class AsyncConversionService {
       taskId: node.taskId || undefined,
       taskStatus,
       error,
+      errorCategory,
     };
   }
 

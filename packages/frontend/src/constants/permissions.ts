@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-10-29T03:24:39.117Z
+ * 生成时间: 2026-11-03T07:48:11.794Z
  * 来源: Prisma Schema (packages/db/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/db/prisma/schema.prisma 文件，
@@ -323,12 +323,32 @@ export const PROJECT_ROLE_NAMES: Record<string, string> = {
 
 /**
  * 获取角色显示名称
+ * 已知角色名走 t() 字面量翻译（渲染期按当前语言取值，键由 extract 自动登记）；
+ * 自定义角色名是用户数据，原样透传。
  */
-export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): string => {
-  // 根据角色名称前缀判断是否为项目角色
-  const isProjectRole = roleName.startsWith('PROJECT_');
-  const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
-  return mapping[roleName] || roleName;
+export const getRoleDisplayName = (roleName: string, _isSystemRole: boolean): string => {
+  switch (roleName) {
+    case 'ADMIN':
+      return t('系统管理员');
+    case 'USER_MANAGER':
+      return t('用户管理员');
+    case 'FONT_MANAGER':
+      return t('字体管理员');
+    case 'USER':
+      return t('普通用户');
+    case 'PROJECT_OWNER':
+      return t('项目所有者');
+    case 'PROJECT_ADMIN':
+      return t('项目管理员');
+    case 'PROJECT_EDITOR':
+      return t('项目编辑者');
+    case 'PROJECT_MEMBER':
+      return t('项目成员');
+    case 'PROJECT_VIEWER':
+      return t('项目查看者');
+    default:
+      return roleName;
+  }
 };
 
 /**

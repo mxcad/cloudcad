@@ -18,6 +18,8 @@
 
 export { TruncateText } from './TruncateText';
 export type { TruncateTextProps, TruncateMode } from './TruncateText';
+// 评审候选 4：这两项与 TruncateText 同文件但未进桶，深导入旁路桶时漏掉，补进统一出口
+export { DescriptionText, FileNameText } from './TruncateText';
 
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
@@ -26,7 +28,9 @@ export type { TabButtonProps } from './TabButton';
 export { Tab } from './Tab';
 export type { TabProps } from './Tab';
 export { Tabs } from './Tabs';
-export { Toast } from './Toast';
+export { Toast, ToastContainer } from './Toast';
+// 评审候选 4：ToastType 类型未进桶，深导入旁路桶时漏掉，补进统一出口
+export type { ToastType } from './Toast';
 export { Tooltip, SimpleTooltip } from './Tooltip';
 export type {
   TooltipProps,

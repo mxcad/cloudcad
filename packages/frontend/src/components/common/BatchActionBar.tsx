@@ -1,16 +1,16 @@
-import React from 'react';
-import { CheckSquare, X, Clipboard } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { t } from '@/languages';
+import React from "react";
+import { CheckSquare, X, Clipboard } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Button, Checkbox } from "@/components/ui";
+
+import { t } from "@/languages";
 
 export interface BatchActionItem {
   key: string;
   /** 按钮文字（可选：省略即 icon-only + tooltip 模式） */
   label?: React.ReactNode;
   icon?: LucideIcon;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
+  variant?: "primary" | "secondary" | "outline" | "danger" | "ghost";
   disabled?: boolean;
   loading?: boolean;
   /** icon-only 模式按钮提示 */
@@ -67,13 +67,13 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   onSelectAll,
   clipboard,
   label,
-  className = '',
+  className = "",
 }) => (
   <div
     className={`inline-flex items-center gap-2 @md:gap-4 px-3 @md:px-6 py-2 @md:py-3 rounded-full shadow-2xl ${className}`}
     style={{
-      background: 'var(--bg-elevated)',
-      border: '1px solid var(--border-default)',
+      background: "var(--bg-elevated)",
+      border: "1px solid var(--border-default)",
     }}
   >
     {selectAllChecked !== undefined && onSelectAll && (
@@ -86,29 +86,29 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           <CheckSquare
             size={20}
             className="@md:hidden"
-            style={{ color: 'var(--primary-500)' }}
+            style={{ color: "var(--primary-500)" }}
           />
           <span
             className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full @md:hidden"
             style={{
-              background: 'var(--primary-500)',
-              color: 'var(--text-inverse)',
+              background: "var(--primary-500)",
+              color: "var(--text-inverse)",
             }}
           >
-            {count > 99 ? '99+' : count}
+            {count > 99 ? "99+" : count}
           </span>
         </div>
         <span
           className="hidden @md:inline text-sm font-semibold whitespace-nowrap"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: "var(--text-primary)" }}
         >
           {label
             ? label(count)
-            : t('已选 {count} 项', { count: String(count) })}
+            : t("已选 {count} 项", { count: String(count) })}
         </span>
         <div
           className="hidden @md:block w-px h-4"
-          style={{ background: 'var(--border-default)' }}
+          style={{ background: "var(--border-default)" }}
         />
       </>
     )}
@@ -119,7 +119,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
         actions.map((action) => (
           <Button
             key={action.key}
-            variant={action.variant ?? 'secondary'}
+            variant={action.variant ?? "secondary"}
             size="sm"
             icon={action.icon}
             tooltip={action.tooltip}
@@ -137,15 +137,15 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
         <div
           className="flex items-center gap-0 rounded-lg"
           style={{
-            border: '1px solid var(--border-default)',
-            overflow: 'hidden',
+            border: "1px solid var(--border-default)",
+            overflow: "hidden",
           }}
         >
           <span
             className="inline-flex"
             title={
               clipboard.items.length > 0 && !clipboard.canPaste
-                ? (clipboard.pasteDisabledReason ?? t('粘贴'))
+                ? (clipboard.pasteDisabledReason ?? t("粘贴"))
                 : undefined
             }
           >
@@ -156,19 +156,19 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
               onClick={clipboard.onPaste}
               disabled={clipboard.items.length === 0 || !clipboard.canPaste}
               style={{
-                color: 'var(--text-secondary)',
-                border: 'none',
+                color: "var(--text-secondary)",
+                border: "none",
                 borderRadius: 0,
               }}
               className="relative pl-3 pr-2"
             >
-              <span className="hidden @md:inline">{t('粘贴')}</span>
+              <span className="hidden @md:inline">{t("粘贴")}</span>
               {clipboard.items.length > 0 && (
                 <span
                   className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
                   style={{
-                    background: 'var(--primary-500)',
-                    color: 'var(--text-inverse)',
+                    background: "var(--primary-500)",
+                    color: "var(--text-inverse)",
                   }}
                 >
                   {clipboard.items.length}
@@ -182,10 +182,10 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
               size="sm"
               onClick={clipboard.onClear}
               style={{
-                color: 'var(--text-muted)',
-                border: 'none',
+                color: "var(--text-muted)",
+                border: "none",
                 borderRadius: 0,
-                padding: '0 8px',
+                padding: "0 8px",
               }}
             >
               <svg
@@ -209,11 +209,11 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
       size="sm"
       icon={X}
       onClick={onClear}
-      style={{ color: 'var(--text-muted)' }}
-      title={t('取消选择')}
-      aria-label={t('取消选择')}
+      style={{ color: "var(--text-muted)" }}
+      title={t("取消选择")}
+      aria-label={t("取消选择")}
     >
-      <span className="hidden @md:inline">{t('取消选择')}</span>
+      <span className="hidden @md:inline">{t("取消选择")}</span>
     </Button>
   </div>
 );

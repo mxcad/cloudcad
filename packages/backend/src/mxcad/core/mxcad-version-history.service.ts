@@ -125,6 +125,8 @@ export class MxcadVersionHistoryService {
         res.setHeader('Access-Control-Allow-Origin', '*');
         const fileStream = fs.createReadStream(servePath);
         fileStream.pipe(res);
+        // 客户端中断 → 销毁读流句柄，避免文件被一直占用
+        res.once('close', () => fileStream.destroy());
         fileStream.on('error', (error) => {
           this.logger.error(`初始版本文件流错误: ${error.message}`);
           if (!res.headersSent) {

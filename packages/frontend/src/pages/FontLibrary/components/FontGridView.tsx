@@ -1,11 +1,11 @@
-import { Download, Trash2, Upload, Type, FolderOpen } from 'lucide-react';
-import type { MutableRefObject } from 'react';
-import { Button, Tag, Checkbox } from '@/components/ui';
-import { FileNameText } from '../../../components/ui/TruncateText';
-import { formatFileSize } from '../../../components/ui/FileSize';
-import { getFontIcon, getFontTypeVariant } from '../fontTypeConfig';
-import { t } from '@/languages';
-import type { FontInfo } from '../../../types/filesystem';
+import { Download, Trash2, Upload, Type, FolderOpen } from "lucide-react";
+import type { MutableRefObject } from "react";
+import { Button, Tag, Checkbox } from "@/components/ui";
+import { FileNameText, formatFileSize } from "@/components/ui";
+
+import { getFontIcon, getFontTypeVariant } from "../fontTypeConfig";
+import { t } from "@/languages";
+import type { FontInfo } from "../../../types/filesystem";
 
 interface FontGridViewProps {
   fonts: FontInfo[];
@@ -18,7 +18,7 @@ interface FontGridViewProps {
   handleSelect: (
     fontName: string,
     ctrlKey?: boolean,
-    shiftKey?: boolean
+    shiftKey?: boolean,
   ) => void;
   handleDelete: (fontName: string) => Promise<void>;
   handleDownload: (fontName: string) => Promise<void>;
@@ -61,16 +61,16 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
             </div>
           </div>
           <h3 className="text-lg font-medium text-text-primary mb-1">
-            {t('暂无字体')}
+            {t("暂无字体")}
           </h3>
           <p className="text-text-tertiary text-sm mb-4">
             {hasActiveFilters
-              ? t('没有找到匹配的字体')
-              : t('当前位置没有字体文件')}
+              ? t("没有找到匹配的字体")
+              : t("当前位置没有字体文件")}
           </p>
           {canUploadFonts && !hasActiveFilters && (
             <Button icon={Upload} onClick={openUploadModal}>
-              {t('上传第一个字体')}
+              {t("上传第一个字体")}
             </Button>
           )}
         </div>
@@ -94,8 +94,8 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
             // hover 效果只作用于未选中卡片（同 FileItem：选中态 hover 保持稳定）
             className={`group relative cursor-pointer rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-6 transition-all duration-300 animate-fade-in ${
               isSelected
-                ? 'ring-2 ring-[var(--primary-500)]'
-                : 'hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5'
+                ? "ring-2 ring-[var(--primary-500)]"
+                : "hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5"
             }`}
             style={{ animationDelay: `${index * 50}ms` }}
             onClick={(e) => {
@@ -105,7 +105,7 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
                 return;
               }
               // checkbox/操作按钮的点击不触发行选择
-              if ((e.target as HTMLElement).closest('input, button, a')) return;
+              if ((e.target as HTMLElement).closest("input, button, a")) return;
               handleSelect(font.name, e.ctrlKey || e.metaKey, e.shiftKey);
             }}
           >
@@ -114,7 +114,7 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
                 选中时恒显示，未选中 hover 卡片时淡入 */}
             <div
               className={`absolute top-3 left-3 z-10 transition-opacity ${
-                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -127,7 +127,7 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
 
             <div
               className={`absolute top-3 right-3 z-10 flex gap-1 transition-opacity ${
-                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}
             >
               {canDownloadFonts && (
@@ -135,7 +135,7 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
                   variant="secondary"
                   icon={Download}
                   onClick={() => handleDownload(font.name)}
-                  tooltip={t('下载')}
+                  tooltip={t("下载")}
                 />
               )}
               {canDeleteFonts && (
@@ -143,7 +143,7 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
                   variant="secondary"
                   icon={Trash2}
                   onClick={() => handleDelete(font.name)}
-                  tooltip={t('删除')}
+                  tooltip={t("删除")}
                 />
               )}
             </div>

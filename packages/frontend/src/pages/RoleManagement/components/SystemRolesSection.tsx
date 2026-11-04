@@ -1,9 +1,9 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui';
-import { t } from '@/languages';
-import styles from '../RoleManagement.module.css';
-import { RoleCard } from './RoleCard';
-import type { SystemRole } from '../types';
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "../RoleManagement.module.css";
+import { RoleCard } from "./RoleCard";
+import type { SystemRole } from "../types";
 
 interface SystemRolesSectionProps {
   roles: SystemRole[];
@@ -30,9 +30,9 @@ export function SystemRolesSection({
     <div className={styles.rolesSection}>
       <div className={styles.sectionHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>{t('系统角色')}</h2>
+          <h2 className={styles.sectionTitle}>{t("系统角色")}</h2>
           <p className={styles.sectionSubtitle}>
-            {t('管理系统用户的角色和权限，系统默认角色不可删除')}
+            {t("管理系统用户的角色和权限，系统默认角色不可删除")}
           </p>
         </div>
         {canCreate && (
@@ -42,7 +42,7 @@ export function SystemRolesSection({
             data-tour="create-role-btn"
           >
             <Plus size={18} />
-            {t('新建角色')}
+            {t("新建角色")}
           </Button>
         )}
       </div>

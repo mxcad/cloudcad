@@ -90,13 +90,13 @@ export function useLibraryModals(): UseLibraryModalsReturn {
   }, []);
 
   const openBatchMoveModal = useCallback((count: number) => {
-    setMoveSourceNode({ id: 'batch', name: t(`${count} 个项目`) });
+    setMoveSourceNode({ id: 'batch', name: t('{count} 个项目', { count: String(count) }) });
     setCopySourceNode(null);
     setShowSelectFolderModal(true);
   }, []);
 
   const openBatchCopyModal = useCallback((count: number) => {
-    setCopySourceNode({ id: 'batch', name: t(`${count} 个项目`) });
+    setCopySourceNode({ id: 'batch', name: t('{count} 个项目', { count: String(count) }) });
     setMoveSourceNode(null);
     setShowSelectFolderModal(true);
   }, []);

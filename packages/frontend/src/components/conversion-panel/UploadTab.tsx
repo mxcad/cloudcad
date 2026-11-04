@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Loader2,
   CheckCircle2,
@@ -10,37 +10,37 @@ import {
   RefreshCw,
   X,
   ExternalLink,
-} from 'lucide-react';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { t } from '@/languages';
-import { useUploadManager } from '@/hooks/useUploadManager';
-import type { UploadTask } from '@/utils/uploadManager';
-import { formatFileSize } from '@/components/ui/FileSize';
-import { useCappedList } from './useCappedList';
+} from "lucide-react";
+import { Tooltip, formatFileSize } from "@/components/ui";
+import { t } from "@/languages";
+import { useUploadManager } from "@/hooks/useUploadManager";
+import type { UploadTask } from "@/utils/uploadManager";
+
+import { useCappedList } from "./useCappedList";
 
 /**
  * 上传任务状态标签
  */
 function getUploadStatusLabel(task: UploadTask): string {
   switch (task.status) {
-    case 'waiting':
-      return t('等待中');
-    case 'uploading':
+    case "waiting":
+      return t("等待中");
+    case "uploading":
       return task.progress >= 100
-        ? t('转换中')
-        : t('上传中 ' + task.progress.toFixed(0) + '%');
-    case 'processing':
-      return t('转换中');
-    case 'done':
-      return t('完成');
-    case 'failed':
-      return t('失败');
-    case 'paused':
-      return t('已暂停');
-    case 'cancelled':
-      return t('已取消');
+        ? t("转换中")
+        : t("上传中 " + task.progress.toFixed(0) + "%");
+    case "processing":
+      return t("转换中");
+    case "done":
+      return t("完成");
+    case "failed":
+      return t("失败");
+    case "paused":
+      return t("已暂停");
+    case "cancelled":
+      return t("已取消");
     default:
-      return '';
+      return "";
   }
 }
 
@@ -49,15 +49,15 @@ function getUploadStatusLabel(task: UploadTask): string {
  */
 function getUploadStatusClass(task: UploadTask): string {
   switch (task.status) {
-    case 'done':
-      return 'done';
-    case 'failed':
-    case 'cancelled':
-      return 'failed';
-    case 'paused':
-      return 'paused';
+    case "done":
+      return "done";
+    case "failed":
+    case "cancelled":
+      return "failed";
+    case "paused":
+      return "paused";
     default:
-      return '';
+      return "";
   }
 }
 
@@ -66,18 +66,18 @@ function getUploadStatusClass(task: UploadTask): string {
  */
 function UploadTaskIcon({ task }: { task: UploadTask }) {
   switch (task.status) {
-    case 'waiting':
+    case "waiting":
       return <Clock size={14} />;
-    case 'uploading':
+    case "uploading":
       return <Loader2 size={14} />;
-    case 'processing':
+    case "processing":
       return <Loader2 size={14} />;
-    case 'done':
+    case "done":
       return <CheckCircle2 size={14} />;
-    case 'failed':
-    case 'cancelled':
+    case "failed":
+    case "cancelled":
       return <AlertCircle size={14} />;
-    case 'paused':
+    case "paused":
       return <Pause size={14} />;
     default:
       return <File size={14} />;
@@ -107,22 +107,22 @@ function UploadRow({
   onOpen,
 }: UploadRowProps) {
   const progressBarClass =
-    task.status === 'processing'
-      ? 'processing'
-      : task.status === 'done'
-        ? 'done'
-        : task.status === 'failed' || task.status === 'cancelled'
-          ? 'failed'
-          : task.status === 'paused'
-            ? 'paused'
-            : 'uploading';
+    task.status === "processing"
+      ? "processing"
+      : task.status === "done"
+        ? "done"
+        : task.status === "failed" || task.status === "cancelled"
+          ? "failed"
+          : task.status === "paused"
+            ? "paused"
+            : "uploading";
 
   const showProgress =
-    task.status === 'uploading' ||
-    task.status === 'processing' ||
-    (task.status === 'done' && task.progress >= 100) ||
-    (task.status === 'failed' && task.progress > 0) ||
-    (task.status === 'paused' && task.progress > 0);
+    task.status === "uploading" ||
+    task.status === "processing" ||
+    (task.status === "done" && task.progress >= 100) ||
+    (task.status === "failed" && task.progress > 0) ||
+    (task.status === "paused" && task.progress > 0);
 
   return (
     <div className="upload-task-item">
@@ -148,7 +148,7 @@ function UploadRow({
         {task.error && (
           <span className="upload-task-status failed" title={task.error}>
             {task.error.length > 40
-              ? task.error.slice(0, 40) + '...'
+              ? task.error.slice(0, 40) + "..."
               : task.error}
           </span>
         )}
@@ -159,10 +159,10 @@ function UploadRow({
       </span>
 
       <div className="upload-task-actions">
-        {task.status === 'waiting' && (
-          <Tooltip content={t('暂停')}>
+        {task.status === "waiting" && (
+          <Tooltip content={t("暂停")}>
             <button
-              aria-label={t('暂停')}
+              aria-label={t("暂停")}
               onClick={(e) => {
                 e.stopPropagation();
                 onPause(task.id);
@@ -172,11 +172,11 @@ function UploadRow({
             </button>
           </Tooltip>
         )}
-        {task.status === 'uploading' && (
-          <Tooltip content={t('取消上传')}>
+        {task.status === "uploading" && (
+          <Tooltip content={t("取消上传")}>
             <button
               className="remove"
-              aria-label={t('取消上传')}
+              aria-label={t("取消上传")}
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove(task.id);
@@ -186,10 +186,10 @@ function UploadRow({
             </button>
           </Tooltip>
         )}
-        {task.status === 'paused' && (
-          <Tooltip content={t('恢复')}>
+        {task.status === "paused" && (
+          <Tooltip content={t("恢复")}>
             <button
-              aria-label={t('恢复')}
+              aria-label={t("恢复")}
               onClick={(e) => {
                 e.stopPropagation();
                 onResume(task.id);
@@ -200,10 +200,10 @@ function UploadRow({
           </Tooltip>
         )}
         {/* 完成态「打开」：上传结果带 nodeId（转换产物）→ 新标签页打开 CAD 编辑器 */}
-        {task.status === 'done' && task.result?.nodeId && (
-          <Tooltip content={t('打开')}>
+        {task.status === "done" && task.result?.nodeId && (
+          <Tooltip content={t("打开")}>
             <button
-              aria-label={t('打开')}
+              aria-label={t("打开")}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpen(task);
@@ -214,11 +214,11 @@ function UploadRow({
           </Tooltip>
         )}
         {/* 失败任务仅在有 File 对象时可重试；从历史恢复的失败任务无 File 对象，不提供重试入口 */}
-        {task.status === 'failed' && task.file && (
-          <Tooltip content={t('重试')}>
+        {task.status === "failed" && task.file && (
+          <Tooltip content={t("重试")}>
             <button
               className="retry"
-              aria-label={t('重试')}
+              aria-label={t("重试")}
               onClick={(e) => {
                 e.stopPropagation();
                 onRetry(task.id);
@@ -268,16 +268,16 @@ export const UploadTab: React.FC<UploadTabProps> = ({ search, onOpen }) => {
     filteredTasks,
     search,
     (task) =>
-      task.status === 'waiting' ||
-      task.status === 'uploading' ||
-      task.status === 'processing' ||
-      task.status === 'paused'
+      task.status === "waiting" ||
+      task.status === "uploading" ||
+      task.status === "processing" ||
+      task.status === "paused",
   );
 
   if (uploadTasks.length === 0) {
     return (
       <div className="conversion-upload-section">
-        <div className="conversion-empty">{t('暂无上传任务')}</div>
+        <div className="conversion-empty">{t("暂无上传任务")}</div>
       </div>
     );
   }
@@ -285,7 +285,7 @@ export const UploadTab: React.FC<UploadTabProps> = ({ search, onOpen }) => {
   if (filteredTasks.length === 0) {
     return (
       <div className="conversion-upload-section">
-        <div className="conversion-empty">{t('无匹配结果')}</div>
+        <div className="conversion-empty">{t("无匹配结果")}</div>
       </div>
     );
   }
@@ -306,18 +306,18 @@ export const UploadTab: React.FC<UploadTabProps> = ({ search, onOpen }) => {
         ))}
         {hiddenCount > 0 && (
           <button className="conversion-load-more" onClick={loadMore}>
-            {t('加载更多（剩余 {count} 项）', { count: String(hiddenCount) })}
+            {t("加载更多（剩余 {count} 项）", { count: String(hiddenCount) })}
           </button>
         )}
       </div>
       <div className="conversion-upload-footer">
         <span className="conversion-upload-summary">
-          {t('完成 {done}/{total}', {
+          {t("完成 {done}/{total}", {
             done: String(uploadStats.done),
             total: String(uploadStats.total),
           })}
           {uploadStats.failed > 0 &&
-            t(' · 失败 {count}', { count: String(uploadStats.failed) })}
+            t(" · 失败 {count}", { count: String(uploadStats.failed) })}
         </span>
       </div>
     </div>

@@ -475,7 +475,8 @@ async function resolvePosterThumbnail(
       // 用 posterThumbBlob 重合成——URL 字符串时 posterThumbBlob=null 会提前返回不重合成。
       // fetch 失败（缩略图接口本身 401 等）则回退后台开图出图。
       const blob = await (await fetch(url, { credentials: 'include' })).blob()
-      return { thumbnail: blob, hasBorder: false }
+      // 后端缩略图恒为整图（无法裁区域）→ 默认框，按规则不描边
+      return { thumbnail: blob, hasBorder: true }
     } catch {
       // 落到下方后台开图兜底
     }
@@ -485,7 +486,8 @@ async function resolvePosterThumbnail(
   )
   const thumbBlob = await renderShareThumbnailInBackground(item.fileId)
   if (thumbBlob) {
-    return { thumbnail: thumbBlob, hasBorder: false }
+    // 后台开图出的 200px 缩略图恒为整图（无法裁区域）→ 默认框，按规则不描边
+    return { thumbnail: thumbBlob, hasBorder: true }
   }
   return null
 }
@@ -566,7 +568,10 @@ async function rerenderPosterPreview() {
       footerText: opts.footerText,
       qrScale: opts.qrScale,
       layout: posterLayout.value,
-      thumbnailHasBorder: posterRegion.value ? posterHasBorderCache.value : false,
+      // 无条件用缓存的 hasBorder（对齐 PC rerenderPreview 的 posterHasBorder）：无区域
+      // （默认整图框）时 posterHasBorderCache 已缓存为 true（整图框不描边），不能强制
+      // false，否则重置/选项调整后会重新冒出描边，与出图时的判定不一致。
+      thumbnailHasBorder: posterHasBorderCache.value,
     })
     // 只认最后一次（连续拖动/输入时旧结果晚到不覆盖新图）；保留旧图直到新图就绪，避免闪烁
     if (seq === posterRecomposeSeq) posterPreviewDataUrl.value = next
@@ -654,6 +659,47 @@ function onPickRegion() {
   posterRegionStore.request(item.fileId, item)
   void router.replace('/shell')
   // 注意：本组件随即卸载（子页收起），pickingRegion 随组件销毁，无需在此复位
+}
+
+/** 重置海报：恢复默认（整图包围盒、默认版式/二维码大小/底部名称），并用默认方式重新截图。 */
+async function handleResetPoster() {
+  if (posterPreviewing.value) return
+  const item = activeShare.value
+  if (!item || !item.fileId) {
+    showToast(t('链接生成失败，请重试'))
+    return
+  }
+  // 重置全部海报选项为默认
+  posterRegion.value = null
+  posterLayout.value = SHARE_POSTER_DEFAULT_LAYOUT
+  posterQrScale.value = 1
+  footerName.value = item.name
+  posterPreviewing.value = true
+  try {
+    // resolvePosterThumbnail 读 posterRegion.value（已置 null）→ 走整图包围盒（默认方式）
+    const resolved = await resolvePosterThumbnail(item)
+    if (!resolved) throw new Error(t('缩略图生成失败'))
+    posterThumbBlob.value =
+      resolved.thumbnail instanceof Blob ? resolved.thumbnail : null
+    // 重置后无区域：二维码内容用基础分享链接（不带区域）
+    previewShareUrl.value = item.url
+    posterHasBorderCache.value = resolved.hasBorder
+    posterPreviewDataUrl.value = await composeSharePosterDataUrl({
+      shareUrl: item.url,
+      fileName: item.name,
+      thumbnail: resolved.thumbnail,
+      scanText: t('扫一扫看图纸'),
+      footerText: item.name,
+      qrScale: 1,
+      layout: SHARE_POSTER_DEFAULT_LAYOUT,
+      thumbnailHasBorder: resolved.hasBorder,
+    })
+  } catch (e) {
+    console.error('[ShareManagePage] resetPoster:', e)
+    showToast(e instanceof Error && e.message ? e.message : t('预览分享图片失败'))
+  } finally {
+    posterPreviewing.value = false
+  }
 }
 
 // 框选完成回来（子页重新挂载）消费结果
@@ -1240,6 +1286,7 @@ function onCustomDaysInput(e: Event) {
       :region-active="!!posterRegion"
       @download="activeShare && onDownloadPoster(activeShare)"
       @pick-region="onPickRegion"
+      @reset="handleResetPoster"
     />
 
     <van-popup v-model:show="showCreateSharePopup" position="bottom" round :style="{ height: '70%' }" @close="closeCreateSharePopup">

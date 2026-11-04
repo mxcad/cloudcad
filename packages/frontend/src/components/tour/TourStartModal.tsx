@@ -7,16 +7,15 @@
  * - 简洁的功能介绍
  * - 提供"立即查看"和"稍后再说"选项
  */
-import React from 'react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
+import React from "react";
+import { Modal, Button } from "@/components/ui";
 
 // Lucide 图标导入
-import { Compass } from 'lucide-react';
-import { BookOpen } from 'lucide-react';
-import { Target } from 'lucide-react';
-import { Sparkles } from 'lucide-react';
-import { t } from '@/languages';
+import { Compass } from "lucide-react";
+import { BookOpen } from "lucide-react";
+import { Target } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { t } from "@/languages";
 
 /** z-index 层级 */
 const START_MODAL_Z_INDEX = 10002;
@@ -38,21 +37,21 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
   const features = [
     {
       icon: BookOpen,
-      testid: 'book-open',
-      title: t('业务流程教程'),
-      description: t('学习文件上传、成员管理等核心功能'),
+      testid: "book-open",
+      title: t("业务流程教程"),
+      description: t("学习文件上传、成员管理等核心功能"),
     },
     {
       icon: Target,
-      testid: 'target',
-      title: t('交互式引导'),
-      description: t('高亮目标元素，一步步引导操作'),
+      testid: "target",
+      title: t("交互式引导"),
+      description: t("高亮目标元素，一步步引导操作"),
     },
     {
       icon: Compass,
-      testid: 'compass',
-      title: t('按需学习'),
-      description: t('随时从引导中心选择需要的教程'),
+      testid: "compass",
+      title: t("按需学习"),
+      description: t("随时从引导中心选择需要的教程"),
     },
   ];
   return (
@@ -69,13 +68,13 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
           className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
           style={{
             background:
-              'linear-gradient(135deg, var(--primary-100), var(--primary-50))',
-            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.2)',
+              "linear-gradient(135deg, var(--primary-100), var(--primary-50))",
+            boxShadow: "0 8px 32px rgba(99, 102, 241, 0.2)",
           }}
         >
           <Sparkles
             size={36}
-            style={{ color: 'var(--primary-500)' }}
+            style={{ color: "var(--primary-500)" }}
             data-testid="icon-sparkles"
           />
         </div>
@@ -83,13 +82,13 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
         {/* 欢迎标题 */}
         <h2
           className="text-2xl font-bold mb-2"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: "var(--text-primary)" }}
         >
-          {t('欢迎使用 CloudCAD')}
+          {t("欢迎使用 CloudCAD")}
         </h2>
 
-        <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          {t('我们为您准备了新手引导，帮助您快速上手')}
+        <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
+          {t("我们为您准备了新手引导，帮助您快速上手")}
         </p>
 
         {/* 功能特性 */}
@@ -100,25 +99,25 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
               <div
                 key={index}
                 className="p-4 rounded-xl text-left"
-                style={{ background: 'var(--bg-tertiary)' }}
+                style={{ background: "var(--bg-tertiary)" }}
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                  style={{ background: 'var(--primary-50)' }}
+                  style={{ background: "var(--primary-50)" }}
                 >
                   <FeatureIcon
                     size={20}
-                    style={{ color: 'var(--primary-500)' }}
+                    style={{ color: "var(--primary-500)" }}
                     data-testid={`icon-${feature.testid}`}
                   />
                 </div>
                 <h4
                   className="text-sm font-semibold mb-1"
-                  style={{ color: 'var(--text-primary)' }}
+                  style={{ color: "var(--text-primary)" }}
                 >
                   {feature.title}
                 </h4>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                   {feature.description}
                 </p>
               </div>
@@ -129,16 +128,16 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
         {/* 操作按钮 */}
         <div className="flex items-center justify-center gap-4">
           <Button variant="secondary" onClick={onDismiss}>
-            {t('稍后再说')}
+            {t("稍后再说")}
           </Button>
           <Button variant="primary" onClick={onViewNow}>
-            {t('立即查看引导')}
+            {t("立即查看引导")}
           </Button>
         </div>
 
         {/* 提示 */}
-        <p className="mt-4 text-xs" style={{ color: 'var(--text-muted)' }}>
-          {t('您可以随时从侧边栏的「帮助引导」入口访问引导中心')}
+        <p className="mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+          {t("您可以随时从侧边栏的「帮助引导」入口访问引导中心")}
         </p>
       </div>
     </Modal>

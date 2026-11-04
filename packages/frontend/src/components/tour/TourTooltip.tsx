@@ -10,13 +10,13 @@
  * - 支持交互模式，显示操作提示
  * @version 1.3.0
  */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import type { TourStep, TooltipPlacement, StepMode } from '../../types/tour';
-import { Button } from '../ui/Button';
-import { X } from 'lucide-react';
-import { MousePointerClick } from 'lucide-react';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { t } from '@/languages';
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import type { TourStep, TooltipPlacement, StepMode } from "../../types/tour";
+import { Button, Tooltip } from "@/components/ui";
+import { X } from "lucide-react";
+import { MousePointerClick } from "lucide-react";
+
+import { t } from "@/languages";
 
 interface TourTooltipProps {
   /** 当前步骤配置 */
@@ -54,14 +54,14 @@ const TOOLTIP_MAX_WIDTH = 380;
 function calculateTooltipPosition(
   placement: TooltipPlacement,
   targetRect: DOMRect | null,
-  tooltipSize: { width: number; height: number }
+  tooltipSize: { width: number; height: number },
 ): { top: number; left: number; placement: TooltipPlacement } {
   // 无目标元素时，居中显示
   if (!targetRect) {
     return {
       top: (window.innerHeight - tooltipSize.height) / 2,
       left: (window.innerWidth - tooltipSize.width) / 2,
-      placement: 'bottom',
+      placement: "bottom",
     };
   }
 
@@ -79,44 +79,44 @@ function calculateTooltipPosition(
 
   // 根据可用空间自动调整位置
   if (
-    placement === 'top' &&
+    placement === "top" &&
     spaceTop < tooltipSize.height + TOOLTIP_GAP + ARROW_SIZE
   ) {
-    finalPlacement = 'bottom';
+    finalPlacement = "bottom";
   } else if (
-    placement === 'bottom' &&
+    placement === "bottom" &&
     spaceBottom < tooltipSize.height + TOOLTIP_GAP + ARROW_SIZE
   ) {
-    finalPlacement = 'top';
+    finalPlacement = "top";
   } else if (
-    placement === 'left' &&
+    placement === "left" &&
     spaceLeft < tooltipSize.width + TOOLTIP_GAP + ARROW_SIZE
   ) {
-    finalPlacement = 'right';
+    finalPlacement = "right";
   } else if (
-    placement === 'right' &&
+    placement === "right" &&
     spaceRight < tooltipSize.width + TOOLTIP_GAP + ARROW_SIZE
   ) {
-    finalPlacement = 'left';
+    finalPlacement = "left";
   }
 
   // 再次检查，如果仍然放不下，选择空间最大的一侧
   if (
-    (finalPlacement === 'top' &&
+    (finalPlacement === "top" &&
       spaceTop < tooltipSize.height + TOOLTIP_GAP + ARROW_SIZE) ||
-    (finalPlacement === 'bottom' &&
+    (finalPlacement === "bottom" &&
       spaceBottom < tooltipSize.height + TOOLTIP_GAP + ARROW_SIZE)
   ) {
-    finalPlacement = spaceTop > spaceBottom ? 'top' : 'bottom';
+    finalPlacement = spaceTop > spaceBottom ? "top" : "bottom";
   }
 
   if (
-    (finalPlacement === 'left' &&
+    (finalPlacement === "left" &&
       spaceLeft < tooltipSize.width + TOOLTIP_GAP + ARROW_SIZE) ||
-    (finalPlacement === 'right' &&
+    (finalPlacement === "right" &&
       spaceRight < tooltipSize.width + TOOLTIP_GAP + ARROW_SIZE)
   ) {
-    finalPlacement = spaceLeft > spaceRight ? 'left' : 'right';
+    finalPlacement = spaceLeft > spaceRight ? "left" : "right";
   }
 
   // 计算位置
@@ -124,19 +124,19 @@ function calculateTooltipPosition(
   let left = 0;
 
   switch (finalPlacement) {
-    case 'top':
+    case "top":
       top = targetRect.top - tooltipSize.height - TOOLTIP_GAP - ARROW_SIZE;
       left = targetRect.left + (targetRect.width - tooltipSize.width) / 2;
       break;
-    case 'bottom':
+    case "bottom":
       top = targetRect.bottom + TOOLTIP_GAP + ARROW_SIZE;
       left = targetRect.left + (targetRect.width - tooltipSize.width) / 2;
       break;
-    case 'left':
+    case "left":
       top = targetRect.top + (targetRect.height - tooltipSize.height) / 2;
       left = targetRect.left - tooltipSize.width - TOOLTIP_GAP - ARROW_SIZE;
       break;
-    case 'right':
+    case "right":
       top = targetRect.top + (targetRect.height - tooltipSize.height) / 2;
       left = targetRect.right + TOOLTIP_GAP + ARROW_SIZE;
       break;
@@ -155,72 +155,72 @@ function calculateTooltipPosition(
 function getArrowStyle(
   placement: TooltipPlacement,
   targetRect: DOMRect | null,
-  tooltipLeft: number
+  tooltipLeft: number,
 ): React.CSSProperties {
   if (!targetRect) {
-    return { display: 'none' };
+    return { display: "none" };
   }
 
   const baseStyle: React.CSSProperties = {
-    position: 'absolute',
+    position: "absolute",
     width: 0,
     height: 0,
     border: `${ARROW_SIZE}px solid transparent`,
   };
 
   switch (placement) {
-    case 'top':
+    case "top":
       return {
         ...baseStyle,
         bottom: -ARROW_SIZE * 2,
         left: targetRect.left + targetRect.width / 2 - tooltipLeft,
-        transform: 'translateX(-50%)',
-        borderTopColor: 'var(--bg-elevated)',
+        transform: "translateX(-50%)",
+        borderTopColor: "var(--bg-elevated)",
       };
-    case 'bottom':
+    case "bottom":
       return {
         ...baseStyle,
         top: -ARROW_SIZE * 2,
         left: targetRect.left + targetRect.width / 2 - tooltipLeft,
-        transform: 'translateX(-50%)',
-        borderBottomColor: 'var(--bg-elevated)',
+        transform: "translateX(-50%)",
+        borderBottomColor: "var(--bg-elevated)",
       };
-    case 'left':
+    case "left":
       return {
         ...baseStyle,
         right: -ARROW_SIZE * 2,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        borderLeftColor: 'var(--bg-elevated)',
+        top: "50%",
+        transform: "translateY(-50%)",
+        borderLeftColor: "var(--bg-elevated)",
       };
-    case 'right':
+    case "right":
       return {
         ...baseStyle,
         left: -ARROW_SIZE * 2,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        borderRightColor: 'var(--bg-elevated)',
+        top: "50%",
+        transform: "translateY(-50%)",
+        borderRightColor: "var(--bg-elevated)",
       };
     default:
-      return { display: 'none' };
+      return { display: "none" };
   }
 }
 
 /**
  * 获取操作类型的默认提示
  */
-function getActionHint(actionType: TourStep['actionType']): string {
+function getActionHint(actionType: TourStep["actionType"]): string {
   switch (actionType) {
-    case 'click':
-      return t('请点击此元素完成操作');
-    case 'right-click':
-      return t('请右键点击此元素');
-    case 'input':
-      return t('请在此输入内容');
-    case 'select':
-      return t('请选择一个选项');
+    case "click":
+      return t("请点击此元素完成操作");
+    case "right-click":
+      return t("请右键点击此元素");
+    case "input":
+      return t("请在此输入内容");
+    case "select":
+      return t("请选择一个选项");
     default:
-      return t('请完成操作后继续');
+      return t("请完成操作后继续");
   }
 }
 
@@ -237,7 +237,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
   const [position, setPosition] = useState({
     top: 0,
     left: 0,
-    placement: step.placement ?? 'bottom',
+    placement: step.placement ?? "bottom",
   });
   const [tooltipSize, setTooltipSize] = useState({
     width: TOOLTIP_MIN_WIDTH,
@@ -245,8 +245,8 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
   });
 
   // 获取步骤模式，默认为 display
-  const stepMode: StepMode = step.mode ?? 'display';
-  const isInteractiveMode = stepMode === 'interactive';
+  const stepMode: StepMode = step.mode ?? "display";
+  const isInteractiveMode = stepMode === "interactive";
 
   /** 计算气泡位置 */
   const updatePosition = useMemo(() => {
@@ -257,9 +257,9 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       setTooltipSize({ width: rect.width, height: rect.height });
 
       const newPosition = calculateTooltipPosition(
-        step.placement ?? 'bottom',
+        step.placement ?? "bottom",
         targetRect,
-        { width: rect.width, height: rect.height }
+        { width: rect.width, height: rect.height },
       );
       setPosition(newPosition);
     };
@@ -276,8 +276,8 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       requestAnimationFrame(updatePosition);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [updatePosition]);
 
   /** 初始位置计算 */
@@ -314,19 +314,19 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       ref={tooltipRef}
       className="tour-tooltip"
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: position.top,
         left: position.left,
         zIndex: TOOLTIP_Z_INDEX,
         minWidth: TOOLTIP_MIN_WIDTH,
         maxWidth: TOOLTIP_MAX_WIDTH,
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-xl)',
-        boxShadow: 'var(--shadow-xl)',
-        overflow: 'hidden',
-        animation: 'tooltipFadeIn 0.2s ease-out',
-        pointerEvents: 'auto', // 确保在交互模式下 Tooltip 可以点击
+        background: "var(--bg-elevated)",
+        border: "1px solid var(--border-default)",
+        borderRadius: "var(--radius-xl)",
+        boxShadow: "var(--shadow-xl)",
+        overflow: "hidden",
+        animation: "tooltipFadeIn 0.2s ease-out",
+        pointerEvents: "auto", // 确保在交互模式下 Tooltip 可以点击
       }}
     >
       {/* 箭头 */}
@@ -339,31 +339,31 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       {/* 头部 */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderBottom: '1px solid var(--border-default)',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 16px",
+          borderBottom: "1px solid var(--border-default)",
           background: isInteractiveMode
-            ? 'var(--primary-50)'
-            : 'var(--bg-tertiary)',
+            ? "var(--primary-50)"
+            : "var(--bg-tertiary)",
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             style={{
               fontSize: 12,
               fontWeight: 600,
               color: isInteractiveMode
-                ? 'var(--primary-600)'
-                : 'var(--primary-500)',
+                ? "var(--primary-600)"
+                : "var(--primary-500)",
               background: isInteractiveMode
-                ? 'var(--primary-100)'
-                : 'var(--primary-100)',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-full)',
-              display: 'flex',
-              alignItems: 'center',
+                ? "var(--primary-100)"
+                : "var(--primary-100)",
+              padding: "2px 8px",
+              borderRadius: "var(--radius-full)",
+              display: "flex",
+              alignItems: "center",
               gap: 4,
             }}
           >
@@ -374,14 +374,14 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
             style={{
               fontSize: 14,
               fontWeight: 600,
-              color: 'var(--text-primary)',
+              color: "var(--text-primary)",
               margin: 0,
             }}
           >
             {displayContent.title}
           </h4>
         </div>
-        <Tooltip content={t('跳过引导')}>
+        <Tooltip content={t("跳过引导")}>
           <Button
             variant="secondary"
             size="xs"
@@ -389,7 +389,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
             style={{
               width: 24,
               height: 24,
-              color: 'var(--text-muted)',
+              color: "var(--text-muted)",
             }}
           >
             <X size={16} />
@@ -400,8 +400,8 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       {/* 内容 */}
       <div
         style={{
-          padding: '16px',
-          color: 'var(--text-secondary)',
+          padding: "16px",
+          color: "var(--text-secondary)",
           fontSize: 14,
           lineHeight: 1.6,
         }}
@@ -413,14 +413,14 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       {isInteractiveMode && interactionHint && (
         <div
           style={{
-            padding: '12px 16px',
-            background: 'var(--primary-50)',
-            borderTop: '1px solid var(--primary-100)',
-            color: 'var(--primary-700)',
+            padding: "12px 16px",
+            background: "var(--primary-50)",
+            borderTop: "1px solid var(--primary-100)",
+            color: "var(--primary-700)",
             fontSize: 13,
             fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
+            display: "flex",
+            alignItems: "center",
             gap: 8,
           }}
         >
@@ -433,17 +433,17 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       <div
         style={{
           height: 3,
-          background: 'var(--bg-tertiary)',
+          background: "var(--bg-tertiary)",
         }}
       >
         <div
           style={{
-            height: '100%',
+            height: "100%",
             width: `${progress}%`,
             background: isInteractiveMode
-              ? 'linear-gradient(90deg, var(--primary-600), var(--primary-500))'
-              : 'linear-gradient(90deg, var(--primary-500), var(--primary-400))',
-            transition: 'width 0.3s ease-out',
+              ? "linear-gradient(90deg, var(--primary-600), var(--primary-500))"
+              : "linear-gradient(90deg, var(--primary-500), var(--primary-400))",
+            transition: "width 0.3s ease-out",
           }}
         />
       </div>
@@ -451,18 +451,18 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
       {/* 底部按钮 */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderTop: '1px solid var(--border-default)',
-          background: 'var(--bg-tertiary)',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 16px",
+          borderTop: "1px solid var(--border-default)",
+          background: "var(--bg-tertiary)",
         }}
       >
         <Button variant="secondary" size="sm" onClick={onSkip}>
-          {t('跳过引导')}
+          {t("跳过引导")}
         </Button>
-        <div style={{ display: 'flex', gap: 8 }}></div>
+        <div style={{ display: "flex", gap: 8 }}></div>
       </div>
 
       <style>{`

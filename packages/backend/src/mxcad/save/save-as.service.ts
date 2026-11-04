@@ -24,7 +24,10 @@ import {
 import * as path from 'path';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
-import { findReadyArtifactByHash } from '../utils/conversion-artifact';
+import {
+  findArtifactByHash,
+  findReadyArtifactByHash,
+} from '../utils/conversion-artifact';
 import * as crypto from 'crypto';
 import { NodeType } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
@@ -581,11 +584,21 @@ export class SaveAsService {
         const uploadPath =
           this.configService.get('mxcadUploadPath', { infer: true }) ||
           path.join(process.cwd(), 'uploads');
-        const preloadingFilePath = path.join(
+        // preloading.json 落位名是 `<hash>.<源扩展名>.mxweb_preloading.json`
+        // （引擎按 src_file_md5 自定产物名，见 file-conversion.service 的 artifact 拼法）。
+        // 源扩展名（dwg/dxf）客户端不传、无法精确拼，故用协议无关的 hash 前缀 + 后缀降级查找，
+        // 与 findReadyArtifactByHash（本文件上方查 .mxweb 主产物）同源，避免拼法漂移漏找。
+        const preloadingFileName = findArtifactByHash(
           uploadPath,
-          `${sourceFileHash}.mxweb_preloading.json`
+          sourceFileHash,
+          '_preloading.json'
         );
-        if (fs.existsSync(preloadingFilePath)) {
+        // findArtifactByHash 已确认文件存在（readdirSync 扫描命中），无需再 existsSync 门禁
+        if (preloadingFileName) {
+          const preloadingFilePath = path.join(
+            uploadPath,
+            preloadingFileName
+          );
           const content = await fsPromises.readFile(
             preloadingFilePath,
             'utf-8'

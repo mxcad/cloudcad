@@ -1,7 +1,7 @@
-import { Modal } from '@/components/ui/Modal';
-import { t } from '@/languages';
-import { centsToYuan } from '@/utils/priceUtils';
-import WechatPayButton from './WechatPayButton';
+import { Modal } from "@/components/ui";
+import { t } from "@/languages";
+import { centsToYuan } from "@/utils/priceUtils";
+import WechatPayButton from "./WechatPayButton";
 
 interface WechatPayModalProps {
   open: boolean;
@@ -30,17 +30,17 @@ export default function WechatPayModal({
   onClose,
 }: WechatPayModalProps) {
   return (
-    <Modal isOpen={open} onClose={onClose} title={t('微信支付')} size="sm">
+    <Modal isOpen={open} onClose={onClose} title={t("微信支付")} size="sm">
       {orderLabel && (
         <p
           className="text-sm mb-2"
-          style={{ color: 'var(--text-primary)', fontWeight: 600 }}
+          style={{ color: "var(--text-primary)", fontWeight: 600 }}
         >
           {orderLabel}
         </p>
       )}
-      <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-        {t('支付金额: ¥{amount}', { amount: centsToYuan(amount) })}
+      <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>
+        {t("支付金额: ¥{amount}", { amount: centsToYuan(amount) })}
       </p>
       <WechatPayButton
         payParams={payParams}

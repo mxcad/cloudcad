@@ -255,61 +255,6 @@ describe('FeedbackRewardService', () => {
     });
   });
 
-  describe('revoke (撤销)', () => {
-    const rewardRow = {
-      id: 'rw-1',
-      feedbackId: 'fb-1',
-      userId: 'user-1',
-      vipTierLevel: 1,
-      durationDays: 30,
-      status: 'PENDING',
-      issuedById: null,
-      issuedAt: null,
-      remark: null,
-      createdAt: new Date(),
-    };
-
-    it('should block when already REVOKED', async () => {
-      mockPrisma.feedbackReward.findUnique.mockResolvedValue({
-        ...rewardRow,
-        status: 'REVOKED',
-      });
-      await expect(
-        service.revoke('rw-1', { reason: '误采纳' }, 'admin-1')
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should revoke and set feedback rewardStatus REVOKED', async () => {
-      mockPrisma.feedbackReward.findUnique
-        .mockResolvedValueOnce(rewardRow) // 初始查询
-        .mockResolvedValueOnce({
-          ...rewardRow,
-          status: 'REVOKED',
-          feedback: { feedbackCode: 'FB-X', title: 't' },
-        }); // loadRewardWithFeedback
-      mockTx.feedbackReward.update.mockResolvedValue({
-        ...rewardRow,
-        status: 'REVOKED',
-      });
-      mockTx.feedback.update.mockResolvedValue({ id: 'fb-1', rewardStatus: 'REVOKED' });
-
-      await service.revoke('rw-1', { reason: '误采纳' }, 'admin-1');
-
-      expect(mockTx.feedbackReward.update).toHaveBeenCalledWith({
-        where: { id: 'rw-1' },
-        data: expect.objectContaining({
-          status: 'REVOKED',
-          remark: '误采纳',
-          issuedById: 'admin-1',
-        }),
-      });
-      expect(mockTx.feedback.update).toHaveBeenCalledWith({
-        where: { id: 'fb-1' },
-        data: { rewardStatus: 'REVOKED' },
-      });
-    });
-  });
-
   describe('档位校验', () => {
     it('should reject invalid tier level', async () => {
       await expect(
@@ -336,10 +281,12 @@ describe('FeedbackRewardService', () => {
       remark: null,
       createdAt: new Date(),
     };
+    const tierRow = { id: 'tier-1', level: 1, baseMonthlyPrice: 0 };
+    const issueDto = { userId: 'user-1', remark: '已核实' };
 
     it('登录用户反馈 → 返回 submitter（奖励发放默认账号）', async () => {
       mockPrisma.feedbackReward.findUnique
-        .mockResolvedValueOnce(rewardRow)
+        .mockResolvedValueOnce(rewardRow) // issue 初始奖励查询
         .mockResolvedValueOnce({
           ...rewardRow,
           feedback: {
@@ -347,11 +294,17 @@ describe('FeedbackRewardService', () => {
             title: 't',
             submitter: { id: 'user-1', username: 'alice', nickname: '爱丽丝', email: 'a@x.com' },
           },
-        });
+        }); // loadRewardWithFeedback
+      mockPrisma.vipTier.findUnique.mockResolvedValue(tierRow);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrisma.feedback.findUnique.mockResolvedValue({
+        id: 'fb-1',
+        submitterId: 'user-1',
+      });
       mockTx.feedbackReward.update.mockResolvedValue(rewardRow);
-      mockTx.feedback.update.mockResolvedValue({ id: 'fb-1', rewardStatus: 'PENDING' });
+      mockTx.feedback.update.mockResolvedValue({ id: 'fb-1', rewardStatus: 'ISSUED' });
 
-      const result = await service.revoke('rw-1', { reason: '测试' }, 'admin-1');
+      const result = await service.issue('rw-1', issueDto, 'admin-1');
       expect(result.submitter).toEqual({
         id: 'user-1',
         username: 'alice',
@@ -367,10 +320,16 @@ describe('FeedbackRewardService', () => {
           ...rewardRow,
           feedback: { feedbackCode: 'FB-X', title: 't', submitter: null },
         });
+      mockPrisma.vipTier.findUnique.mockResolvedValue(tierRow);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrisma.feedback.findUnique.mockResolvedValue({
+        id: 'fb-1',
+        submitterId: null,
+      });
       mockTx.feedbackReward.update.mockResolvedValue(rewardRow);
-      mockTx.feedback.update.mockResolvedValue({ id: 'fb-1', rewardStatus: 'PENDING' });
+      mockTx.feedback.update.mockResolvedValue({ id: 'fb-1', rewardStatus: 'ISSUED' });
 
-      const result = await service.revoke('rw-1', { reason: '测试' }, 'admin-1');
+      const result = await service.issue('rw-1', issueDto, 'admin-1');
       expect(result.submitter).toBeNull();
     });
   });

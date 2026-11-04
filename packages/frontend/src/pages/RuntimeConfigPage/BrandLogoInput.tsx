@@ -17,13 +17,13 @@
  * Logo 上传入口保留在此：上传图片即覆盖输入框里的 URL（仍需点保存才生效）。
  */
 
-import React, { useRef, useState } from 'react';
-import { ImageUp } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { runtimeConfigControllerUploadBrandLogo } from '@/api-sdk';
-import styles from './RuntimeConfigPage.module.css';
-import { t } from '@/languages';
+import React, { useRef, useState } from "react";
+import { ImageUp } from "lucide-react";
+import { Button, Input } from "@/components/ui";
+
+import { runtimeConfigControllerUploadBrandLogo } from "@/api-sdk";
+import styles from "./RuntimeConfigPage.module.css";
+import { t } from "@/languages";
 
 interface BrandLogoInputProps {
   value: string;
@@ -42,7 +42,7 @@ export const BrandLogoInput: React.FC<BrandLogoInputProps> = ({
   /** 上传图片即覆盖旧 Logo，返回的 URL 写进输入框（仍需点保存才生效） */
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    event.target.value = '';
+    event.target.value = "";
     if (!file || disabled) return;
 
     setUploading(true);
@@ -64,11 +64,11 @@ export const BrandLogoInput: React.FC<BrandLogoInputProps> = ({
     <div className={styles.brandLogoRow}>
       {value ? (
         <span className={styles.brandLogoPreview}>
-          <img src={value} alt={t('当前 Logo')} />
+          <img src={value} alt={t("当前 Logo")} />
         </span>
       ) : (
         <span className={styles.brandLogoPreview}>
-          {t('未设置 Logo，使用内置默认值')}
+          {t("未设置 Logo，使用内置默认值")}
         </span>
       )}
       <Button
@@ -80,7 +80,7 @@ export const BrandLogoInput: React.FC<BrandLogoInputProps> = ({
         onClick={() => fileInputRef.current?.click()}
         data-testid="rc-brand-upload-logo"
       >
-        {t('上传 Logo')}
+        {t("上传 Logo")}
       </Button>
       <Input
         type="text"
@@ -96,7 +96,7 @@ export const BrandLogoInput: React.FC<BrandLogoInputProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/x-icon"
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         disabled={disabled}
         onChange={(e) => void handleFile(e)}
         data-testid="rc-brand-logo-input"

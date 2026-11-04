@@ -30,6 +30,7 @@ interface HarnessProps {
   loading?: boolean;
   onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
   onPageChange?: (page: number) => void;
+  enableScrollPagination?: boolean;
   loadError?: string | null;
   onRetryLoadMore?: () => void;
   /** 列表第一项所属页码（默认 = page，模拟 replace 单页模型） */
@@ -43,6 +44,7 @@ function Harness({
   loading = false,
   onScrollPageChange,
   onPageChange = () => {},
+  enableScrollPagination,
   loadError,
   onRetryLoadMore,
   minLoadedPage,
@@ -62,6 +64,7 @@ function Harness({
       onPageChange={onPageChange}
       onPageSizeChange={() => {}}
       onScrollPageChange={onScrollPageChange}
+      enableScrollPagination={enableScrollPagination}
       loadError={loadError}
       onRetryLoadMore={onRetryLoadMore}
       minLoadedPage={minLoadedPage ?? page}
@@ -137,8 +140,12 @@ function renderHarness(props: HarnessProps) {
   const utils = render(
     <Harness
       {...props}
-      onScrollPageChange={onScrollPageChange}
-      onPageChange={onPageChange}
+      onScrollPageChange={
+        'onScrollPageChange' in props
+          ? props.onScrollPageChange
+          : onScrollPageChange
+      }
+      onPageChange={'onPageChange' in props ? props.onPageChange : onPageChange}
     />
   );
   const itemsWrapper = utils.container.querySelector(
@@ -207,6 +214,31 @@ describe('FileListGrid 滚动分页', () => {
     scrollTo(scrollContainer, 400, 30); // 重新建立基线（向下）
     scrollTo(scrollContainer, 1000, 30); // 距底 200 内（30*40-1000=200）→ next
     expect(onScrollPageChange).toHaveBeenCalledWith(3, 'next');
+  });
+
+  it('滚动分页默认开启：传 onPageChange（无 onScrollPageChange）时滚到底触发 onPageChange(2)', () => {
+    const { scrollContainer, onPageChange } = renderHarness({
+      nodes: makeNodes('p1'),
+      page: 1,
+      totalPages: 3,
+      onScrollPageChange: undefined,
+    });
+    advanceSettleBlock();
+    // 距底 → 未接累积回调时向下滚动退化为按钮翻页（replace）
+    scrollTo(scrollContainer, 1000, 30);
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it('enableScrollPagination={false} 关闭滚动分页：滚到底不触发翻页', () => {
+    const { scrollContainer, onPageChange } = renderHarness({
+      nodes: makeNodes('p1'),
+      page: 1,
+      totalPages: 3,
+      enableScrollPagination: false,
+    });
+    advanceSettleBlock();
+    scrollTo(scrollContainer, 1000, 30);
+    expect(onPageChange).not.toHaveBeenCalled();
   });
 
   it('页脚页码点击：透传 onPageChange（jump 定位由 useScrollPagination 处理）', () => {

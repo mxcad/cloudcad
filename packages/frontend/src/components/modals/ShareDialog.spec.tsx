@@ -53,6 +53,34 @@ vi.mock('../../contexts/NotificationContext', () => ({
   useNotification: () => ({ showToast: vi.fn() }),
 }));
 
+// Select 桩：原生 <select>，onChange 直接透传 value（Radix 弹层交互不是本测试对象，
+// 版式切换是否触发预览重合成才是）。MultiSelect 一并提供：桶文件从本模块 re-export，
+// mock 工厂缺具名导出会导致 import 报错
+vi.mock('../ui/Select', () => ({
+  Select: ({
+    value,
+    onChange,
+    options,
+  }: {
+    value?: string | number;
+    onChange?: (v: string) => void;
+    options: { value: string | number; label: string }[];
+  }) => (
+    <select
+      data-testid="poster-layout-select"
+      value={value === undefined || value === '' ? '' : String(value)}
+      onChange={(e) => onChange?.(e.target.value)}
+    >
+      {options.map((o) => (
+        <option key={String(o.value)} value={String(o.value)}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  ),
+  MultiSelect: () => <div data-testid="multi-select" />,
+}));
+
 // currentFileId 可配置：单文件编辑器上下文（isEditorContext=true）测试「指定区域」用
 const hoisted = vi.hoisted(() => ({
   currentFileId: null as string | null,
@@ -296,6 +324,41 @@ describe('ShareDialog 单文件列表视图 + 指定区域（回归：预览/主
     expect(hoisted.generatePosterImage).toHaveBeenCalledWith(
       { minPt: { x: 0, y: 0 }, maxPt: { x: 100, y: 100 } },
       false
+    );
+  });
+
+  it('预览弹窗切换版式：以新版式重合成预览图（回归：版式切换无变化）', async () => {
+    hoisted.generatePosterImage.mockResolvedValue({
+      dataUrl: 'data:image/bmp;base64,zz',
+      hasBorder: true,
+    });
+
+    render(
+      <ShareDialog isOpen onClose={vi.fn()} fileId="f1" fileName="平面图.dwg" />
+    );
+
+    // 打开预览弹窗：初始按默认版式 phone 合成
+    fireEvent.click(await screen.findByTitle('预览分享图片'));
+    await waitFor(() =>
+      expect(screen.getByText('预览分享图片')).toBeInTheDocument()
+    );
+    await waitFor(() => {
+      expect(hoisted.composeSharePosterDataUrl).toHaveBeenCalledWith(
+        expect.objectContaining({ layout: 'phone' })
+      );
+    });
+
+    // 切换版式 → 节流后以新 layout 重合成（只重 canvas 合成，不重新引擎截图）
+    fireEvent.change(screen.getByTestId('poster-layout-select'), {
+      target: { value: 'square' },
+    });
+    await waitFor(
+      () => {
+        expect(hoisted.composeSharePosterDataUrl).toHaveBeenCalledWith(
+          expect.objectContaining({ layout: 'square' })
+        );
+      },
+      { timeout: 3000 }
     );
   });
 });

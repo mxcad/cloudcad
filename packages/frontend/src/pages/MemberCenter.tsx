@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Crown,
   Shield,
@@ -9,46 +9,44 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Tag } from '@/components/ui/Tag';
-import type { TagVariant } from '@/components/ui/Tag';
-import { Textarea } from '@/components/ui/Textarea';
-import { Modal } from '@/components/ui/Modal';
-import { globalShowToast } from '@/utils/notificationEvents';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { usePlanSelectStore } from '@/stores/planSelectStore';
-import { useMembership } from '@/hooks/useMembership';
-import { useStorageQuota } from '@/hooks/useStorageQuota';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
-import { Z_LAYERS } from '@/constants/layers';
-import { formatFileSize } from '@/utils/fileUtils';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
+} from "lucide-react";
+import { Button, Card, Tag, Textarea, Modal } from "@/components/ui";
+import type { TagVariant } from "@/components/ui";
+
+import { globalShowToast } from "@/utils/notificationEvents";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { usePlanSelectStore } from "@/stores/planSelectStore";
+import { useMembership } from "@/hooks/useMembership";
+import { useStorageQuota } from "@/hooks/useStorageQuota";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRuntimeConfig } from "@/contexts/RuntimeConfigContext";
+import { Z_LAYERS } from "@/constants/layers";
+import { formatFileSize } from "@/utils/fileUtils";
+import { t } from "@/languages";
+import { fillTemplate } from "@/utils/i18nFill";
+import { getErrorMessage } from "@/utils/errorHandler";
 import {
   billingControllerGetOrders,
   billingControllerApplyRefund,
-} from '@/api-sdk';
-import WechatPayModal from '@/components/billing/WechatPayModal';
-import { useTierConfigRegistry } from '@/hooks/useTierConfigRegistry';
-import { useVipOffering, type VipTier } from '@/hooks/billing/useVipOffering';
-import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
+} from "@/api-sdk";
+import WechatPayModal from "@/components/billing/WechatPayModal";
+import { useTierConfigRegistry } from "@/hooks/useTierConfigRegistry";
+import { useVipOffering, type VipTier } from "@/hooks/billing/useVipOffering";
+import { usePaymentRefresh } from "@/hooks/billing/usePaymentRefresh";
 import {
   openPayment,
   type PaymentDescriptor,
-} from '@/hooks/billing/paymentIntake';
-import { formatConfigValue, getConfigLabel } from '@/utils/tierConfigUtils';
-import { centsToYuan } from '@/utils/priceUtils';
-import { formatDate } from '@/utils/dateUtils';
-import { usagePercent } from '@cloudcad/platform';
+} from "@/hooks/billing/paymentIntake";
+import { formatConfigValue, getConfigLabel } from "@/utils/tierConfigUtils";
+import { centsToYuan } from "@/utils/priceUtils";
+import { formatDate } from "@/utils/dateUtils";
+import { usagePercent } from "@cloudcad/platform";
 import {
-  BENEFIT_ITEMS,
-  FAQ_ITEMS,
+  getBenefitItems,
+  getFaqItems,
   buildConversionBenefitItem,
   buildConversionFaq,
-} from './memberCenterContent';
+} from "./memberCenterContent";
 
 interface OrderItem {
   id: string;
@@ -69,22 +67,33 @@ interface OrderItem {
   }>;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: t('待支付'),
-  SUCCEEDED: t('已完成'),
-  FAILED: t('支付失败'),
-  REFUNDED: t('已退款'),
-  CLOSED: t('已取消'),
-  TIMEOUT: t('超时关闭'),
-};
+// 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case "PENDING":
+      return t("待支付");
+    case "SUCCEEDED":
+      return t("已完成");
+    case "FAILED":
+      return t("支付失败");
+    case "REFUNDED":
+      return t("已退款");
+    case "CLOSED":
+      return t("已取消");
+    case "TIMEOUT":
+      return t("超时关闭");
+    default:
+      return status;
+  }
+}
 
 const STATUS_COLORS: Record<string, TagVariant> = {
-  PENDING: 'warning',
-  SUCCEEDED: 'success',
-  FAILED: 'error',
-  REFUNDED: 'neutral',
-  CLOSED: 'neutral',
-  TIMEOUT: 'neutral',
+  PENDING: "warning",
+  SUCCEEDED: "success",
+  FAILED: "error",
+  REFUNDED: "neutral",
+  CLOSED: "neutral",
+  TIMEOUT: "neutral",
 };
 
 export default function MemberCenter() {
@@ -103,22 +112,22 @@ export default function MemberCenter() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [selectedTierIdx, setSelectedTierIdx] = useState(0);
   const [repayPayment, setRepayPayment] = useState<PaymentDescriptor | null>(
-    null
+    null,
   );
   const [repayLoading, setRepayLoading] = useState(false);
-  const [repayError, setRepayError] = useState('');
+  const [repayError, setRepayError] = useState("");
   const [refundTarget, setRefundTarget] = useState<OrderItem | null>(null);
-  const [refundReason, setRefundReason] = useState('');
+  const [refundReason, setRefundReason] = useState("");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
-  const [refundError, setRefundError] = useState('');
+  const [refundError, setRefundError] = useState("");
   // ADR-0066：?auto=1 自动下单的支付弹窗状态
   const [autoPayment, setAutoPayment] = useState<PaymentDescriptor | null>(
-    null
+    null,
   );
   const [autoLoading, setAutoLoading] = useState(false);
-  const [autoError, setAutoError] = useState('');
+  const [autoError, setAutoError] = useState("");
 
-  useDocumentTitle(t('会员中心'));
+  useDocumentTitle(t("会员中心"));
 
   const isVip = membership?.isVip ?? false;
 
@@ -129,7 +138,7 @@ export default function MemberCenter() {
   // ADR-0043：转换频率窗口值 —— 当前等级配置优先，缺键回落 registry 默认值（与后端回落语义一致）
   const currentTierConfigs = useMemo(
     () => tiers.find((t) => t.level === currentTierLevel)?.configs ?? {},
-    [tiers, currentTierLevel]
+    [tiers, currentTierLevel],
   );
   const getEffectiveConfig = useCallback(
     (key: string): number => {
@@ -138,32 +147,32 @@ export default function MemberCenter() {
       const registryEntry = registry.get(key);
       return Number(registryEntry?.defaultValue) || 0;
     },
-    [currentTierConfigs, registry]
+    [currentTierConfigs, registry],
   );
   const conversionWindowHours =
-    getEffectiveConfig('quota.conversion_window_hours') || 2;
+    getEffectiveConfig("quota.conversion_window_hours") || 2;
   const conversionWindowCount =
-    getEffectiveConfig('quota.conversion_window_count') || 0;
+    getEffectiveConfig("quota.conversion_window_count") || 0;
 
   const benefitItems = useMemo(
     () => [
-      ...BENEFIT_ITEMS,
+      ...getBenefitItems(),
       buildConversionBenefitItem(
         conversionWindowHours,
         conversionWindowCount,
-        isVip
+        isVip,
       ),
     ],
-    [conversionWindowHours, conversionWindowCount, isVip]
+    [conversionWindowHours, conversionWindowCount, isVip],
   );
 
   const faqItems = useMemo(() => {
-    const items = [...FAQ_ITEMS];
+    const items = [...getFaqItems()];
     if (conversionWindowCount > 0) {
       items.splice(
         items.length - 1,
         0,
-        buildConversionFaq(conversionWindowHours, conversionWindowCount, isVip)
+        buildConversionFaq(conversionWindowHours, conversionWindowCount, isVip),
       );
     }
     return items;
@@ -178,7 +187,7 @@ export default function MemberCenter() {
       const data = res?.data as { items?: OrderItem[] } | undefined;
       setOrders(data?.items?.slice(0, 5) ?? []);
     } catch (error) {
-      console.error('[MemberCenter] 加载订单失败:', error);
+      console.error("[MemberCenter] 加载订单失败:", error);
     } finally {
       setOrdersLoading(false);
     }
@@ -191,37 +200,34 @@ export default function MemberCenter() {
   // ADR-0066：EXE 桌面端 ?auto=1 自动下单 —— 挂载时若带 auto=1，
   // 自动创建最低付费档 1 个月订单并弹出微信支付二维码
   useEffect(() => {
-    if (searchParams.get('auto') !== '1') return;
+    if (searchParams.get("auto") !== "1") return;
     // 清掉 auto 参数，避免刷新/回退重复触发（走 setSearchParams 同步 React Router 状态）
     const next = new URLSearchParams(searchParams);
-    next.delete('auto');
+    next.delete("auto");
     setSearchParams(next, { replace: true });
     let cancelled = false;
     (async () => {
       setAutoLoading(true);
-      setAutoError('');
+      setAutoError("");
       try {
         // 响应后协议（SUCCEEDED 对账 / PENDING 守卫）走 openPayment 唯一出口：
         // 此前 auto 入口两者皆缺，已支付订单会以「请扫码支付」呈现给用户
-        const outcome = await openPayment({ source: 'auto' });
+        const outcome = await openPayment({ source: "auto" });
         if (cancelled) return;
-        if (outcome.kind === 'already-paid') {
+        if (outcome.kind === "already-paid") {
           // 对账兜底：auto 订单已支付（回调丢失）→ 按支付成功处理，不展示二维码
-          globalShowToast(
-            t('该订单已支付成功，会员已开通'),
-            'success'
-          );
+          globalShowToast(t("该订单已支付成功，会员已开通"), "success");
           await refreshAfterPayment();
           return;
         }
-        if (outcome.kind !== 'pending') {
-          setAutoError(t('创建订单失败，请重试'));
+        if (outcome.kind !== "pending") {
+          setAutoError(t("创建订单失败，请重试"));
           return;
         }
         setAutoPayment(outcome.descriptor);
       } catch (error) {
         if (cancelled) return;
-        setAutoError(getErrorMessage(error) || t('创建订单失败，请重试'));
+        setAutoError(getErrorMessage(error) || t("创建订单失败，请重试"));
       } finally {
         if (!cancelled) setAutoLoading(false);
       }
@@ -237,50 +243,50 @@ export default function MemberCenter() {
     (tierLevel?: number) => {
       globalOpen(undefined, tierLevel);
     },
-    [globalOpen]
+    [globalOpen],
   );
 
   const handleRepay = useCallback(
     async (orderNo: string) => {
       setRepayLoading(true);
-      setRepayError('');
+      setRepayError("");
       try {
         // 下单 + 响应后协议走 openPayment 唯一出口（tradeType 探测在其内部）
-        const outcome = await openPayment({ source: 'repay', orderNo });
-        if (outcome.kind === 'already-paid') {
+        const outcome = await openPayment({ source: "repay", orderNo });
+        if (outcome.kind === "already-paid") {
           // 对账兜底：后端确认微信侧已支付并完成订单（回调丢失场景），
           // 提示已开通并刷新会员状态/订单列表，而非误导性的"状态已变更"
-          globalShowToast(t('该订单已支付成功，会员已开通'), 'success');
+          globalShowToast(t("该订单已支付成功，会员已开通"), "success");
           await refreshAfterPayment();
           await loadOrders();
           return;
         }
-        if (outcome.kind !== 'pending') {
-          setRepayError(t('订单状态已变更，无法继续支付'));
-          globalShowToast(t('订单状态已变更，无法继续支付'), 'error');
+        if (outcome.kind !== "pending") {
+          setRepayError(t("订单状态已变更，无法继续支付"));
+          globalShowToast(t("订单状态已变更，无法继续支付"), "error");
           return;
         }
         setRepayPayment(outcome.descriptor);
       } catch (error) {
         // 透传后端真实原因（网关/风控等），不再固定"获取支付参数失败"
-        const msg = getErrorMessage(error) || t('获取支付参数失败，请重试');
+        const msg = getErrorMessage(error) || t("获取支付参数失败，请重试");
         setRepayError(msg);
-        globalShowToast(msg, 'error');
+        globalShowToast(msg, "error");
       } finally {
         setRepayLoading(false);
       }
     },
-    [refreshAfterPayment, loadOrders]
+    [refreshAfterPayment, loadOrders],
   );
 
   const handleApplyRefund = useCallback(async () => {
     if (!refundTarget) return;
     if (!refundReason.trim()) {
-      setRefundError(t('请填写退款原因'));
+      setRefundError(t("请填写退款原因"));
       return;
     }
     setRefundSubmitting(true);
-    setRefundError('');
+    setRefundError("");
     try {
       const res = await billingControllerApplyRefund({
         throwOnError: true,
@@ -288,13 +294,13 @@ export default function MemberCenter() {
         body: { reason: refundReason.trim() },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出（sdk-mutation-error-gotcha）
-      globalShowToast(t('退款申请已提交，请等待审核'), 'success');
+      globalShowToast(t("退款申请已提交，请等待审核"), "success");
       setRefundTarget(null);
-      setRefundReason('');
+      setRefundReason("");
       await loadOrders();
     } catch (error) {
       // 透传后端真实原因（已有待审核申请/状态不允许等）
-      setRefundError(getErrorMessage(error) || t('退款申请提交失败，请重试'));
+      setRefundError(getErrorMessage(error) || t("退款申请提交失败，请重试"));
     } finally {
       setRefundSubmitting(false);
     }
@@ -307,7 +313,7 @@ export default function MemberCenter() {
       const cfg = tier.configs as Record<string, unknown>;
       return formatConfigValue(key, cfg[key], registry);
     },
-    [registry]
+    [registry],
   );
 
   if (!runtimeConfig.membershipEnabled) {
@@ -316,10 +322,10 @@ export default function MemberCenter() {
         <Card variant="outlined" padding="lg" radius="2xl">
           <div
             className="text-center py-12"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
             <Crown size={48} className="mx-auto mb-4" />
-            <p className="text-base">{t('会员功能暂未开放')}</p>
+            <p className="text-base">{t("会员功能暂未开放")}</p>
           </div>
         </Card>
       </div>
@@ -333,8 +339,8 @@ export default function MemberCenter() {
           <div
             className="w-8 h-8 rounded-full animate-spin"
             style={{
-              border: '2px solid var(--border-default)',
-              borderTopColor: 'var(--primary-500)',
+              border: "2px solid var(--border-default)",
+              borderTopColor: "var(--primary-500)",
             }}
           />
         </div>
@@ -349,7 +355,7 @@ export default function MemberCenter() {
         {membership && (
           <section>
             <Card
-              variant={membership.isVip ? 'elevated' : 'outlined'}
+              variant={membership.isVip ? "elevated" : "outlined"}
               padding="md"
               radius="xl"
             >
@@ -359,16 +365,16 @@ export default function MemberCenter() {
                     className="p-2.5 rounded-xl"
                     style={{
                       background: membership.isVip
-                        ? 'linear-gradient(135deg, var(--primary-400), var(--accent-400))'
-                        : 'var(--bg-tertiary)',
+                        ? "linear-gradient(135deg, var(--primary-400), var(--accent-400))"
+                        : "var(--bg-tertiary)",
                     }}
                   >
                     <Crown
                       size={24}
                       style={
                         membership.isVip
-                          ? { color: 'var(--text-inverse)' }
-                          : { color: 'var(--text-muted)' }
+                          ? { color: "var(--text-inverse)" }
+                          : { color: "var(--text-muted)" }
                       }
                     />
                   </div>
@@ -376,38 +382,38 @@ export default function MemberCenter() {
                     <div className="flex items-center gap-2">
                       <span
                         className="text-lg font-bold"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: "var(--text-primary)" }}
                       >
                         {membership.isVip
-                          ? t('VIP{level}', {
+                          ? t("VIP{level}", {
                               level: String(membership.tierLevel),
                             })
-                          : t('免费用户')}
+                          : t("免费用户")}
                       </span>
                       {membership.isVip && (
                         <span
                           className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
                           style={{
-                            background: 'var(--primary-100)',
-                            color: 'var(--primary-700)',
+                            background: "var(--primary-100)",
+                            color: "var(--primary-700)",
                           }}
                         >
                           {(() => {
                             // 永久会员 daysRemaining 为 Infinity，直接展示"永久有效"，跳过剩余天数计算
                             if (!Number.isFinite(membership.daysRemaining))
-                              return t('永久有效');
+                              return t("永久有效");
                             const m = Math.floor(membership.daysRemaining / 30);
                             const d = membership.daysRemaining % 30;
                             if (m > 0 && d > 0)
-                              return t('剩余 {months} 个月 {days} 天', {
+                              return fillTemplate("剩余 {months} 个月 {days} 天", {
                                 months: String(m),
                                 days: String(d),
                               });
                             if (m > 0)
-                              return t('剩余 {months} 个月', {
+                              return t("剩余 {months} 个月", {
                                 months: String(m),
                               });
-                            return t('剩余 {days} 天', {
+                            return t("剩余 {days} 天", {
                               days: String(membership.daysRemaining),
                             });
                           })()}
@@ -417,9 +423,9 @@ export default function MemberCenter() {
                     {membership.isVip && membership.expiresAt && (
                       <p
                         className="text-xs mt-1"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: "var(--text-tertiary)" }}
                       >
-                        {t('有效期至 {date}', {
+                        {t("有效期至 {date}", {
                           date: formatDate(membership.expiresAt),
                         })}
                       </p>
@@ -433,14 +439,14 @@ export default function MemberCenter() {
                       size="sm"
                       onClick={() => handleUpgrade()}
                     >
-                      {t('续费')}
+                      {t("续费")}
                     </Button>
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={() => handleUpgrade()}
                     >
-                      {t('升级')}
+                      {t("升级")}
                     </Button>
                   </div>
                 )}
@@ -451,18 +457,18 @@ export default function MemberCenter() {
                   <div
                     className="flex items-center gap-2 p-3 rounded-lg mt-3 text-xs"
                     style={{
-                      background: 'var(--warning-light)',
+                      background: "var(--warning-light)",
                       border:
-                        '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
+                        "1px solid color-mix(in srgb, var(--warning) 25%, transparent)",
                     }}
                   >
                     <AlertTriangle
                       size={14}
                       className="flex-shrink-0"
-                      style={{ color: 'var(--warning)' }}
+                      style={{ color: "var(--warning)" }}
                     />
-                    <span style={{ color: 'var(--text-primary)' }}>
-                      {t('即将到期，请及时续费')}
+                    <span style={{ color: "var(--text-primary)" }}>
+                      {t("即将到期，请及时续费")}
                     </span>
                   </div>
                 )}
@@ -474,18 +480,18 @@ export default function MemberCenter() {
         <section>
           <h3
             className="text-base font-semibold mb-4 flex items-center gap-2"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            <Crown size={16} style={{ color: 'var(--primary-500)' }} />
-            {t('方案对比')}
+            <Crown size={16} style={{ color: "var(--primary-500)" }} />
+            {t("方案对比")}
           </h3>
           {loading ? (
             <div className="flex justify-center py-12">
               <div
                 className="w-8 h-8 rounded-full animate-spin"
                 style={{
-                  border: '2px solid var(--border-default)',
-                  borderTopColor: 'var(--primary-500)',
+                  border: "2px solid var(--border-default)",
+                  borderTopColor: "var(--primary-500)",
                 }}
               />
             </div>
@@ -493,9 +499,9 @@ export default function MemberCenter() {
             <Card variant="filled" padding="lg" radius="xl">
               <p
                 className="text-sm text-center"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               >
-                {t('暂无可用方案')}
+                {t("暂无可用方案")}
               </p>
             </Card>
           ) : (
@@ -506,7 +512,7 @@ export default function MemberCenter() {
                 return (
                   <Card
                     key={tier.id}
-                    variant={isCurrent ? 'elevated' : 'outlined'}
+                    variant={isCurrent ? "elevated" : "outlined"}
                     padding="md"
                     radius="xl"
                     className="relative flex flex-col"
@@ -515,26 +521,26 @@ export default function MemberCenter() {
                       <span
                         className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap z-10"
                         style={{
-                          background: 'var(--primary-500)',
-                          color: 'var(--text-inverse)',
+                          background: "var(--primary-500)",
+                          color: "var(--text-inverse)",
                         }}
                       >
-                        {t('当前方案')}
+                        {t("当前方案")}
                       </span>
                     )}
                     <div className="flex items-center gap-2 mb-3">
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center"
                         style={{
-                          background: 'var(--primary-500)',
-                          color: 'var(--text-inverse)',
+                          background: "var(--primary-500)",
+                          color: "var(--text-inverse)",
                         }}
                       >
                         <Crown size={16} />
                       </div>
                       <span
                         className="text-base font-bold"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: "var(--text-primary)" }}
                       >
                         {tier.name}
                       </span>
@@ -543,23 +549,23 @@ export default function MemberCenter() {
                       {tier.level > 0 && (
                         <span
                           className="text-sm"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                         >
                           ¥
                         </span>
                       )}
                       <span
                         className="text-2xl font-extrabold"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: "var(--text-primary)" }}
                       >
-                        {tier.level === 0 ? t('免费') : priceYuan.toFixed(0)}
+                        {tier.level === 0 ? t("免费") : priceYuan.toFixed(0)}
                       </span>
                       {tier.level > 0 && (
                         <span
                           className="text-xs"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                         >
-                          {t('/月')}
+                          {t("/月")}
                         </span>
                       )}
                     </div>
@@ -573,27 +579,27 @@ export default function MemberCenter() {
                             <div
                               key={key}
                               className="flex items-center gap-2 text-xs"
-                              style={{ color: 'var(--text-secondary)' }}
+                              style={{ color: "var(--text-secondary)" }}
                             >
                               <Icon size={12} style={{ color }} />
                               <span className="flex-1 min-w-0">
-                                <span style={{ color: 'var(--text-tertiary)' }}>
-                                  {label}{' '}
+                                <span style={{ color: "var(--text-tertiary)" }}>
+                                  {label}{" "}
                                 </span>
                                 <span className="font-medium">{val}</span>
                               </span>
                             </div>
                           );
-                        }
+                        },
                       )}
                     </div>
                     <Button
                       variant={
                         isCurrent
-                          ? 'outline'
+                          ? "outline"
                           : tier.level > 0
-                            ? 'primary'
-                            : 'secondary'
+                            ? "primary"
+                            : "secondary"
                       }
                       size="sm"
                       onClick={() => handleUpgrade(tier.level)}
@@ -601,12 +607,12 @@ export default function MemberCenter() {
                       className="w-full"
                     >
                       {isCurrent
-                        ? t('当前方案')
+                        ? t("当前方案")
                         : tier.level === 0
-                          ? t('当前方案')
+                          ? t("当前方案")
                           : isVip
-                            ? t('升级')
-                            : t('开通')}
+                            ? t("升级")
+                            : t("开通")}
                     </Button>
                   </Card>
                 );
@@ -619,18 +625,18 @@ export default function MemberCenter() {
         <section>
           <h3
             className="text-base font-semibold mb-4 flex items-center gap-2"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            <Shield size={16} style={{ color: 'var(--primary-500)' }} />
-            {t('权益明细')}
+            <Shield size={16} style={{ color: "var(--primary-500)" }} />
+            {t("权益明细")}
           </h3>
           {loading ? (
             <div className="flex justify-center py-8">
               <div
                 className="w-8 h-8 rounded-full animate-spin"
                 style={{
-                  border: '2px solid var(--border-default)',
-                  borderTopColor: 'var(--primary-500)',
+                  border: "2px solid var(--border-default)",
+                  borderTopColor: "var(--primary-500)",
                 }}
               />
             </div>
@@ -638,9 +644,9 @@ export default function MemberCenter() {
             <Card variant="filled" padding="lg" radius="xl">
               <p
                 className="text-sm text-center"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               >
-                {t('暂无权益信息')}
+                {t("暂无权益信息")}
               </p>
             </Card>
           ) : (
@@ -655,11 +661,11 @@ export default function MemberCenter() {
                   example,
                 }) => {
                   const currentCfg = tiers.find(
-                    (t) => t.level === currentTierLevel
+                    (t) => t.level === currentTierLevel,
                   )?.configs as Record<string, unknown> | undefined;
                   const currentVal = currentCfg?.[key];
                   const hasStorageGauge =
-                    key === 'quota.personal_storage_mb' && storageInfo;
+                    key === "quota.personal_storage_mb" && storageInfo;
                   // 存储用量百分比：由 used/total 计算（收敛到 @cloudcad/platform，
                   // 与后端 storage-info.service 的 usagePercent 同公式）
                   const storagePct = hasStorageGauge
@@ -681,17 +687,17 @@ export default function MemberCenter() {
                           <div className="flex items-center gap-2 mb-2">
                             <span
                               className="text-base font-bold"
-                              style={{ color: 'var(--text-primary)' }}
+                              style={{ color: "var(--text-primary)" }}
                             >
                               {label}
                             </span>
                             {currentVal !== undefined && (
                               <Tag variant="primary" size="sm">
-                                {t('当前: {val}', {
+                                {t("当前: {val}", {
                                   val: formatConfigValue(
                                     key,
                                     currentVal,
-                                    registry
+                                    registry,
                                   ),
                                 })}
                               </Tag>
@@ -703,22 +709,22 @@ export default function MemberCenter() {
                             <div className="mb-3">
                               <div
                                 className="flex items-center justify-between text-xs mb-1"
-                                style={{ color: 'var(--text-tertiary)' }}
+                                style={{ color: "var(--text-tertiary)" }}
                               >
                                 <span>
-                                  {t('已用 {used}', {
+                                  {t("已用 {used}", {
                                     used: formatFileSize(storageInfo!.used),
                                   })}
                                 </span>
                                 <span>
-                                  {t('总计 {total}', {
+                                  {t("总计 {total}", {
                                     total: formatFileSize(storageInfo!.total),
                                   })}
                                 </span>
                               </div>
                               <div
                                 className="h-2 rounded-full overflow-hidden"
-                                style={{ background: 'var(--bg-tertiary)' }}
+                                style={{ background: "var(--bg-tertiary)" }}
                               >
                                 <div
                                   className="h-full rounded-full transition-all duration-500"
@@ -726,18 +732,18 @@ export default function MemberCenter() {
                                     width: `${storagePct}%`,
                                     background:
                                       storagePct > 90
-                                        ? 'var(--error)'
+                                        ? "var(--error)"
                                         : storagePct > 70
-                                          ? 'var(--warning)'
+                                          ? "var(--warning)"
                                           : color,
                                   }}
                                 />
                               </div>
                               <div
                                 className="text-xs mt-1"
-                                style={{ color: 'var(--text-tertiary)' }}
+                                style={{ color: "var(--text-tertiary)" }}
                               >
-                                {t('使用率 {pct}%', {
+                                {t("使用率 {pct}%", {
                                   pct: String(storagePct.toFixed(1)),
                                 })}
                               </div>
@@ -756,12 +762,12 @@ export default function MemberCenter() {
                                   className="text-xs flex items-center gap-1"
                                   style={{
                                     color: isCurrentTier
-                                      ? 'var(--primary-500)'
-                                      : 'var(--text-muted)',
+                                      ? "var(--primary-500)"
+                                      : "var(--text-muted)",
                                   }}
                                 >
                                   {tier.level === 0
-                                    ? t('免费')
+                                    ? t("免费")
                                     : `VIP${tier.level}`}
                                   <span className="font-semibold">{val}</span>
                                   {isCurrentTier && <Check size={10} />}
@@ -773,21 +779,21 @@ export default function MemberCenter() {
                           {/* 超出后 */}
                           <div
                             className="flex items-start gap-2 p-3 rounded-lg mb-2 text-xs"
-                            style={{ background: 'var(--bg-tertiary)' }}
+                            style={{ background: "var(--bg-tertiary)" }}
                           >
                             <AlertTriangle
                               size={14}
                               className="flex-shrink-0 mt-0.5"
-                              style={{ color: 'var(--warning)' }}
+                              style={{ color: "var(--warning)" }}
                             />
                             <div>
                               <span
                                 className="font-semibold"
-                                style={{ color: 'var(--text-primary)' }}
+                                style={{ color: "var(--text-primary)" }}
                               >
-                                {t('超出后：')}
+                                {t("超出后：")}
                               </span>
-                              <span style={{ color: 'var(--text-secondary)' }}>
+                              <span style={{ color: "var(--text-secondary)" }}>
                                 {t(boundaryText)}
                               </span>
                             </div>
@@ -796,13 +802,13 @@ export default function MemberCenter() {
                           {/* 举例 */}
                           <div
                             className="flex items-start gap-2 text-xs"
-                            style={{ color: 'var(--text-tertiary)' }}
+                            style={{ color: "var(--text-tertiary)" }}
                           >
                             <span
                               className="font-medium flex-shrink-0"
-                              style={{ color: 'var(--text-muted)' }}
+                              style={{ color: "var(--text-muted)" }}
                             >
-                              💡 {t('举例：')}
+                              💡 {t("举例：")}
                             </span>
                             <span>{t(example)}</span>
                           </div>
@@ -810,7 +816,7 @@ export default function MemberCenter() {
                       </div>
                     </Card>
                   );
-                }
+                },
               )}
             </div>
           )}
@@ -820,10 +826,10 @@ export default function MemberCenter() {
         <section>
           <h3
             className="text-base font-semibold mb-4 flex items-center gap-2"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            <HelpCircle size={16} style={{ color: 'var(--primary-500)' }} />
-            {t('常见问题')}
+            <HelpCircle size={16} style={{ color: "var(--primary-500)" }} />
+            {t("常见问题")}
           </h3>
           <Card variant="outlined" padding="none" radius="xl">
             {faqItems.map((item, idx) => {
@@ -832,7 +838,7 @@ export default function MemberCenter() {
                 <div
                   key={idx}
                   className="border-b last:border-b-0"
-                  style={{ borderColor: 'var(--border-default)' }}
+                  style={{ borderColor: "var(--border-default)" }}
                 >
                   <button
                     onClick={() => setExpandedFaq(open ? null : idx)}
@@ -840,7 +846,7 @@ export default function MemberCenter() {
                   >
                     <span
                       className="text-sm font-medium flex-1"
-                      style={{ color: 'var(--text-primary)' }}
+                      style={{ color: "var(--text-primary)" }}
                     >
                       {t(item.q)}
                     </span>
@@ -848,13 +854,13 @@ export default function MemberCenter() {
                       <ChevronUp
                         size={16}
                         className="flex-shrink-0"
-                        style={{ color: 'var(--text-muted)' }}
+                        style={{ color: "var(--text-muted)" }}
                       />
                     ) : (
                       <ChevronDown
                         size={16}
                         className="flex-shrink-0"
-                        style={{ color: 'var(--text-muted)' }}
+                        style={{ color: "var(--text-muted)" }}
                       />
                     )}
                   </button>
@@ -863,8 +869,8 @@ export default function MemberCenter() {
                       <div
                         className="p-3 rounded-lg text-sm"
                         style={{
-                          background: 'var(--bg-tertiary)',
-                          color: 'var(--text-secondary)',
+                          background: "var(--bg-tertiary)",
+                          color: "var(--text-secondary)",
                         }}
                       >
                         {t(item.a)}
@@ -881,10 +887,10 @@ export default function MemberCenter() {
         <section>
           <h3
             className="text-base font-semibold mb-4 flex items-center gap-2"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            <CreditCard size={16} style={{ color: 'var(--primary-500)' }} />
-            {t('订单历史')}
+            <CreditCard size={16} style={{ color: "var(--primary-500)" }} />
+            {t("订单历史")}
           </h3>
           <Card variant="outlined" padding="none" radius="xl">
             {ordersLoading ? (
@@ -892,48 +898,48 @@ export default function MemberCenter() {
                 <div
                   className="w-8 h-8 rounded-full animate-spin"
                   style={{
-                    border: '2px solid var(--border-default)',
-                    borderTopColor: 'var(--primary-500)',
+                    border: "2px solid var(--border-default)",
+                    borderTopColor: "var(--primary-500)",
                   }}
                 />
               </div>
             ) : orders.length === 0 ? (
               <div
                 className="py-12 text-center"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               >
                 <CreditCard size={32} className="mx-auto mb-2" />
-                <p className="text-sm">{t('暂无订单记录')}</p>
+                <p className="text-sm">{t("暂无订单记录")}</p>
               </div>
             ) : (
               <div
                 className="divide-y"
-                style={{ borderColor: 'var(--border-default)' }}
+                style={{ borderColor: "var(--border-default)" }}
               >
                 {orders.map((order) => {
-                  const isPending = order.status === 'PENDING';
+                  const isPending = order.status === "PENDING";
                   // 最近一条退款申请：PENDING 时展示"审核中"并禁用再次申请；REJECTED 后允许重新申请并展示驳回意见
                   const latestApplication =
                     order.refundApplications?.[0] ?? null;
-                  const refundPending = latestApplication?.status === 'PENDING';
+                  const refundPending = latestApplication?.status === "PENDING";
                   const refundRejected =
-                    latestApplication?.status === 'REJECTED';
+                    latestApplication?.status === "REJECTED";
                   const canApplyRefund =
-                    order.status === 'SUCCEEDED' && !refundPending;
+                    order.status === "SUCCEEDED" && !refundPending;
                   const statusLabel = refundPending
-                    ? t('退款审核中')
+                    ? t("退款审核中")
                     : refundRejected
-                      ? t('退款已驳回')
-                      : STATUS_LABELS[order.status] || order.status;
+                      ? t("退款已驳回")
+                      : getStatusLabel(order.status);
                   const statusVariant: TagVariant = refundPending
-                    ? 'warning'
+                    ? "warning"
                     : refundRejected
-                      ? 'error'
-                      : STATUS_COLORS[order.status] || 'neutral';
+                      ? "error"
+                      : STATUS_COLORS[order.status] || "neutral";
                   return (
                     <div
                       key={order.id}
-                      className={`flex items-center justify-between p-4 sm:px-6 ${isPending ? 'cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors' : ''}`}
+                      className={`flex items-center justify-between p-4 sm:px-6 ${isPending ? "cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors" : ""}`}
                       onClick={
                         isPending ? () => handleRepay(order.orderNo) : undefined
                       }
@@ -941,13 +947,13 @@ export default function MemberCenter() {
                       <div className="min-w-0 flex-1">
                         <p
                           className="text-sm font-medium truncate"
-                          style={{ color: 'var(--text-primary)' }}
+                          style={{ color: "var(--text-primary)" }}
                         >
                           {order.description || order.orderNo}
                         </p>
                         <p
                           className="text-xs mt-0.5"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                         >
                           {formatDate(order.createdAt)}
                           <span className="ml-2 font-mono">
@@ -957,9 +963,9 @@ export default function MemberCenter() {
                         {refundRejected && latestApplication?.reviewNote && (
                           <p
                             className="text-xs mt-0.5"
-                            style={{ color: 'var(--text-tertiary)' }}
+                            style={{ color: "var(--text-tertiary)" }}
                           >
-                            {t('驳回原因：{note}', {
+                            {t("驳回原因：{note}", {
                               note: latestApplication.reviewNote,
                             })}
                           </p>
@@ -968,7 +974,7 @@ export default function MemberCenter() {
                       <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                         <span
                           className="text-sm font-semibold"
-                          style={{ color: 'var(--text-primary)' }}
+                          style={{ color: "var(--text-primary)" }}
                         >
                           ¥{centsToYuan(order.amount)}
                         </span>
@@ -982,11 +988,11 @@ export default function MemberCenter() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setRefundTarget(order);
-                              setRefundReason('');
-                              setRefundError('');
+                              setRefundReason("");
+                              setRefundError("");
                             }}
                           >
-                            {t('申请退款')}
+                            {t("申请退款")}
                           </Button>
                         )}
                       </div>
@@ -1003,22 +1009,22 @@ export default function MemberCenter() {
       {repayLoading && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             inset: 0,
             zIndex: Z_LAYERS.MODAL,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <div
-            style={{ display: 'flex', justifyContent: 'center', padding: 48 }}
+            style={{ display: "flex", justifyContent: "center", padding: 48 }}
           >
             <div
               className="w-8 h-8 rounded-full animate-spin"
               style={{
-                border: '2px solid var(--border-default)',
-                borderTopColor: 'var(--primary-500)',
+                border: "2px solid var(--border-default)",
+                borderTopColor: "var(--primary-500)",
               }}
             />
           </div>
@@ -1026,14 +1032,14 @@ export default function MemberCenter() {
       )}
       <WechatPayModal
         open={!!repayPayment && !repayLoading}
-        orderNo={repayPayment?.orderNo ?? ''}
+        orderNo={repayPayment?.orderNo ?? ""}
         amount={repayPayment?.amount ?? 0}
         payParams={repayPayment?.payParams ?? null}
         codeUrl={repayPayment?.codeUrl ?? null}
         redirectUrl={repayPayment?.redirectUrl ?? null}
         onSuccess={async () => {
           setRepayPayment(null);
-          setRepayError('');
+          setRepayError("");
           // 支付成功后刷新会员状态 + 订单列表，避免整页刷新才更新
           await refreshAfterPayment();
           loadOrders();
@@ -1041,7 +1047,7 @@ export default function MemberCenter() {
         onError={(msg) => setRepayError(msg)}
         onClose={() => {
           setRepayPayment(null);
-          setRepayError('');
+          setRepayError("");
         }}
       />
 
@@ -1049,22 +1055,22 @@ export default function MemberCenter() {
       {autoLoading && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             inset: 0,
             zIndex: Z_LAYERS.MODAL,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <div
-            style={{ display: 'flex', justifyContent: 'center', padding: 48 }}
+            style={{ display: "flex", justifyContent: "center", padding: 48 }}
           >
             <div
               className="w-8 h-8 rounded-full animate-spin"
               style={{
-                border: '2px solid var(--border-default)',
-                borderTopColor: 'var(--primary-500)',
+                border: "2px solid var(--border-default)",
+                borderTopColor: "var(--primary-500)",
               }}
             />
           </div>
@@ -1073,15 +1079,15 @@ export default function MemberCenter() {
       {autoError && !autoLoading && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 16,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            left: "50%",
+            transform: "translateX(-50%)",
             zIndex: Z_LAYERS.MODAL,
-            padding: '8px 16px',
+            padding: "8px 16px",
             borderRadius: 8,
-            background: 'var(--bg-elevated)',
-            color: 'var(--danger-500)',
+            background: "var(--bg-elevated)",
+            color: "var(--danger-500)",
           }}
         >
           {autoError}
@@ -1089,7 +1095,7 @@ export default function MemberCenter() {
       )}
       <WechatPayModal
         open={!!autoPayment && !autoLoading}
-        orderNo={autoPayment?.orderNo ?? ''}
+        orderNo={autoPayment?.orderNo ?? ""}
         amount={autoPayment?.amount ?? 0}
         payParams={autoPayment?.payParams ?? null}
         codeUrl={autoPayment?.codeUrl ?? null}
@@ -1097,7 +1103,7 @@ export default function MemberCenter() {
         orderLabel={autoPayment?.orderLabel}
         onSuccess={async () => {
           setAutoPayment(null);
-          setAutoError('');
+          setAutoError("");
           // 支付成功后刷新会员状态 + 订单列表，避免整页刷新才更新
           await refreshAfterPayment();
           loadOrders();
@@ -1105,7 +1111,7 @@ export default function MemberCenter() {
         onError={(msg) => setAutoError(msg)}
         onClose={() => {
           setAutoPayment(null);
-          setAutoError('');
+          setAutoError("");
         }}
       />
 
@@ -1113,45 +1119,45 @@ export default function MemberCenter() {
       <Modal
         isOpen={!!refundTarget}
         onClose={() => !refundSubmitting && setRefundTarget(null)}
-        title={t('申请退款')}
+        title={t("申请退款")}
         size="sm"
       >
         <div className="space-y-4">
           {refundTarget && (
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {t('订单 {orderNo}，退款金额 {amount}', {
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              {t("订单 {orderNo}，退款金额 {amount}", {
                 orderNo: refundTarget.orderNo,
                 amount: `¥${centsToYuan(refundTarget.amount)}`,
               })}
             </p>
           )}
-          {refundTarget?.refundApplications?.[0]?.status === 'REJECTED' && (
+          {refundTarget?.refundApplications?.[0]?.status === "REJECTED" && (
             <p
               className="text-xs rounded-lg p-2"
               style={{
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-secondary)',
+                background: "var(--bg-tertiary)",
+                color: "var(--text-secondary)",
               }}
             >
-              {t('上次退款申请被驳回：{note}', {
-                note: refundTarget.refundApplications[0].reviewNote ?? '',
+              {t("上次退款申请被驳回：{note}", {
+                note: refundTarget.refundApplications[0].reviewNote ?? "",
               })}
             </p>
           )}
           <Textarea
-            placeholder={t('请填写退款原因（必填）')}
+            placeholder={t("请填写退款原因（必填）")}
             value={refundReason}
             maxLength={500}
             rows={4}
             onChange={(e) => setRefundReason(e.target.value)}
           />
           {refundError && (
-            <p className="text-xs" style={{ color: 'var(--danger-500)' }}>
+            <p className="text-xs" style={{ color: "var(--danger-500)" }}>
               {refundError}
             </p>
           )}
-          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            {t('提交后需管理员审核，审核结果将通过邮件通知')}
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+            {t("提交后需管理员审核，审核结果将通过邮件通知")}
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -1159,14 +1165,14 @@ export default function MemberCenter() {
               onClick={() => setRefundTarget(null)}
               disabled={refundSubmitting}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               variant="danger"
               onClick={handleApplyRefund}
               loading={refundSubmitting}
             >
-              {t('提交申请')}
+              {t("提交申请")}
             </Button>
           </div>
         </div>

@@ -7,15 +7,15 @@
  * 分类卡片：可折叠的分组容器 + 分类级批量恢复默认入口。
  */
 
-import React from 'react';
-import { ChevronDown, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
-import styles from './RuntimeConfigPage.module.css';
-import { ConfigItemRow } from './ConfigItemRow';
-import type { ConfigGroup, ConfigItem, DependencyStatus } from './types';
-import type { DraftValue } from './validate';
-import { t } from '@/languages';
+import React from "react";
+import { ChevronDown, RotateCcw } from "lucide-react";
+import { Button, Tag } from "@/components/ui";
+
+import styles from "./RuntimeConfigPage.module.css";
+import { ConfigItemRow } from "./ConfigItemRow";
+import type { ConfigGroup, ConfigItem, DependencyStatus } from "./types";
+import type { DraftValue } from "./validate";
+import { t } from "@/languages";
 
 /** 传给行组件的每组回调集合 */
 export interface RowActions {
@@ -80,17 +80,17 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
           <span className={styles.cardTitle}>{group.label}</span>
           <span className={styles.cardCount}>
             {group.items.length}
-            {t(' 项配置')}
+            {t(" 项配置")}
           </span>
           {group.modifiedCount > 0 && (
             <Tag variant="warning">
               {group.modifiedCount}
-              {t(' 项修改')}
+              {t(" 项修改")}
             </Tag>
           )}
           <ChevronDown
             size={16}
-            className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
+            className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ""}`}
           />
         </button>
         <Button
@@ -103,8 +103,8 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
           data-testid="rc-reset-category"
           tooltip={
             actions.canManageConfig
-              ? t('恢复本分类全部配置为默认值')
-              : t('只读权限：无修改配置')
+              ? t("恢复本分类全部配置为默认值")
+              : t("只读权限：无修改配置")
           }
         />
       </div>
@@ -121,10 +121,12 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                 saving={actions.saving.has(item.key)}
                 canManageConfig={actions.canManageConfig}
                 secretVisible={actions.secretVisible.has(item.key)}
-                fieldError={actions.fieldErrors[item.key] ?? ''}
+                fieldError={actions.fieldErrors[item.key] ?? ""}
                 highlight={actions.highlightKey === item.key}
                 dependencyStatus={actions.dependencyStatus.get(item.key) ?? []}
-                onDraftChange={(value) => actions.onDraftChange(item.key, value)}
+                onDraftChange={(value) =>
+                  actions.onDraftChange(item.key, value)
+                }
                 onFormatJson={() => actions.onFormatJson(item.key)}
                 onToggleSecret={() => actions.onToggleSecret(item.key)}
                 onSave={() => actions.onSave(item.key)}
@@ -137,7 +139,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
             if (group.subgroups.length > 0) {
               return group.subgroups.map((sub) => (
                 <div
-                  key={sub.subgroup || '__unsorted__'}
+                  key={sub.subgroup || "__unsorted__"}
                   className={styles.subgroupSection}
                 >
                   {sub.subgroup && (

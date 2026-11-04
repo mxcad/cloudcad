@@ -1,0 +1,196 @@
+diff --git a/src/commands/translate/baidu.provider.js b/src/commands/translate/baidu.provider.js
+index 36d4f1722f5a4e341c1a497791c06eedf29e4266..d9b5ddd3fa9fdfaec8666508daacc19053e331a0 100644
+--- a/src/commands/translate/baidu.provider.js
++++ b/src/commands/translate/baidu.provider.js
+@@ -14,30 +14,41 @@ const axios = require('axios');
+ //     54003: "访问频率受限 - 请降低您的调用频率，或在控制台进行身份认证后切换为高级版/尊享版",
+ //     54004: "账户余额不足 - 请前往管理控制台为账户充值",
+ //     54005: "长query请求频繁 - 请降低长query的发送频率，3s后再试",
+-//     58000: "客户端IP非法 - 检查个人资料里填写的IP地址是否正确，可前往开发者信息-基本信息修改",
+-//     58001: "译文语言方向不支持 - 检查译文语言是否在语言列表里",
++//     58000: "客户端IP非法 - 检查个人资料里填写的IP是否正确",
++//     58001: "译文语言方向不支持 - 请检查译文语言是否在语言列表里",
+ //     58002: "服务当前已关闭 - 请前往管理控制台开启服务",
+ //     58003: "此IP已被封禁 - 同一IP当日使用多个APPID发送翻译请求，则该IP将被封禁当日请求权限，次日解封。请勿将APPID和密钥填写到第三方软件中。",
+ //     90107: "认证未通过或未生效 - 请前往我的认证查看认证进度",
+ //     20003: "请求内容存在安全风险 - 请检查请求内容"
+ // }
+ 
++/**
++ * 插值变量占位 token：11 位数字（9876543210 + 序号）。
++ * 百度翻译从不改写纯数字串，而旧版 `__$_$_$__` 哨兵会被百度
++ * 插入空格/重复/转成 `______`，导致还原正则失配、垃圾字符泄漏进译文
++ * （如 `Register and get VIP1 free trial for __ $_ $_ $_ $__ months`）。
++ * 数字 token 从机制上杜绝这类损坏。
++ */
++function interpToken(index){
++    return `9876543210${index}`
++}
++
+ /**
+  * 文本中的插值变量不进行翻译，所以需要进行替换为特殊字符，翻译后再替换回来
+- * 
+- * 如“My name is {},I am {} years old” 先替换为“My name is __$_$_$__,I am __$_$_$__ years old” 
++ *
++ * 如“My name is {a},I am {b} years old” 先替换为“My name is 98765432100,I am 98765432101 years old”
+  * 翻译后再替换回来
+- *  
+- * @param {String | Object} messages 
++ *
++ * @param {String | Object} messages
+  */
+ function replaceInterpVars(messages){
+     const interpVars = []
+     const msgs = Array.isArray(messages) ? messages : Object.keys(messages)
+     const replacedMessages = msgs.map((message)=>{
+-        let vars=[]
+-        let result = message.replaceAll(/\{\s*.*?\s*\}/gm,(matched)=>{
++        const vars=[]
++        const result = message.replaceAll(/\{\s*.*?\s*\}/gm,(matched)=>{
+             vars.push(matched)
+-            return `__$_$_$__`
++            return interpToken(vars.length-1)
+         })
+         interpVars.push(vars)
+         return result
+@@ -46,30 +57,41 @@ function replaceInterpVars(messages){
+ }
+ 
+ /**
+- * 将翻译后的内容还原为插值变量
++ * 将翻译后的内容还原为插值变量（按 token 精确替换，不依赖正则容错）
+  * @param {String[]} messages   翻译后的内容
+- * @param {*} interpVars 
++ * @param {*} interpVars
+  */
+-function restoreInterpVars(messages,interpVars){ 
++function restoreInterpVars(messages,interpVars){
+     return messages.map((message,index)=>{
+-        let i = 0
+-        return message.replaceAll(/__\s*\$_\s*\$_\s*\$__/gm,()=>interpVars[index][i++])
++        let result = message
++        interpVars[index].forEach((variable,i)=>{
++            result = result.split(interpToken(i)).join(variable)
++        })
++        return result
+     })
+ }
+ /**
+  * 在翻译内容中如果包含|,()等在插值变量里面需要的符号时，百度翻译会将其转成全角符号，这会导致插值变量无法识别，所以需要转回来
+- * @param {*} message 
+- * @returns 
++ * @param {*} message
++ * @returns
+  */
+ function fixMesssage(message){
+     return message.replaceAll("｜", "|")
+                     .replaceAll("，", ",")
+                     .replaceAll("（", "(")
+-                    .replaceAll("）", ")");
+-} 
++                    .replaceAll("）", ")")
++                    .replace(/[０-９]/g,(ch)=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0));
++}
++
++/** 统计文本中插值变量数量（与 replaceInterpVars 的匹配规则一致） */
++function countInterpVars(message){
++    const matches = message.match(/\{\s*.*?\s*\}/gm)
++    return matches ? matches.length : 0
++}
++
+ /**
+  * q	  string	是	请求翻译query	UTF-8编码
+- * from	  string	是	翻译源语言	可设置为auto
++ * from	  string	是	请求源语言	可设置为auto
+  * to	  string	是	翻译目标语言	不可设置为auto
+  * appid  string	是	APPID	可在管理控制台查看
+  * salt	  string	是	随机数	可为字母或数字的字符串
+@@ -79,40 +101,59 @@ function fixMesssage(message){
+ */
+ module.exports = function(params){
+     const { key:appkey,id:appid ,url:baseurl = "http://api.fanyi.baidu.com/api/trans/vip/translate" } = params
++    const baiduTranslate = async (texts,from,to)=>{
++        const salt = new Date().getTime()
++        const sign = md5(`${appid}${texts}${salt}${appkey}`);
++        const query = qs.stringify({
++            q:texts,
++            from,
++            to,
++            appid,
++            salt,
++            sign
++        });
++        const response = await axios.get(`${baseurl}?${query}`);
++        const data = response.data;
++        if (data.error_code) {
++            throw new Error(`${data.error_msg}(code=${data.error_code})`);
++        }
++        return data.trans_result.map(item => fixMesssage(item.dst));
++    }
+     return {
+-        translate:async (texts=[],from="zh",to="en")=>{           
++        translate:async (texts=[],from="zh",to="en")=>{
+             from = baiduTagMap[from] || from;
+-            to = baiduTagMap[to] || to; 
+-                
++            to = baiduTagMap[to] || to;
++
+             const [fixedTexts,interpVars] = replaceInterpVars(texts)
+-            texts = fixedTexts.join("\n") 
+- 
+-            // saltStep1. 拼接字符串1：
+-            // 拼接[appid=2015063000000001][q=apple][salt=1435660288][密钥=12345678]得到字符串1：“2015063000000001apple143566028812345678”
+-            // Step2. 计算签名：（对字符串1做MD5加密）
+-            // sign=MD5(2015063000000001apple143566028812345678)，得到sign=f89f9594663708c1605f3d736d01d2d4
+-            const salt = new Date().getTime()
+-            const sign = md5(`${appid}${texts}${salt}${appkey}`);
+-            let params = qs.stringify({
+-                q:texts,
+-                from,
+-                to,
+-                appid,
+-                salt,
+-                sign
+-            });   
+-            try {
+-                const response = await axios.get(`${baseurl}?${params}`);
+-                const data = response.data;
+-                if (data.error_code) {
+-                    throw new Error(`${data.error_msg}(code=${data.error_code})`);
+-                } else {
+-                    const result = data.trans_result.map(item => fixMesssage(item.dst));
+-                    return restoreInterpVars(result, interpVars);
++            let results = await baiduTranslate(fixedTexts.join("\n"),from,to)
++            results = restoreInterpVars(results,interpVars)
++
++            // 校验：译文还原后的插值变量数量必须与原文一致。百度偶发把整行吞掉/改写，
++            // 对不合格的行单独重试（最多 3 次）；仍失败则回退原文，
++            // 让该条保持「未翻译」状态（下次运行会再试），绝不写入损坏译文。
++            const expectedVars = interpVars.map(vars=>vars.length)
++            const isOk = (result,index)=>countInterpVars(result)===expectedVars[index]
++            const MAX_RETRY = 3
++            for(let round=0;round<MAX_RETRY;round++){
++                const badIndexes = []
++                results.forEach((result,index)=>{
++                    if(!isOk(result,index)) badIndexes.push(index)
++                })
++                if(badIndexes.length===0) break
++                for(const index of badIndexes){
++                    try{
++                        const [retryFixed,retryVars] = replaceInterpVars([fixedTexts[index]])
++                        const retryResults = await baiduTranslate(retryFixed.join("\n"),from,to)
++                        const restored = restoreInterpVars(retryResults,retryVars)
++                        if(countInterpVars(restored[0])===expectedVars[index]){
++                            results[index] = restored[0]
++                        }
++                    }catch(e){ /* 保留上一轮结果，进入下一轮重试 */ }
+                 }
+-            } catch (err) {
+-                throw err;
+             }
++            // 仍不合格的行回退为原文（含 {占位符}），保持「未翻译」状态
++            results = results.map((result,index)=>isOk(result,index) ? result : texts[index])
++            return results
+         }
+ 
+     }

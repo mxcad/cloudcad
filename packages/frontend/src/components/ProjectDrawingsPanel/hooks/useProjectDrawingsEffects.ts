@@ -281,7 +281,7 @@ export function useProjectDrawingsEffects({
   // API 错误时显示 toast
   useEffect(() => {
     if (loadNodesError) {
-      showToast(t(`加载失败: ${loadNodesError}`), 'error');
+      showToast(t('加载失败: {error}', { error: String(loadNodesError) }), 'error');
     }
   }, [loadNodesError]);
 

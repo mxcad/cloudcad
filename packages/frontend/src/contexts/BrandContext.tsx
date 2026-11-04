@@ -18,6 +18,8 @@ import {
   type RuntimeBrandConfig,
   type RuntimeBrandFieldOverrides,
 } from '../constants/appConfig';
+import { useVoerkaI18n } from '@voerkai18n/react';
+import { i18nScope } from '@/languages';
 import { applyBrandFavicon, saveBrandChromeCache } from '@/lib/brandChrome';
 import { queryKeys } from '@/lib/queryKeys';
 import { STALE_TIME_DEFAULT } from '@/constants/timeouts';
@@ -36,6 +38,10 @@ const BrandContext = createContext<BrandContextValue>({
 });
 
 export function BrandProvider({ children }: { children: ReactNode }) {
+  // 内置品牌标题按当前语言切换（见 appConfig.getLocalizedDefaultAppName），
+  // 订阅语言变化让首帧缓存 effect 在切语言后重写，下次打开页面首帧标题不闪旧语言
+  const { activeLanguage } = useVoerkaI18n(i18nScope);
+
   // server 配置（/brand/config.json）统一走 react-query（ADR-0030）
   // AppInitializer 已通过 fetchQuery 预取并缓存，queryFn 命中缓存直接返回
   const { data, isLoading } = useQuery({
@@ -100,7 +106,7 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     notifyBrandChanges();
     applyBrandFavicon(brand.logo);
     saveBrandChromeCache(brand.title, brand.logo);
-  }, [effectiveConfig]);
+  }, [effectiveConfig, activeLanguage]);
 
   return (
     <BrandContext.Provider

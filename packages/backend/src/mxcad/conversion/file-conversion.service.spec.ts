@@ -4,15 +4,21 @@
 /////////////////////////////////////////////////////////////////////////////////
 // 只 mock 真正起子进程的 runMxcadAssembly；结果解读层（interpretEngineRun /
 // salvageSuccessResult / resolveEngineNewpath）是纯函数，保持真实实现——它正是被测对象之一。
+// isArtifactLocked 亦 mock：真实实现对「不存在产物」返回 false（既有测试不受影响），
+// 但「被占用」无法用 Node 自锁模拟（Node 打开默认共享写），故需 mockReturnValue(true) 触发检测分支。
 jest.mock("@cloudcad/engine-exec", () => {
 	const actual = jest.requireActual("@cloudcad/engine-exec");
-	return { ...actual, runMxcadAssembly: jest.fn() };
+	return {
+		...actual,
+		runMxcadAssembly: jest.fn(),
+		isArtifactLocked: jest.fn(),
+	};
 });
 
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { runMxcadAssembly } from "@cloudcad/engine-exec";
+import { runMxcadAssembly, isArtifactLocked } from "@cloudcad/engine-exec";
 import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { FileConversionService } from "./file-conversion.service";
@@ -415,7 +421,51 @@ describe("FileConversionService", () => {
 			expect(mockRun).not.toHaveBeenCalled();
 		});
 
-		it("产物不存在：回落真实转换", async () => {
+		// 「无缓存打开」重转：引擎写已存在的 mxweb 会报 write file error（code 2，
+		// 实例 2026-11-03 移动端无缓存打开「01海绵城市专篇设计说明_t3.dwg」失败，
+		// 产物 4b298d….dwg.mxweb 已就位、重转失败后仍未被覆盖）。重转前必须清理旧产物。
+		it("forceConvert=true 且产物已存在：转换前删除旧产物与 preloading.json", async () => {
+			const artifactPath = path.join(uploadDir, "abc.dwg.mxweb");
+			const preloadingPath = `${artifactPath}_preloading.json`;
+			fs.writeFileSync(artifactPath, "mxweb-bytes");
+			fs.writeFileSync(preloadingPath, "{}");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				forceConvert: true,
+			});
+
+			expect(fs.existsSync(artifactPath)).toBe(false);
+			expect(fs.existsSync(preloadingPath)).toBe(false);
+				expect(mockRun).toHaveBeenCalledTimes(1);
+			});
+
+			it("产物被占用（无缓存打开/forceConvert）：返回 file-locked 可重试，不调引擎", async () => {
+				const artifactPath = path.join(uploadDir, "abc.dwg.mxweb");
+				fs.writeFileSync(artifactPath, "mxweb-bytes");
+				(isArtifactLocked as jest.Mock).mockReturnValue(true);
+				const svc = await createServiceWithUploadPath(uploadDir);
+				const mockRun = runMxcadAssembly as unknown as jest.Mock;
+				mockRun.mockClear();
+
+				const r = await svc.convertFile({
+					srcPath: "/tmp/f.dwg",
+					fileHash: "abc",
+					forceConvert: true,
+				});
+
+				expect(r.isOk).toBe(false);
+				expect(r.errorCategory).toBe("file-locked");
+				expect(r.transient).toBe(true);
+				expect(r.ret.message).toContain("被占用");
+				expect(mockRun).not.toHaveBeenCalled();
+			});
+
+			it("产物不存在：回落真实转换", async () => {
 			const svc = await createServiceWithUploadPath(uploadDir);
 			const mockRun = runMxcadAssembly as unknown as jest.Mock;
 			mockRun.mockClear();

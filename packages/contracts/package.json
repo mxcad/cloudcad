@@ -21,6 +21,10 @@
     "./runtime-config/defaults": {
       "types": "./dist/runtime-config/defaults.d.ts",
       "default": "./dist/runtime-config/defaults.js"
+    },
+    "./runtime-config/taxonomy": {
+      "types": "./dist/runtime-config/taxonomy.d.ts",
+      "default": "./dist/runtime-config/taxonomy.js"
     }
   },
   "scripts": {

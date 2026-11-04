@@ -4,8 +4,8 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { useQuery } from '@tanstack/react-query';
+} from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeftRight,
@@ -33,29 +33,34 @@ import {
   UserCog,
   UserMinus,
   UserPlus,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   memberControllerGetProjectMembers,
   nodeControllerGetParentContext,
   projectAuditLogControllerFindByProject,
-} from '@/api-sdk';
-import { Button } from '@/components/ui/Button';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { Pagination } from '@/components/ui/Pagination';
-import { Select } from '@/components/ui/Select';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { queryKeys } from '@/lib/queryKeys';
-import { AuditAction } from '@/pages/AuditLogPage/types';
+} from "@/api-sdk";
+import {
+  Button,
+  DatePicker,
+  Input,
+  Modal,
+  Pagination,
+  Select,
+  Tooltip,
+  UserAvatar,
+} from "@/components/ui";
+
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { useAccumulatedPagination } from "@/hooks/common/useAccumulatedPagination";
+import { useScrollPagination } from "@/hooks/common/useScrollPagination";
+import { queryKeys } from "@/lib/queryKeys";
+import { AuditAction } from "@/pages/AuditLogPage/types";
 import {
   formatDate,
   getActionDisplayName,
-} from '@/pages/AuditLogPage/constants';
-import { getActionDetail, type AuditLog } from '@/utils/auditActionTemplates';
+} from "@/pages/AuditLogPage/constants";
+import { getActionDetail, type AuditLog } from "@/utils/auditActionTemplates";
 
 interface OperationHistoryModalProps {
   isOpen: boolean;
@@ -129,44 +134,50 @@ const ACTION_ICON: Record<
   string,
   { icon: React.ElementType; colorClass: string }
 > = {
-  FILE_CREATE: { icon: FilePlus, colorClass: 'text-[var(--success)]' },
-  FILE_UPDATE: { icon: FileEdit, colorClass: 'text-[var(--info)]' },
-  FILE_DELETE: { icon: Trash2, colorClass: 'text-[var(--error)]' },
-  FILE_SHARE: { icon: Share2, colorClass: 'text-[var(--primary-600)]' },
-  FOLDER_CREATE: { icon: FolderPlus, colorClass: 'text-[var(--success)]' },
-  NODE_RENAME: { icon: PenLine, colorClass: 'text-[var(--info)]' },
-  NODE_MOVE: { icon: MoveRight, colorClass: 'text-[var(--warning)]' },
-  NODE_COPY: { icon: Copy, colorClass: 'text-[var(--primary-600)]' },
-  NODE_RESTORE: { icon: RotateCcw, colorClass: 'text-[var(--success)]' },
-  ADD_MEMBER: { icon: UserPlus, colorClass: 'text-[var(--warning)]' },
-  UPDATE_MEMBER: { icon: UserCog, colorClass: 'text-[var(--warning)]' },
-  REMOVE_MEMBER: { icon: UserMinus, colorClass: 'text-[var(--error)]' },
-  TRANSFER_OWNERSHIP: { icon: Crown, colorClass: 'text-[var(--primary-600)]' },
-  PROJECT_CREATE: { icon: FolderPlus, colorClass: 'text-[var(--primary-600)]' },
-  PROJECT_UPDATE: { icon: Settings2, colorClass: 'text-[var(--info)]' },
-  PROJECT_DELETE: { icon: FolderX, colorClass: 'text-[var(--error)]' },
+  FILE_CREATE: { icon: FilePlus, colorClass: "text-[var(--success)]" },
+  FILE_UPDATE: { icon: FileEdit, colorClass: "text-[var(--info)]" },
+  FILE_DELETE: { icon: Trash2, colorClass: "text-[var(--error)]" },
+  FILE_SHARE: { icon: Share2, colorClass: "text-[var(--primary-600)]" },
+  FOLDER_CREATE: { icon: FolderPlus, colorClass: "text-[var(--success)]" },
+  NODE_RENAME: { icon: PenLine, colorClass: "text-[var(--info)]" },
+  NODE_MOVE: { icon: MoveRight, colorClass: "text-[var(--warning)]" },
+  NODE_COPY: { icon: Copy, colorClass: "text-[var(--primary-600)]" },
+  NODE_RESTORE: { icon: RotateCcw, colorClass: "text-[var(--success)]" },
+  ADD_MEMBER: { icon: UserPlus, colorClass: "text-[var(--warning)]" },
+  UPDATE_MEMBER: { icon: UserCog, colorClass: "text-[var(--warning)]" },
+  REMOVE_MEMBER: { icon: UserMinus, colorClass: "text-[var(--error)]" },
+  TRANSFER_OWNERSHIP: { icon: Crown, colorClass: "text-[var(--primary-600)]" },
+  PROJECT_CREATE: { icon: FolderPlus, colorClass: "text-[var(--primary-600)]" },
+  PROJECT_UPDATE: { icon: Settings2, colorClass: "text-[var(--info)]" },
+  PROJECT_DELETE: { icon: FolderX, colorClass: "text-[var(--error)]" },
   PROJECT_TRANSFER: {
     icon: ArrowLeftRight,
-    colorClass: 'text-[var(--primary-600)]',
+    colorClass: "text-[var(--primary-600)]",
   },
-  ROLE_CREATE: { icon: ShieldPlus, colorClass: 'text-[var(--success)]' },
-  ROLE_UPDATE: { icon: Shield, colorClass: 'text-[var(--info)]' },
-  ROLE_DELETE: { icon: ShieldX, colorClass: 'text-[var(--error)]' },
+  ROLE_CREATE: { icon: ShieldPlus, colorClass: "text-[var(--success)]" },
+  ROLE_UPDATE: { icon: Shield, colorClass: "text-[var(--info)]" },
+  ROLE_DELETE: { icon: ShieldX, colorClass: "text-[var(--error)]" },
 };
 const getActionIcon = (action: string) =>
   ACTION_ICON[action] ?? {
     icon: History,
-    colorClass: 'text-[var(--text-secondary)]',
+    colorClass: "text-[var(--text-secondary)]",
   };
 
 /** 时间分组：今天 / 昨天 / 更早 */
-type TimeGroup = 'today' | 'yesterday' | 'earlier';
-const TIME_GROUP_ORDER: TimeGroup[] = ['today', 'yesterday', 'earlier'];
-const TIME_GROUP_LABEL: Record<TimeGroup, string> = {
-  today: t('今天'),
-  yesterday: t('昨天'),
-  earlier: t('更早'),
-};
+type TimeGroup = "today" | "yesterday" | "earlier";
+const TIME_GROUP_ORDER: TimeGroup[] = ["today", "yesterday", "earlier"];
+// 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新
+function getTimeGroupLabel(group: TimeGroup): string {
+  switch (group) {
+    case "today":
+      return t("今天");
+    case "yesterday":
+      return t("昨天");
+    default:
+      return t("更早");
+  }
+}
 
 function groupByTime(logs: AuditLog[]): Record<TimeGroup, AuditLog[]> {
   const now = new Date();
@@ -178,20 +189,20 @@ function groupByTime(logs: AuditLog[]): Record<TimeGroup, AuditLog[]> {
       const date = new Date(log.createdAt);
       const key: TimeGroup =
         date >= todayStart
-          ? 'today'
+          ? "today"
           : date >= yesterdayStart
-            ? 'yesterday'
-            : 'earlier';
+            ? "yesterday"
+            : "earlier";
       acc[key].push(log);
       return acc;
     },
-    { today: [], yesterday: [], earlier: [] }
+    { today: [], yesterday: [], earlier: [] },
   );
 }
 
 /** 操作者显示名（优先昵称，其次用户名，最后 email） */
 function actorDisplayName(log: AuditLog): string {
-  return log.user?.nickname || log.user?.username || log.user?.email || '-';
+  return log.user?.nickname || log.user?.username || log.user?.email || "-";
 }
 
 export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
@@ -202,11 +213,11 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
 }) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [action, setAction] = useState('');
-  const [memberId, setMemberId] = useState('');
-  const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [action, setAction] = useState("");
+  const [memberId, setMemberId] = useState("");
+  const [search, setSearch] = useState("");
   // 搜索防抖：输入不暂停请求不发出（useDeferredValue 延迟 queryKey 联动）
   const deferredSearch = useDeferredValue(search);
   const listRef = useRef<HTMLDivElement>(null);
@@ -227,11 +238,11 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
   const handleActionChange = handleFilterChange(setAction);
   const handleMemberChange = handleFilterChange(setMemberId);
   const handleResetFilter = () => {
-    setStartDate('');
-    setEndDate('');
-    setAction('');
-    setMemberId('');
-    setSearch('');
+    setStartDate("");
+    setEndDate("");
+    setAction("");
+    setMemberId("");
+    setSearch("");
     setPage(1);
     listRef.current?.scrollTo({ top: 0 });
   };
@@ -244,7 +255,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
 
   // 项目成员列表（操作人筛选数据源）
   const { data: members = [], isLoading: membersLoading } = useQuery({
-    queryKey: ['projectMembers', projectId],
+    queryKey: ["projectMembers", projectId],
     queryFn: async () => {
       const result = await memberControllerGetProjectMembers({
         throwOnError: true,
@@ -267,7 +278,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
         value: m.id,
         label: m.nickname || m.username || m.email || m.id,
       })),
-    [members]
+    [members],
   );
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -314,34 +325,63 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
         path: { nodeId: log.resourceId },
         query: { pageSize: 30 },
       });
-      if (result.error || !result.data) throw new Error('parent-context 失败');
+      if (result.error || !result.data) throw new Error("parent-context 失败");
       const ctx = result.data as { parentId?: string; pageNumber?: number };
-      if (!ctx.parentId) throw new Error('parent-context 无父目录');
+      if (!ctx.parentId) throw new Error("parent-context 无父目录");
       window.open(
         `/projects/${log.projectId}/files/${ctx.parentId}?highlight=${log.resourceId}&page=${ctx.pageNumber ?? 1}`,
-        '_blank',
-        'noopener'
+        "_blank",
+        "noopener",
       );
     } catch {
-      window.open(`/projects/${log.projectId}/files`, '_blank', 'noopener');
+      window.open(`/projects/${log.projectId}/files`, "_blank", "noopener");
     }
   };
 
   /** 打开项目根目录（新标签页） */
   const handleOpenProject = (log: AuditLog) => {
     if (!log.projectId) return;
-    window.open(`/projects/${log.projectId}/files`, '_blank', 'noopener');
+    window.open(`/projects/${log.projectId}/files`, "_blank", "noopener");
   };
 
   /** 打开图纸（新标签页）：/cad-editor/:fileId 路由 */
   const handleOpenDrawing = (log: AuditLog) => {
-    const url = `/cad-editor/${log.resourceId}?nodeId=${log.projectId ?? ''}`;
-    window.open(url, '_blank', 'noopener');
+    const url = `/cad-editor/${log.resourceId}?nodeId=${log.projectId ?? ""}`;
+    window.open(url, "_blank", "noopener");
   };
 
-  const logs = data?.logs ?? [];
+  const rawLogs = data?.logs ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const loadErrorText = error ? getErrorMessage(error) : null;
+  // 滚动分页（累积模型）：向下加载更多 / 向上加载前页，与按钮分页并存。
+  // resetKey 含筛选/条数：查询身份变化时整体替换并清挂起方向，防误前插
+  const resetKey = `${projectId}|${startDate}|${endDate}|${action}|${memberId}|${deferredSearch}|${pageSize}`;
+  const {
+    viewNodes: logs,
+    handleScrollPageChange,
+    minLoadedPage,
+  } = useAccumulatedPagination({
+    displayNodes: rawLogs,
+    currentPage: page,
+    handlePageChange: setPage,
+    resetKey,
+  });
+  const { visiblePage, jumpTo, showBottomLoader, showTopLoader, isLastPage } =
+    useScrollPagination({
+      containerRef: listRef,
+      // 列表项为时间分组 div（children 与日志数不匹配），测量自动回退 displayedPage
+      itemContainerRef: listRef,
+      itemsLength: logs.length,
+      pageSize,
+      currentPage: page,
+      totalPages,
+      loading: isFetching,
+      enabled: isOpen && !!projectId,
+      loadError: loadErrorText,
+      minLoadedPage,
+      onPageChange: handleScrollPageChange,
+    });
   const grouped = useMemo(() => groupByTime(logs), [logs]);
   const hasAnyLogs = logs.length > 0;
 
@@ -353,7 +393,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
         <span className="flex items-center gap-2 min-w-0">
           <History className="w-4 h-4 shrink-0" />
           <span className="truncate">
-            {projectName ? `${projectName} · ${t('操作历史')}` : t('操作历史')}
+            {projectName ? `${projectName} · ${t("操作历史")}` : t("操作历史")}
           </span>
         </span>
       }
@@ -362,10 +402,10 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
       <div className="flex flex-col gap-3 min-h-[360px] max-h-[62vh]">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-[var(--text-secondary)] truncate">
-            {t('项目动态：成员变更、文件操作与分享记录')}
+            {t("项目动态：成员变更、文件操作与分享记录")}
           </span>
           <span className="text-xs text-[var(--text-tertiary)] shrink-0">
-            {t('共 {count} 条记录', { count: String(total) })}
+            {t("共 {count} 条记录", { count: String(total) })}
           </span>
         </div>
 
@@ -381,7 +421,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                 value={action}
                 onChange={handleActionChange}
                 options={PROJECT_AUDIT_ACTIONS}
-                placeholder={t('全部')}
+                placeholder={t("全部")}
                 clearable
               />
             </div>
@@ -391,7 +431,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                 value={memberId}
                 onChange={handleMemberChange}
                 options={memberOptions}
-                placeholder={t('全部成员')}
+                placeholder={t("全部成员")}
                 clearable
                 searchable
                 loading={membersLoading}
@@ -405,7 +445,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                placeholder={t('搜索图纸名称')}
+                placeholder={t("搜索图纸名称")}
               />
             </div>
           </div>
@@ -414,23 +454,23 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
               <DatePicker
                 size="sm"
                 value={startDate ? `${startDate}T00:00:00` : undefined}
-                onChange={(v) => handleStartDateChange(v ? v.slice(0, 10) : '')}
-                placeholder={t('开始日期')}
+                onChange={(v) => handleStartDateChange(v ? v.slice(0, 10) : "")}
+                placeholder={t("开始日期")}
               />
             </div>
             <div className="w-36">
               <DatePicker
                 size="sm"
                 value={endDate ? `${endDate}T00:00:00` : undefined}
-                onChange={(v) => handleEndDateChange(v ? v.slice(0, 10) : '')}
-                placeholder={t('结束日期')}
+                onChange={(v) => handleEndDateChange(v ? v.slice(0, 10) : "")}
+                placeholder={t("结束日期")}
                 minDate={startDate || undefined}
               />
             </div>
             <div className="flex-1" />
             {(startDate || endDate || action || memberId || search) && (
               <Button variant="ghost" size="sm" onClick={handleResetFilter}>
-                {t('重置筛选')}
+                {t("重置筛选")}
               </Button>
             )}
             <Button
@@ -440,9 +480,9 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
               disabled={isFetching}
             >
               <RefreshCw
-                className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`}
+                className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`}
               />
-              {t('刷新')}
+              {t("刷新")}
             </Button>
           </div>
         </div>
@@ -454,12 +494,12 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
         ) : error ? (
           <div className="flex items-center gap-2 justify-center py-16 text-[var(--error)]">
             <AlertCircle className="w-5 h-5" />
-            {getErrorMessage(error) || t('加载操作历史失败')}
+            {getErrorMessage(error) || t("加载操作历史失败")}
           </div>
         ) : !hasAnyLogs ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-[var(--text-secondary)]">
             <FolderOpen className="w-8 h-8" />
-            <span>{t('暂无操作记录')}</span>
+            <span>{t("暂无操作记录")}</span>
           </div>
         ) : (
           <div
@@ -467,13 +507,22 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
             className="flex flex-col gap-3 overflow-y-auto pr-1"
             data-tour="operation-history-list"
           >
+            {showTopLoader && (
+              <div
+                className="flex items-center justify-center gap-2 py-2 text-xs"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>{t("加载中...")}</span>
+              </div>
+            )}
             {TIME_GROUP_ORDER.map((group) => {
               const groupLogs = grouped[group];
               if (groupLogs.length === 0) return null;
               return (
                 <div key={group} className="flex flex-col gap-1">
                   <div className="text-xs font-medium text-[var(--text-tertiary)] px-1">
-                    {TIME_GROUP_LABEL[group]}
+                    {getTimeGroupLabel(group)}
                     <span className="ml-1 opacity-60">{groupLogs.length}</span>
                   </div>
                   {groupLogs.map((log) => {
@@ -493,18 +542,18 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                             : handleOpenProject(log)
                       : undefined;
                     const { icon: ActionIcon, colorClass } = getActionIcon(
-                      log.action
+                      log.action,
                     );
                     return (
                       <div
                         key={log.id}
-                        role={clickable ? 'button' : undefined}
+                        role={clickable ? "button" : undefined}
                         tabIndex={clickable ? 0 : undefined}
                         onClick={onClick}
                         onKeyDown={
                           clickable
                             ? (e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
+                                if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
                                   onClick?.();
                                 }
@@ -513,13 +562,13 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                         }
                         className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 bg-[var(--bg-tertiary)] text-sm transition-colors ${
                           clickable
-                            ? 'cursor-pointer hover:bg-[var(--bg-secondary)] group'
-                            : ''
+                            ? "cursor-pointer hover:bg-[var(--bg-secondary)] group"
+                            : ""
                         }`}
                       >
                         <Tooltip
                           content={`${actorDisplayName(log)}${
-                            log.user?.email ? ` · ${log.user.email}` : ''
+                            log.user?.email ? ` · ${log.user.email}` : ""
                           }`}
                           position="top"
                         >
@@ -551,7 +600,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                             {clickable && (
                               <span className="inline-flex items-center gap-0.5 text-[var(--primary-600)] opacity-0 group-hover:opacity-100 transition-opacity">
                                 <MapPin className="w-3 h-3" />
-                                {locatable ? t('打开所在位置') : t('打开项目')}
+                                {locatable ? t("打开所在位置") : t("打开项目")}
                               </span>
                             )}
                           </div>
@@ -565,10 +614,10 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                               e.stopPropagation();
                               handleOpenDrawing(log);
                             }}
-                            title={t('打开图纸')}
+                            title={t("打开图纸")}
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
-                            {t('打开图纸')}
+                            {t("打开图纸")}
                           </Button>
                         )}
                       </div>
@@ -577,16 +626,48 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                 </div>
               );
             })}
+            {showBottomLoader ? (
+              <div
+                className="flex items-center justify-center gap-2 py-2 text-xs"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>{t("加载中...")}</span>
+              </div>
+            ) : loadErrorText ? (
+              <div
+                className="flex items-center justify-center gap-2 py-3 text-xs"
+                style={{ color: "var(--error)" }}
+              >
+                <span className="max-w-[60%] truncate" title={loadErrorText}>
+                  {loadErrorText}
+                </span>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => void refetch()}
+                >
+                  {t("重试")}
+                </Button>
+              </div>
+            ) : isLastPage ? (
+              <div
+                className="flex items-center justify-center gap-2 py-2 text-xs"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <span>{t("已经是最后一页")}</span>
+              </div>
+            ) : null}
           </div>
         )}
 
         {totalPages > 1 && (
           <div className="flex justify-center pt-2">
             <Pagination
-              meta={{ total, page, limit: pageSize, totalPages }}
+              meta={{ total, page: visiblePage, limit: pageSize, totalPages }}
               onPageChange={(p) => {
+                jumpTo(p);
                 setPage(p);
-                listRef.current?.scrollTo({ top: 0 });
               }}
               showSizeChanger
               onPageSizeChange={handlePageSizeChange}

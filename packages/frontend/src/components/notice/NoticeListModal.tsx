@@ -19,13 +19,13 @@
  * 不为「读一条公告」额外叠一层全屏遮罩。
  */
 
-import React from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { Z_LAYERS } from '@/constants/layers';
-import { t } from '@/languages';
+import React from "react";
+import { Modal } from "@/components/ui";
+import { Z_LAYERS } from "@/constants/layers";
+import { t } from "@/languages";
 
-import { NoticeListView } from './NoticeListView';
-import type { Notice } from './noticeTypes';
+import { NoticeListView } from "./NoticeListView";
+import type { Notice } from "./noticeTypes";
 
 export interface NoticeListModalProps {
   notices: Notice[];
@@ -45,7 +45,7 @@ export const NoticeListModal: React.FC<NoticeListModalProps> = ({
   <Modal
     isOpen
     onClose={onClose}
-    title={t('通知')}
+    title={t("通知")}
     size="md"
     maxWidth="max-w-lg"
     contentClassName="p-0"

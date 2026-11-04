@@ -458,7 +458,7 @@ feedback:
   content_too_long: 回饋內容過長，請精簡後再提交
   code_not_found: 回饋不存在或查詢碼無效
   not_found: 回饋不存在
-  status_locked_adopted: 已採納的回饋不可改狀態，如需撤銷請處理獎勵
+  status_locked_adopted: 已採納的回饋不可改狀態
   reject_reason_required: 駁回必須填寫原因
   already_adopted: 該回饋已採納
   reward_exists: 該回饋已存在獎勵記錄

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// 可控的 i18n scope：appConfig 的内置标题按 `i18nScope.activeLanguage` 本地化，
+// mock 掉真实 scope 以便确定性切换语言（与 dateUtils.spec 同一模式）
+const mockI18nScope = vi.hoisted(() => ({ activeLanguage: 'zh-CN' }));
+vi.mock('@/languages', () => ({ i18nScope: mockI18nScope }));
+
 import {
   APP_COOPERATE_URL,
   BRAND_FIELD_OVERRIDE_PATHS,
@@ -160,6 +165,21 @@ describe('getAppBrandConfig（5 层优先级，永不返回 null）', () => {
 
   it('默认品牌与不带 appId 的调用等价', () => {
     expect(getDefaultAppBrandConfig()).toEqual(getAppBrandConfig());
+  });
+
+  it('未配置品牌标题时内置标题随当前语言切换（非中文模式不显示写死的中文标题）', () => {
+    expect(getAppBrandConfig().title).toBe(DEFAULT_APP_NAME);
+
+    mockI18nScope.activeLanguage = 'en-US';
+    expect(getAppBrandConfig().title).toBe(
+      'Dream Web CAD Real-time Collaboration Platform'
+    );
+
+    mockI18nScope.activeLanguage = 'ko-KR';
+    expect(getAppBrandConfig().title).toBe('드림 웹 CAD 실시간 협업 플랫폼');
+
+    mockI18nScope.activeLanguage = 'zh-CN';
+    expect(getAppBrandConfig().title).toBe(DEFAULT_APP_NAME);
   });
 });
 
@@ -413,6 +433,13 @@ describe('getAppBrandConfig 的运行时覆盖层', () => {
     setRuntimeBrandConfig(null);
     expect(getAppBrandConfig().title).toBe(DEFAULT_APP_NAME);
   });
+
+  it('自定义配置的品牌标题原样展示，不做语言本地化', () => {
+    setRuntimeBrandConfig({ title: 'Custom Brand' });
+    mockI18nScope.activeLanguage = 'en-US';
+    expect(getAppBrandConfig().title).toBe('Custom Brand');
+    mockI18nScope.activeLanguage = 'zh-CN';
+  });
 });
 
 describe('resolveSupportContact（三层优先级）', () => {
@@ -610,6 +637,21 @@ describe('品牌快照与变更订阅（useSyncExternalStore 供给）', () => {
     const restored = getAppBrandSnapshot();
     expect(restored).toEqual(first);
     expect(getAppBrandSnapshot()).toBe(restored);
+  });
+
+  it('语言变化时快照重算（内置标题随语言切换，订阅方切语言后不滞留旧值）', () => {
+    const first = getAppBrandSnapshot();
+    expect(getAppBrandSnapshot()).toBe(first);
+
+    mockI18nScope.activeLanguage = 'en-US';
+    const next = getAppBrandSnapshot();
+    expect(next).not.toBe(first);
+    expect(next.title).toBe(
+      'Dream Web CAD Real-time Collaboration Platform'
+    );
+    expect(getAppBrandSnapshot()).toBe(next);
+
+    mockI18nScope.activeLanguage = 'zh-CN';
   });
 
   it('notifyBrandChanges 通知订阅者；退订后不再收到', () => {

@@ -1,50 +1,47 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Search, Trash2 } from 'lucide-react';
-import { t } from '@/languages';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Tag } from '@/components/ui/Tag';
-import { SelectableTable } from '@/components/common/SelectableTable';
-import { BatchActionBar } from '@/components/common/BatchActionBar';
-import { useFileBrowserSelection } from '@/hooks/file-browser';
-import { useSelectionShortcuts } from '@/hooks/common/useSelectionShortcuts';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNotification } from '@/contexts/NotificationContext';
-import { getErrorMessage } from '@/utils/errorHandler';
+import React, { useCallback, useMemo, useState } from "react";
+import { Search, Trash2 } from "lucide-react";
+import { t } from "@/languages";
+import { Card, Button, Input, Select, Tag } from "@/components/ui";
+
+import { SelectableTable } from "@/components/common/SelectableTable";
+import { BatchActionBar } from "@/components/common/BatchActionBar";
+import { useFileBrowserSelection } from "@/hooks/file-browser";
+import { useSelectionShortcuts } from "@/hooks/common/useSelectionShortcuts";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNotification } from "@/contexts/NotificationContext";
+import { getErrorMessage } from "@/utils/errorHandler";
 import {
   feedbackAttachmentAdminControllerList,
   feedbackAttachmentAdminControllerRemove,
   feedbackAttachmentAdminControllerBatchRemove,
-} from '@/api-sdk';
-import type { FeedbackAttachmentDto } from '@/api-sdk';
-import { FeedbackAttachmentList } from '@/components/feedback/FeedbackAttachmentList';
+} from "@/api-sdk";
+import type { FeedbackAttachmentDto } from "@/api-sdk";
+import { FeedbackAttachmentList } from "@/components/feedback/FeedbackAttachmentList";
 import {
   canDownloadAttachment,
   canViewAttachment,
   useAttachmentActions,
-} from '@/components/feedback/attachmentActions';
+} from "@/components/feedback/attachmentActions";
 
 const PAGE_SIZE = 30;
 
 const TYPE_LABEL: Record<string, string> = {
-  IMAGE: '图片',
-  DOCUMENT: '文档',
-  DRAWING: '图纸',
+  IMAGE: "图片",
+  DOCUMENT: "文档",
+  DRAWING: "图纸",
 };
 const KIND_LABEL: Record<string, string> = {
-  FILE: '副本',
-  REFERENCE: '引用',
+  FILE: "副本",
+  REFERENCE: "引用",
 };
-const TYPE_TAG: Record<string, 'info' | 'warning' | 'success'> = {
-  IMAGE: 'info',
-  DOCUMENT: 'warning',
-  DRAWING: 'success',
+const TYPE_TAG: Record<string, "info" | "warning" | "success"> = {
+  IMAGE: "info",
+  DOCUMENT: "warning",
+  DRAWING: "success",
 };
 
 function formatSize(size: number | null): string {
-  if (!size) return '';
+  if (!size) return "";
   const mb = size / 1024 / 1024;
   if (mb >= 1) return `${mb.toFixed(1)}MB`;
   return `${(size / 1024).toFixed(0)}KB`;
@@ -66,17 +63,17 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [typeFilter, setTypeFilter] = useState('');
-  const [kindFilter, setKindFilter] = useState('');
-  const [search, setSearch] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState("");
+  const [kindFilter, setKindFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const listQuery = useQuery<{
     items: FeedbackAttachmentDto[];
     total: number;
   }>({
     queryKey: [
-      'feedback-attachments-admin',
+      "feedback-attachments-admin",
       page,
       pageSize,
       typeFilter,
@@ -89,14 +86,14 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
         query: {
           page,
           pageSize,
-          type: (typeFilter || undefined) as 'IMAGE' | 'DOCUMENT' | 'DRAWING' | undefined,
-          kind: (kindFilter || undefined) as 'FILE' | 'REFERENCE' | undefined,
+          type: (typeFilter || undefined) as
+            "IMAGE" | "DOCUMENT" | "DRAWING" | undefined,
+          kind: (kindFilter || undefined) as "FILE" | "REFERENCE" | undefined,
           search: searchQuery || undefined,
         },
       });
       const d = res.data as
-        | { items: FeedbackAttachmentDto[]; total: number }
-        | undefined;
+        { items: FeedbackAttachmentDto[]; total: number } | undefined;
       return { items: d?.items ?? [], total: d?.total ?? 0 };
     },
   });
@@ -106,7 +103,10 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
 
   // 选择模型：复用文件系统多选内核（ADR-0052），以附件 id 为 id。
   // nodes 为当前页项；全选/Shift 区间作用于当前页 nodes。
-  const selectableNodes = useMemo(() => items.map((a) => ({ id: a.id })), [items]);
+  const selectableNodes = useMemo(
+    () => items.map((a) => ({ id: a.id })),
+    [items],
+  );
   const {
     selectedNodes: selectedIds,
     handleNodeSelect,
@@ -114,7 +114,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
     clearSelection,
     selectMany,
     deselectNode,
-  } = useFileBrowserSelection({ nodes: selectableNodes, multiple: 'always' });
+  } = useFileBrowserSelection({ nodes: selectableNodes, multiple: "always" });
 
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -124,14 +124,14 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
       });
     },
     onSuccess: (_data, id) => {
-      showToast(t('附件已删除'), 'success');
+      showToast(t("附件已删除"), "success");
       // 单删后从选中集移除（保留其余选中）
       deselectNode(id);
       void queryClient.invalidateQueries({
-        queryKey: ['feedback-attachments-admin'],
+        queryKey: ["feedback-attachments-admin"],
       });
     },
-    onError: (err) => showToast(getErrorMessage(err), 'error'),
+    onError: (err) => showToast(getErrorMessage(err), "error"),
   });
 
   const batchRemoveMutation = useMutation({
@@ -147,40 +147,43 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
       const notFound = data?.notFoundIds?.length ?? 0;
       showToast(
         notFound > 0
-          ? t('已删除 {n} 个附件，{m} 个不存在', { n: deleted, m: notFound })
-          : t('已删除 {n} 个附件', { n: deleted }),
-        'success'
+          ? t("已删除 {n} 个附件，{m} 个不存在", { n: deleted, m: notFound })
+          : t("已删除 {n} 个附件", { n: deleted }),
+        "success",
       );
       clearSelection();
       void queryClient.invalidateQueries({
-        queryKey: ['feedback-attachments-admin'],
+        queryKey: ["feedback-attachments-admin"],
       });
     },
-    onError: (err) => showToast(getErrorMessage(err), 'error'),
+    onError: (err) => showToast(getErrorMessage(err), "error"),
   });
 
   const handleRemove = useCallback(
     async (att: FeedbackAttachmentDto) => {
       const confirmed = await showConfirm({
-        title: t('删除附件'),
-        message: t('确定删除该附件吗？删除后不可恢复。{kind} 附件不删除图纸本体。', {
-          kind: t(KIND_LABEL[att.kind] ?? ''),
-        }),
-        confirmText: t('删除'),
+        title: t("删除附件"),
+        message: t(
+          "确定删除该附件吗？删除后不可恢复。{kind} 附件不删除图纸本体。",
+          {
+            kind: t(KIND_LABEL[att.kind] ?? ""),
+          },
+        ),
+        confirmText: t("删除"),
       });
       if (confirmed) removeMutation.mutate(att.id);
     },
-    [showConfirm, removeMutation]
+    [showConfirm, removeMutation],
   );
 
   const handleBatchRemove = useCallback(async () => {
     if (selectedIds.size === 0) return;
     const confirmed = await showConfirm({
-      title: t('确认批量删除'),
-      message: t('确定要删除选中的 {count} 个附件吗？', {
+      title: t("确认批量删除"),
+      message: t("确定要删除选中的 {count} 个附件吗？", {
         count: String(selectedIds.size),
       }),
-      confirmText: t('删除'),
+      confirmText: t("删除"),
     });
     if (confirmed) batchRemoveMutation.mutate(Array.from(selectedIds));
   }, [selectedIds, showConfirm, batchRemoveMutation]);
@@ -202,7 +205,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
         const { data } = await listQuery.refetch();
         return data?.items.find((a) => a.id === attachmentId) ?? null;
       },
-      [listQuery]
+      [listQuery],
     ),
   });
 
@@ -212,7 +215,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
       clearSelection();
       setPage(next);
     },
-    [clearSelection]
+    [clearSelection],
   );
   // 每页条数变化：清空选择并重置到第一页（新条数下深层页码无意义）
   const handlePageSizeChange = useCallback(
@@ -222,7 +225,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
       setPageSize(next);
       setPage(1);
     },
-    [pageSize, clearSelection]
+    [pageSize, clearSelection],
   );
   const handleTypeChange = useCallback(
     (v: string) => {
@@ -230,7 +233,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
       setTypeFilter(v);
       setPage(1);
     },
-    [clearSelection]
+    [clearSelection],
   );
   const handleKindChange = useCallback(
     (v: string) => {
@@ -238,7 +241,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
       setKindFilter(v);
       setPage(1);
     },
-    [clearSelection]
+    [clearSelection],
   );
   const handleSearchSubmit = useCallback(() => {
     clearSelection();
@@ -253,10 +256,10 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
         onClear={clearSelection}
         actions={[
           {
-            key: 'delete',
-            label: t('批量删除'),
+            key: "delete",
+            label: t("批量删除"),
             icon: Trash2,
-            variant: 'danger',
+            variant: "danger",
             onClick: () => void handleBatchRemove(),
             loading: batchRemoveMutation.isPending,
           },
@@ -272,10 +275,10 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
           value={typeFilter}
           onChange={handleTypeChange}
           options={[
-            { value: '', label: t('全部类型') },
-            { value: 'IMAGE', label: t('图片') },
-            { value: 'DOCUMENT', label: t('文档') },
-            { value: 'DRAWING', label: t('图纸') },
+            { value: "", label: t("全部类型") },
+            { value: "IMAGE", label: t("图片") },
+            { value: "DOCUMENT", label: t("文档") },
+            { value: "DRAWING", label: t("图纸") },
           ]}
           className="w-32"
         />
@@ -283,9 +286,9 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
           value={kindFilter}
           onChange={handleKindChange}
           options={[
-            { value: '', label: t('全部形态') },
-            { value: 'FILE', label: t('副本') },
-            { value: 'REFERENCE', label: t('引用') },
+            { value: "", label: t("全部形态") },
+            { value: "FILE", label: t("副本") },
+            { value: "REFERENCE", label: t("引用") },
           ]}
           className="w-32"
         />
@@ -293,17 +296,21 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('搜索文件名/查询码/上传者')}
+            placeholder={t("搜索文件名/查询码/上传者")}
             className="w-56"
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSearchSubmit();
+              if (e.key === "Enter") handleSearchSubmit();
             }}
           />
-          <Button variant="secondary" icon={Search} onClick={handleSearchSubmit}>
-            {t('搜索')}
+          <Button
+            variant="secondary"
+            icon={Search}
+            onClick={handleSearchSubmit}
+          >
+            {t("搜索")}
           </Button>
           <div className="text-xs text-[var(--text-tertiary)] self-center">
-            {t('共 {n} 个附件', { n: total })}
+            {t("共 {n} 个附件", { n: total })}
           </div>
         </div>
       </div>
@@ -321,12 +328,12 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
           loading={listQuery.isLoading}
           loadingView={
             <div className="flex-1 flex items-center justify-center text-sm text-[var(--text-secondary)]">
-              {t('加载中...')}
+              {t("加载中...")}
             </div>
           }
           emptyView={
             <div className="flex-1 flex items-center justify-center text-sm text-[var(--text-secondary)]">
-              {t('暂无附件')}
+              {t("暂无附件")}
             </div>
           }
           bottomBar={batchBar}
@@ -345,13 +352,13 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
           onRubberBandSelect={selectMany}
           renderHeader={() => (
             <>
-              <th className="px-4 py-2 font-medium">{t('附件')}</th>
-              <th className="px-4 py-2 font-medium">{t('类型')}</th>
-              <th className="px-4 py-2 font-medium">{t('形态')}</th>
-              <th className="px-4 py-2 font-medium">{t('大小')}</th>
-              <th className="px-4 py-2 font-medium">{t('上传者')}</th>
-              <th className="px-4 py-2 font-medium">{t('时间')}</th>
-              <th className="px-4 py-2 font-medium text-right">{t('操作')}</th>
+              <th className="px-4 py-2 font-medium">{t("附件")}</th>
+              <th className="px-4 py-2 font-medium">{t("类型")}</th>
+              <th className="px-4 py-2 font-medium">{t("形态")}</th>
+              <th className="px-4 py-2 font-medium">{t("大小")}</th>
+              <th className="px-4 py-2 font-medium">{t("上传者")}</th>
+              <th className="px-4 py-2 font-medium">{t("时间")}</th>
+              <th className="px-4 py-2 font-medium text-right">{t("操作")}</th>
             </>
           )}
           renderRow={(att) => (
@@ -360,7 +367,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
                 <FeedbackAttachmentList attachments={[att]} compact />
               </td>
               <td className="px-4 py-2">
-                <Tag variant={TYPE_TAG[att.type] ?? 'neutral'}>
+                <Tag variant={TYPE_TAG[att.type] ?? "neutral"}>
                   {t(TYPE_LABEL[att.type] ?? att.type)}
                 </Tag>
               </td>
@@ -369,7 +376,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
               </td>
               <td className="px-4 py-2 text-xs">{formatSize(att.size)}</td>
               <td className="px-4 py-2 text-xs">
-                {att.uploadedByName || t('匿名')}
+                {att.uploadedByName || t("匿名")}
               </td>
               <td className="px-4 py-2 text-xs whitespace-nowrap">
                 {new Date(att.createdAt).toLocaleString()}
@@ -385,7 +392,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
                       variant="ghost"
                       onClick={() => void handleView(att)}
                     >
-                      {t('查看')}
+                      {t("查看")}
                     </Button>
                   )}
                   {canDownloadAttachment(att) && (
@@ -394,7 +401,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
                       variant="ghost"
                       onClick={() => void handleDownload(att)}
                     >
-                      {t('下载')}
+                      {t("下载")}
                     </Button>
                   )}
                   <Button
@@ -403,7 +410,7 @@ export const FeedbackAttachmentAdminPanel: React.FC = () => {
                     icon={Trash2}
                     onClick={() => handleRemove(att)}
                   >
-                    {t('删除')}
+                    {t("删除")}
                   </Button>
                 </div>
               </td>

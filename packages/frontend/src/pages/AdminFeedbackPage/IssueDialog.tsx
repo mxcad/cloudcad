@@ -1,23 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
-import { t } from '@/languages';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { Select } from '@/components/ui/Select';
-import { useNotification } from '@/contexts/NotificationContext';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { usersControllerSearchUsers } from '@/api-sdk';
-import type {
-  FeedbackRewardResponseDto,
-  UserResponseDto,
-} from '@/api-sdk';
+import React, { useCallback, useEffect, useState } from "react";
+import { Search } from "lucide-react";
+import { t } from "@/languages";
+import { fillTemplate } from "@/utils/i18nFill";
+import { Modal, Button, Input, Textarea, Select } from "@/components/ui";
+
+import { useNotification } from "@/contexts/NotificationContext";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { usersControllerSearchUsers } from "@/api-sdk";
+import type { FeedbackRewardResponseDto, UserResponseDto } from "@/api-sdk";
 import {
   FEEDBACK_TIER_OPTIONS,
   FEEDBACK_DURATION_OPTIONS,
-} from '@/constants/feedback';
-import { useIssueReward } from './useFeedbackAdmin';
+} from "@/constants/feedback";
+import { useIssueReward } from "./useFeedbackAdmin";
 
 /** 发放账号（预选=反馈提交者，或客服搜索结果；仅消费 id/email/username/nickname） */
 type IssueAccount = {
@@ -58,24 +53,24 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
 }) => {
   const { showToast } = useNotification();
   const issue = useIssueReward();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [users, setUsers] = useState<UserResponseDto[]>([]);
   const [selected, setSelected] = useState<IssueAccount | null>(null);
-  const [remark, setRemark] = useState('');
-  const [tier, setTier] = useState('');
-  const [duration, setDuration] = useState('');
+  const [remark, setRemark] = useState("");
+  const [tier, setTier] = useState("");
+  const [duration, setDuration] = useState("");
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setSearch('');
+      setSearch("");
       setUsers([]);
       // 默认发放账号 = 反馈提交者（登录用户提交）；匿名反馈（submitter=null）
       // 则保持空，须客服搜索/绑定账号
       setSelected(reward?.submitter ?? null);
-      setRemark('');
-      setTier('');
-      setDuration('');
+      setRemark("");
+      setTier("");
+      setDuration("");
     }
   }, [isOpen, reward]);
 
@@ -91,10 +86,10 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
       const d = res.data as { users: UserResponseDto[] } | undefined;
       setUsers(d?.users ?? []);
       if ((d?.users ?? []).length === 0) {
-        showToast(t('未找到匹配用户'), 'warning');
+        showToast(t("未找到匹配用户"), "warning");
       }
     } catch (err) {
-      showToast(getErrorMessage(err), 'error');
+      showToast(getErrorMessage(err), "error");
     } finally {
       setSearching(false);
     }
@@ -103,11 +98,11 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
   const handleSubmit = useCallback(async () => {
     if (!reward) return;
     if (!selected) {
-      showToast(t('请先选择发放账号'), 'warning');
+      showToast(t("请先选择发放账号"), "warning");
       return;
     }
     if (!remark.trim()) {
-      showToast(t('请填写客服核实备注'), 'warning');
+      showToast(t("请填写客服核实备注"), "warning");
       return;
     }
     try {
@@ -120,19 +115,29 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
           durationDays: duration ? Number(duration) : undefined,
         },
       });
-      showToast(t('奖励已发放'), 'success');
+      showToast(t("奖励已发放"), "success");
       onIssued();
       onClose();
     } catch (err) {
-      showToast(getErrorMessage(err), 'error');
+      showToast(getErrorMessage(err), "error");
     }
-  }, [reward, selected, remark, tier, duration, issue, showToast, onIssued, onClose]);
+  }, [
+    reward,
+    selected,
+    remark,
+    tier,
+    duration,
+    issue,
+    showToast,
+    onIssued,
+    onClose,
+  ]);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('发放奖励')}
+      title={t("发放奖励")}
       maxWidth="max-w-[520px]"
       closeOnOverlayClick={!issue.isPending}
     >
@@ -140,14 +145,16 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border border-[var(--border-default)] p-3 text-sm space-y-1 bg-[var(--bg-secondary)]">
             <p className="font-mono">{reward.feedbackCode}</p>
-            <p className="text-[var(--text-secondary)]">{reward.feedbackTitle}</p>
+            <p className="text-[var(--text-secondary)]">
+              {reward.feedbackTitle}
+            </p>
             {contact && (
               <p className="text-[var(--text-secondary)]">
-                {t('联系方式')}：{contact}
+                {t("联系方式")}：{contact}
               </p>
             )}
             <p>
-              {t('奖励：VIP{level} {days} 天', {
+              {fillTemplate("奖励：VIP{level} {days} 天", {
                 level: reward.vipTierLevel,
                 days: reward.durationDays,
               })}
@@ -155,15 +162,15 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium">{t('发放账号')}</label>
+            <label className="block text-sm font-medium">{t("发放账号")}</label>
             <div className="flex gap-2">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('输入邮箱或用户名搜索')}
+                placeholder={t("输入邮箱或用户名搜索")}
                 disabled={issue.isPending || searching}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSearch();
+                  if (e.key === "Enter") handleSearch();
                 }}
               />
               <Button
@@ -172,7 +179,7 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
                 loading={searching}
                 icon={Search}
               >
-                {t('搜索')}
+                {t("搜索")}
               </Button>
             </div>
             {users.length > 0 && (
@@ -183,10 +190,12 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
                     type="button"
                     onClick={() => setSelected(u)}
                     className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] ${
-                      selected?.id === u.id ? 'bg-[var(--bg-tertiary)]' : ''
+                      selected?.id === u.id ? "bg-[var(--bg-tertiary)]" : ""
                     }`}
                   >
-                    <span className="font-medium">{u.nickname || u.username}</span>
+                    <span className="font-medium">
+                      {u.nickname || u.username}
+                    </span>
                     <span className="ml-2 text-[var(--text-tertiary)]">
                       {u.email}
                     </span>
@@ -196,7 +205,7 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
             )}
             {selected && (
               <p className="text-xs text-green-700">
-                {t('已选择：{name}（{email}）', {
+                {t("已选择：{name}（{email}）", {
                   name: selected.nickname || selected.username,
                   email: selected.email,
                 })}
@@ -206,14 +215,16 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
 
           <div className="space-y-2">
             <label className="block text-sm font-medium">
-              {t('客服核实备注（必填）')}
+              {t("客服核实备注（必填）")}
             </label>
             <Textarea
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               rows={2}
               maxLength={500}
-              placeholder={t('记录核实过程，如：凭查询码确认身份，已核验注册信息')}
+              placeholder={t(
+                "记录核实过程，如：凭查询码确认身份，已核验注册信息",
+              )}
               disabled={issue.isPending}
             />
           </div>
@@ -221,34 +232,44 @@ export const IssueDialog: React.FC<IssueDialogProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <label className="block text-sm font-medium">
-                {t('覆盖等级（选填）')}
+                {t("覆盖等级（选填）")}
               </label>
               <Select
                 value={tier}
                 onChange={setTier}
-                options={[{ value: '', label: t('沿用采纳等级') }, ...TIER_OPTIONS]}
+                options={[
+                  { value: "", label: t("沿用采纳等级") },
+                  ...TIER_OPTIONS,
+                ]}
                 disabled={issue.isPending}
               />
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium">
-                {t('覆盖时长（选填）')}
+                {t("覆盖时长（选填）")}
               </label>
               <Select
                 value={duration}
                 onChange={setDuration}
-                options={[{ value: '', label: t('沿用采纳时长') }, ...DURATION_OPTIONS]}
+                options={[
+                  { value: "", label: t("沿用采纳时长") },
+                  ...DURATION_OPTIONS,
+                ]}
                 disabled={issue.isPending}
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose} disabled={issue.isPending}>
-              {t('取消')}
+            <Button
+              variant="secondary"
+              onClick={onClose}
+              disabled={issue.isPending}
+            >
+              {t("取消")}
             </Button>
             <Button onClick={handleSubmit} loading={issue.isPending}>
-              {t('确认发放')}
+              {t("确认发放")}
             </Button>
           </div>
         </div>

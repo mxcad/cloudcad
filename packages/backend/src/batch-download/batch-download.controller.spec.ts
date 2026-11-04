@@ -38,6 +38,7 @@ describe('BatchDownloadController', () => {
     res.json = jest.fn().mockReturnValue(res);
     res.end = jest.fn().mockReturnValue(res);
     res.flushHeaders = jest.fn();
+    res.once = jest.fn().mockReturnValue(res);
     return res;
   };
 
@@ -52,6 +53,7 @@ describe('BatchDownloadController', () => {
         if (event === 'close') setImmediate(() => handler());
         return { on: jest.fn() };
       }),
+      destroy: jest.fn(),
     });
 
     mockService = {

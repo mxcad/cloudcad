@@ -1,6 +1,7 @@
 import { callCommand } from "@/plugins/mxcad/command"
 import { McObject, McObjectId, MxCADUtility, MxCpp } from "mxcad"
 import { ref, nextTick, onMounted } from "vue"
+import { t } from "@/languages"
 import type { MxToolbarItem } from "@/types/mx-toolbar-item"
 export const useEditObjectToolbar = () => {
     // ‍  对象编辑操作
@@ -8,33 +9,33 @@ export const useEditObjectToolbar = () => {
 
     const objectEditingToolbarItems = [
         {
-            name: "删除",
+            name: t("删除"),
             icon: "shanchu",
             cmd: "Mx_Erase",
             isClosed: true
         },
         {
-            name: "复制",
+            name: t("复制"),
             icon: "fuzhi",
             cmd: "m_mx_copy"
         },
         {
-            name: "移动",
+            name: t("移动"),
             icon: "pianyi",
             cmd: "m_mx_move"
         },
         {
-            name: "旋转",
+            name: t("旋转"),
             icon: "xuanzhuan",
             cmd: "m_mx_rotate"
         },
         {
-            name: "镜像",
+            name: t("镜像"),
             icon: "jingxiang",
             cmd: "m_mx_mirror"
         },
         {
-            name: "颜色",
+            name: t("颜色"),
             icon: "yanse",
             cmd: "Mx_SetObjectColor",
         }

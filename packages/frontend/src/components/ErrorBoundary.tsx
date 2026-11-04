@@ -3,10 +3,10 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React from 'react';
-import * as Sentry from '@sentry/react';
-import { Button } from '@/components/ui';
-import { t } from '@/languages';
+import React from "react";
+import * as Sentry from "@sentry/react";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -37,7 +37,7 @@ export class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Caught render error:', error, errorInfo);
+    console.error("[ErrorBoundary] Caught render error:", error, errorInfo);
     if (import.meta.env.VITE_SENTRY_DSN) {
       Sentry.captureException(error, {
         extra: { componentStack: errorInfo.componentStack },
@@ -58,32 +58,32 @@ export class ErrorBoundary extends React.Component<
       return (
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            background: 'var(--bg-primary)',
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-family-base)',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            background: "var(--bg-primary)",
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-family-base)",
             padding: 24,
-            textAlign: 'center',
+            textAlign: "center",
           }}
         >
           <h1 style={{ fontSize: 24, marginBottom: 16 }}>
-            {t('应用发生错误')}
+            {t("应用发生错误")}
           </h1>
           <p
             style={{
-              color: 'var(--text-muted)',
+              color: "var(--text-muted)",
               marginBottom: 24,
               maxWidth: 480,
             }}
           >
-            {this.state.error?.message || t('未知错误')}
+            {this.state.error?.message || t("未知错误")}
           </p>
           <Button variant="primary" size="sm" onClick={this.handleReset}>
-            {t('重试')}
+            {t("重试")}
           </Button>
         </div>
       );

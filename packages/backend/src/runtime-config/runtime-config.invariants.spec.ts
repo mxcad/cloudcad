@@ -16,6 +16,7 @@
 import { RUNTIME_CONFIG_DEFINITIONS } from "./runtime-config.constants";
 import { validateDefinitions } from "./runtime-config.invariants";
 import type { RuntimeConfigDefinition } from "./runtime-config.types";
+import type { RuntimeConfigSubgroup } from "@cloudcad/contracts";
 
 const BASE = RUNTIME_CONFIG_DEFINITIONS;
 
@@ -76,7 +77,12 @@ describe("validateDefinitions", () => {
   });
 
   it("子分组闭集：子分组挂到未声明的分类会被抓住", () => {
-    expectViolation(patch("membershipEnabled", { subgroup: "billing-x" }), "不应声明子分组");
+    expectViolation(
+      patch("membershipEnabled", {
+        subgroup: "billing-x" as RuntimeConfigSubgroup,
+      }),
+      "不应声明子分组"
+    );
   });
 
   it("子分组闭集：多项大类少一个子分组会被抓住", () => {

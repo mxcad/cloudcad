@@ -11,7 +11,7 @@ import ObserveImage from '@better-scroll/observe-image';
 import { McCmColor, McObject, MxCpp } from 'mxcad';
 import { useColorPicker } from './useColorPicker';
 import iro from '@jaames/iro';
-import { useMenu, exportDialogTrigger } from './hooks/useMenu';
+import { useMenu } from './hooks/useMenu';
 import { useEditObjectToolbar } from './hooks/useEditObjectToolbar';
 import { useSimulatedMouse } from './hooks/useSimulatedMouse';
 import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
@@ -28,7 +28,6 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
 import type { PosterRegion } from '../../stores/posterRegion';
 import { isHashLike } from '../../services/publicFileService';
 import {
-  isExportDownloadAllowedFor,
   loadCADPermissions,
 } from '../../services/permissionService';
 import {
@@ -36,7 +35,6 @@ import {
   SAVE_AS_CHAIN,
   VERSION_HISTORY_CHAIN,
   SHARE_CHAIN,
-  exportChainDef,
   beginIntent,
   resumeIntent,
   clearIntentChain,
@@ -76,11 +74,12 @@ import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
 import { usePosterRegionFlow } from '../../composables/usePosterRegionFlow';
 import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
 import { useBrand } from '../../composables/useBrand';
+// 评审候选 5：导出意图收敛到 feature composable（原内联 389-438 行）
+import { useExportFlow } from './composables/useExportFlow';
 import { isCollaborationAllowed } from '@cloudcad/platform';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
 import DownloadFormatPopup from '../shell/components/DownloadFormatPopup.vue';
-import type { DownloadFormatPayload } from '../shell/components/DownloadFormatPopup.vue';
 import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
 import LoginPromptPopup from '@/components/LoginPromptPopup.vue';
 import CooperatePopup from './components/CooperatePopup.vue';
@@ -204,6 +203,15 @@ const drawName = computed(() =>
 const isInCollaboration = computed(() => editorState.state.isInCollaboration);
 const currentVersion = computed(() => editorState.state.currentVersion);
 const isPublicFile = computed(() => editorState.state.isPublicFile);
+
+// 另存为时后端据此从 uploads 复制外部参照（对齐 PC sourceFileHash）。
+// hash 打开的公开图纸：fileId 本身就是 hash；nodeId 打开的云端图纸：取节点 fileHash。
+const sourceFileHash = computed<string | undefined>(() => {
+  const urlHash = getHashFromUrl();
+  if (urlHash && isHashLike(urlHash)) return urlHash;
+  const fh = editorState.state.fileInfo?.fileHash;
+  return typeof fh === 'string' && fh ? fh : undefined;
+});
 
 const progressMessage = computed(() => {
   const stage = editorState.state.progressStage;
@@ -384,58 +392,14 @@ watch(resumeAction, (act) => {
   }
 });
 
-// 导出闸门翻转（充值成功 → useUser 刷新；管理员开放免费导出 → 配置刷新）
-// → 续跑挂起链。图纸打开中不续跑（document-loaded 锚点）。
-const exportAllowed = computed(() =>
-  isExportDownloadAllowedFor(
-    user.value,
-    runtimeConfig.value.freeExportDownloadEnabled,
-  ),
-);
-watch(exportAllowed, (allowed) => {
-  if (!allowed) return;
-  if (editorState.state.loading) return;
-  resumeIntent();
-});
-
-// 导出（菜单「导出」→ DownloadFormatPopup，对齐 PC 的 DownloadFormatModal：
-// MXWEB/DWG/DXF/PDF 单选 + DWG 版本 / PDF 宽高与色彩）。
-const showExportFormat = ref(false);
-// 下载进行中：弹窗保持打开、下载按钮转圈（对齐 PC modal 的 loading）
-const exportFormatLoading = ref(false);
-watch(exportDialogTrigger, () => {
-  showExportFormat.value = true;
-});
-
-async function onExportFormatConfirm(payload: DownloadFormatPayload) {
-  // MXWEB 是源格式：纯前端导出、不做转换，不走会员门控（与 PC 一致）
-  if (
-    payload.format !== 'mxweb' &&
-    !isExportDownloadAllowedFor(
-      user.value,
-      runtimeConfig.value.freeExportDownloadEnabled,
-    )
-  ) {
-    // 闸门未过 → 挂起导出意图链：未登录走登录闸门，已登录走购买引导
-    // （确认后跳会员中心，充值/开放免费导出后自动续跑重放本次导出）
-    showExportFormat.value = false;
-    void beginIntent(exportChainDef(payload));
-    return;
-  }
-  exportFormatLoading.value = true;
-  try {
-    await exportDrawing(
-      payload.format,
-      undefined,
-      payload.pdfOptions,
-      payload.dwgOptions,
-    );
-  } finally {
-    exportFormatLoading.value = false;
-  }
-  // 完成（成功或失败）后关弹窗：exportDrawing 内部已给出结果 toast
-  showExportFormat.value = false;
-}
+// 导出意图（评审候选 5：收敛到 useExportFlow feature composable，
+// 闸门/弹窗开关/确认派发三件事各归其位，页面只消费结果）
+const {
+  exportAllowed,
+  showExportFormat,
+  exportFormatLoading,
+  onExportFormatConfirm,
+} = useExportFlow({ user, runtimeConfig, editorState });
 
 // 协同入口可用性 = 功能开关 && 当前域名在白名单内。
 // 与 PC SidebarContainer（collaborationEnabled && isCollaborationAllowed）同口径，
@@ -584,6 +548,10 @@ async function onSaveAsSuccess(result: {
   editorState.setExpectedTimestamp(null);
   editorState.setIsCurrentFileDeleted(false);
   editorState.setFromShare(false);
+  // 公开标记同步清除：另存为后会话已切到新建的云端节点（用户自己的文件），
+  // 不再是从分享/公开资源打开的只读原件。漏了它会被 onShowVersionHistory
+  // 误判成「公开文件不支持版本历史」，用户点版本历史永远进不去。
+  editorState.setIsPublicFile(false);
 
   // 分享态权限恒为 canSave:false，不重算会让下一次保存又被判「无权限，请另存为」
   if (isProject && rootId) {
@@ -1202,6 +1170,7 @@ setViewportHeight();
       :show="showSaveAsSheet"
       :current-file-name="currentDrawingName()"
       :current-node-id="editorState.state.fileId || undefined"
+      :current-file-hash="sourceFileHash"
       :notice="saveAsNotice"
       @close="onSaveAsClose"
       @success="onSaveAsSuccess"

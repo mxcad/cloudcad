@@ -1,16 +1,14 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Tag } from '../ui/Tag';
-import { FileNameText } from '../ui/TruncateText';
-import { ExternalReferenceFile } from '../../types/filesystem';
-import { CheckCircle } from 'lucide-react';
-import { XCircle } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
-import { Upload } from 'lucide-react';
-import { AlertCircle } from 'lucide-react';
-import { t } from '@/languages';
+import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Button, Modal, Tag, FileNameText } from "@/components/ui";
+
+import { ExternalReferenceFile } from "../../types/filesystem";
+import { CheckCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Upload } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { t } from "@/languages";
 
 interface ExternalReferenceModalProps {
   /** 模态框是否打开 */
@@ -51,50 +49,50 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   isCADEditor = true,
 }) => {
   const allSuccess =
-    files.length > 0 && files.every((f) => f.uploadState === 'success');
-  const hasUploading = files.some((f) => f.uploadState === 'uploading');
-  const hasFailures = files.some((f) => f.uploadState === 'fail');
+    files.length > 0 && files.every((f) => f.uploadState === "success");
+  const hasUploading = files.some((f) => f.uploadState === "uploading");
+  const hasFailures = files.some((f) => f.uploadState === "fail");
   const missingCount = files.filter(
-    (f) => !f.exists && f.uploadState === 'notSelected'
+    (f) => !f.exists && f.uploadState === "notSelected",
   ).length;
 
   // 禁止背景滚动
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isOpen]);
 
   const getStatusIcon = (file: ExternalReferenceFile) => {
     // 优先显示上传状态
-    if (file.uploadState === 'success') {
+    if (file.uploadState === "success") {
       return (
         <CheckCircle
           size={16}
-          style={{ color: 'var(--success)' }}
+          style={{ color: "var(--success)" }}
           data-testid="icon-check-circle"
         />
       );
     }
-    if (file.uploadState === 'fail') {
+    if (file.uploadState === "fail") {
       return (
         <XCircle
           size={16}
-          style={{ color: 'var(--error)' }}
+          style={{ color: "var(--error)" }}
           data-testid="icon-x-circle"
         />
       );
     }
-    if (file.uploadState === 'uploading') {
+    if (file.uploadState === "uploading") {
       return (
         <Loader2
           size={16}
-          style={{ color: 'var(--info)' }}
+          style={{ color: "var(--info)" }}
           className="animate-spin"
           data-testid="icon-loader"
         />
@@ -106,7 +104,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       return (
         <CheckCircle
           size={16}
-          style={{ color: 'var(--success)' }}
+          style={{ color: "var(--success)" }}
           data-testid="icon-check-circle"
         />
       );
@@ -116,7 +114,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
     return (
       <AlertCircle
         size={16}
-        style={{ color: 'var(--text-muted)' }}
+        style={{ color: "var(--text-muted)" }}
         data-testid="icon-alert-circle"
       />
     );
@@ -124,51 +122,51 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
 
   const getStatusColor = (file: ExternalReferenceFile) => {
     // 优先显示上传状态
-    if (file.uploadState === 'success') {
-      return 'text-green-500';
+    if (file.uploadState === "success") {
+      return "text-green-500";
     }
-    if (file.uploadState === 'fail') {
-      return 'text-red-500';
+    if (file.uploadState === "fail") {
+      return "text-red-500";
     }
-    if (file.uploadState === 'uploading') {
-      return 'text-blue-500';
+    if (file.uploadState === "uploading") {
+      return "text-blue-500";
     }
 
     // 如果文件已存在，显示绿色
     if (file.exists) {
-      return 'text-green-500';
+      return "text-green-500";
     }
 
     // 默认状态
-    return 'text-slate-400';
+    return "text-slate-400";
   };
 
   const getStatusText = (file: ExternalReferenceFile) => {
     // 优先显示上传状态
-    if (file.uploadState === 'success') {
-      return t('已完成');
+    if (file.uploadState === "success") {
+      return t("已完成");
     }
-    if (file.uploadState === 'fail') {
-      return t('上传失败');
+    if (file.uploadState === "fail") {
+      return t("上传失败");
     }
-    if (file.uploadState === 'uploading') {
-      return t('上传中');
+    if (file.uploadState === "uploading") {
+      return t("上传中");
     }
 
     // 如果文件已存在，显示"已上传"
     if (file.exists) {
-      return t('已上传');
+      return t("已上传");
     }
 
     // 默认状态
-    return t('待上传');
+    return t("待上传");
   };
 
   const modalContent = (
     <Modal
       isOpen={isOpen}
       onClose={onSkip}
-      title={t('管理外部参照文件')}
+      title={t("管理外部参照文件")}
       size="lg"
       contentClassName="p-0"
       footer={
@@ -192,12 +190,12 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                     className="mr-1.5 animate-spin"
                     data-testid="icon-loader"
                   />
-                  {t('上传中...')}
+                  {t("上传中...")}
                 </>
               ) : (
                 <>
                   <Upload size={14} className="mr-1.5" />
-                  {t('选择并上传')}
+                  {t("选择并上传")}
                 </>
               )}
             </Button>
@@ -218,7 +216,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             data-tour="xref-complete-btn"
             className="min-w-[72px] h-8"
           >
-            {isCADEditor ? t('继续打开') : t('完成')}
+            {isCADEditor ? t("继续打开") : t("完成")}
           </Button>
         </div>
       }
@@ -228,47 +226,47 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         {files.length > 0 ? (
           <div
             className="overflow-hidden"
-            style={{ maxHeight: '300px', overflowY: 'auto' }}
+            style={{ maxHeight: "300px", overflowY: "auto" }}
             data-tour="xref-list"
           >
             <table className="w-full">
               <thead className="sticky top-0 z-10">
-                <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                <tr style={{ backgroundColor: "var(--bg-tertiary)" }}>
                   <th
                     className="px-3 py-2 text-left font-medium w-12"
                     style={{
-                      color: 'var(--text-tertiary)',
-                      fontSize: '0.75rem',
+                      color: "var(--text-tertiary)",
+                      fontSize: "0.75rem",
                     }}
                   >
-                    {t('状态')}
+                    {t("状态")}
                   </th>
                   <th
                     className="px-3 py-2 text-left font-medium"
                     style={{
-                      color: 'var(--text-tertiary)',
-                      fontSize: '0.75rem',
+                      color: "var(--text-tertiary)",
+                      fontSize: "0.75rem",
                     }}
                   >
-                    {t('文件名')}
+                    {t("文件名")}
                   </th>
                   <th
                     className="px-3 py-2 text-center font-medium w-20"
                     style={{
-                      color: 'var(--text-tertiary)',
-                      fontSize: '0.75rem',
+                      color: "var(--text-tertiary)",
+                      fontSize: "0.75rem",
                     }}
                   >
-                    {t('类型')}
+                    {t("类型")}
                   </th>
                   <th
                     className="px-3 py-2 text-right font-medium w-24"
                     style={{
-                      color: 'var(--text-tertiary)',
-                      fontSize: '0.75rem',
+                      color: "var(--text-tertiary)",
+                      fontSize: "0.75rem",
                     }}
                   >
-                    {t('进度')}
+                    {t("进度")}
                   </th>
                 </tr>
               </thead>
@@ -280,12 +278,12 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                     style={{
                       borderBottom:
                         index < files.length - 1
-                          ? '1px solid var(--border-subtle)'
-                          : 'none',
+                          ? "1px solid var(--border-subtle)"
+                          : "none",
                       backgroundColor:
-                        file.exists && file.uploadState === 'notSelected'
-                          ? 'var(--success-light)'
-                          : 'var(--bg-primary)',
+                        file.exists && file.uploadState === "notSelected"
+                          ? "var(--success-light)"
+                          : "var(--bg-primary)",
                     }}
                   >
                     <td className="px-3 py-2 align-middle">
@@ -294,15 +292,15 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                           className="w-6 h-6 rounded-full flex items-center justify-center"
                           style={{
                             backgroundColor:
-                              file.uploadState === 'success' ||
+                              file.uploadState === "success" ||
                               (file.exists &&
-                                file.uploadState === 'notSelected')
-                                ? 'var(--success-dim)'
-                                : file.uploadState === 'fail'
-                                  ? 'var(--error-dim)'
-                                  : file.uploadState === 'uploading'
-                                    ? 'var(--info-dim)'
-                                    : 'var(--bg-tertiary)',
+                                file.uploadState === "notSelected")
+                                ? "var(--success-dim)"
+                                : file.uploadState === "fail"
+                                  ? "var(--error-dim)"
+                                  : file.uploadState === "uploading"
+                                    ? "var(--info-dim)"
+                                    : "var(--bg-tertiary)",
                           }}
                         >
                           {getStatusIcon(file)}
@@ -315,80 +313,80 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                           className="font-medium block truncate"
                           style={{
                             color:
-                              file.exists && file.uploadState === 'notSelected'
-                                ? 'var(--text-muted)'
-                                : 'var(--text-primary)',
-                            fontSize: '0.875rem',
+                              file.exists && file.uploadState === "notSelected"
+                                ? "var(--text-muted)"
+                                : "var(--text-primary)",
+                            fontSize: "0.875rem",
                           }}
                         >
                           <FileNameText>{file.name}</FileNameText>
                         </span>
-                        <span style={{ fontSize: '0.75rem' }}>
+                        <span style={{ fontSize: "0.75rem" }}>
                           {getStatusText(file)}
                         </span>
                       </div>
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
                       <Tag
-                        variant={file.type === 'img' ? 'info' : 'primary'}
+                        variant={file.type === "img" ? "info" : "primary"}
                         size="xs"
                       >
-                        {file.type === 'img' ? t('图片') : t('图纸')}
+                        {file.type === "img" ? t("图片") : t("图纸")}
                       </Tag>
                     </td>
                     <td className="px-3 py-2 text-right align-middle">
-                      {file.uploadState === 'uploading' ? (
+                      {file.uploadState === "uploading" ? (
                         <div className="flex items-center justify-end gap-1.5">
                           <div
                             className="w-12 h-1 rounded-full overflow-hidden"
-                            style={{ backgroundColor: 'var(--border-default)' }}
+                            style={{ backgroundColor: "var(--border-default)" }}
                           >
                             <div
                               className="h-full rounded-full transition-all duration-300"
                               style={{
                                 width: `${file.progress}%`,
-                                backgroundColor: 'var(--primary-500)',
+                                backgroundColor: "var(--primary-500)",
                               }}
                             />
                           </div>
                           <span
                             style={{
-                              color: 'var(--text-secondary)',
-                              fontSize: '0.75rem',
+                              color: "var(--text-secondary)",
+                              fontSize: "0.75rem",
                             }}
                           >
                             {Math.round(file.progress)}%
                           </span>
                         </div>
-                      ) : file.uploadState === 'success' ? (
+                      ) : file.uploadState === "success" ? (
                         <span
                           style={{
-                            color: 'var(--success)',
-                            fontSize: '0.75rem',
+                            color: "var(--success)",
+                            fontSize: "0.75rem",
                           }}
                         >
                           100%
                         </span>
-                      ) : file.uploadState === 'fail' ? (
+                      ) : file.uploadState === "fail" ? (
                         <span
-                          style={{ color: 'var(--error)', fontSize: '0.75rem' }}
+                          style={{ color: "var(--error)", fontSize: "0.75rem" }}
                         >
-                          {t('失败')}
+                          {t("失败")}
                         </span>
                       ) : file.exists ? (
                         <span
                           style={{
-                            color: 'var(--text-muted)',
-                            fontSize: '0.75rem',
+                            color: "var(--text-muted)",
+                            fontSize: "0.75rem",
                           }}
                         >
-                          {t('可覆盖')}
+                          {t("可覆盖")}
                         </span>
                       ) : (
                         <span
                           style={{
-                            color: 'var(--text-muted)',
-                            fontSize: '0.75rem',
+                            color: "var(--text-muted)",
+                            fontSize: "0.75rem",
                           }}
                         >
                           -
@@ -403,9 +401,9 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         ) : (
           <div
             className="rounded-lg p-6 text-center"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
           >
-            {t('暂无外部参照文件')}
+            {t("暂无外部参照文件")}
           </div>
         )}
 
@@ -413,25 +411,25 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           <div className="mt-3 space-y-1.5">
             <div
               className="flex items-center justify-between"
-              style={{ fontSize: '0.75rem' }}
+              style={{ fontSize: "0.75rem" }}
             >
-              <span style={{ color: 'var(--text-secondary)' }}>
-                {t('正在上传...')}
+              <span style={{ color: "var(--text-secondary)" }}>
+                {t("正在上传...")}
               </span>
-              <span style={{ color: 'var(--primary-500)' }}>
-                {files.filter((f) => f.uploadState === 'success').length} /{' '}
+              <span style={{ color: "var(--primary-500)" }}>
+                {files.filter((f) => f.uploadState === "success").length} /{" "}
                 {files.length}
               </span>
             </div>
             <div
               className="h-1.5 rounded-full overflow-hidden"
-              style={{ backgroundColor: 'var(--border-default)' }}
+              style={{ backgroundColor: "var(--border-default)" }}
             >
               <div
                 className="h-full transition-all duration-300"
                 style={{
-                  width: `${(files.filter((f) => f.uploadState === 'success').length / files.length) * 100}%`,
-                  backgroundColor: 'var(--primary-500)',
+                  width: `${(files.filter((f) => f.uploadState === "success").length / files.length) * 100}%`,
+                  backgroundColor: "var(--primary-500)",
                 }}
               />
             </div>

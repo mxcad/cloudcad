@@ -27,6 +27,7 @@ jest.mock('fs', () => {
     ...actual,
     statSync: jest.fn().mockReturnValue({ size: 1024 }),
     existsSync: jest.fn().mockReturnValue(false),
+    readdirSync: jest.fn().mockReturnValue([]),
     promises: {
       ...actual.promises,
       copyFile: jest.fn().mockResolvedValue(undefined),
@@ -427,17 +428,11 @@ describe('SaveAsService', () => {
     });
 
     it('合法十六进制 hash 正常进入 uploads 查找分支（勿过度拦截）', async () => {
-      (fs.existsSync as jest.Mock).mockImplementation((p: any) =>
-        String(p).endsWith('.mxweb_preloading.json')
-      );
-      (fs.promises.readFile as jest.Mock).mockResolvedValue(
-        JSON.stringify({
-          images: [],
-          externalReference: [],
-          tz: false,
-          src_file_md5: 'abc123',
-        })
-      );
+      // preloading.json 不存在（readdirSync 扫不到匹配）——只验证合法 hash 进入了扫描分支
+      (fs.readdirSync as jest.Mock).mockReturnValue([]);
+      const copySpy = jest
+        .spyOn(service as any, 'copyDirectoryContents')
+        .mockResolvedValue(undefined);
 
       await (service as any).copyPreloadingData({
         newNodeId: 'node1',
@@ -445,13 +440,52 @@ describe('SaveAsService', () => {
         sourceFileHash: 'abc123def456',
       });
 
-      // 合法 hash 进入分支：对 <hash>.mxweb_preloading.json 做了 existsSync 探测
-      const calledPaths = (fs.existsSync as jest.Mock).mock.calls.map((c) =>
+      // 合法 hash 进入分支：按 hash 前缀扫描 uploads 目录定位 preloading（不再硬拼单名）
+      const calledDirs = (fs.readdirSync as jest.Mock).mock.calls.map((c) =>
         String(c[0])
       );
-      expect(
-        calledPaths.some((p) => p.endsWith('.mxweb_preloading.json'))
-      ).toBe(true);
+      expect(calledDirs.some((d) => d.includes('uploads'))).toBe(true);
+      expect(copySpy).not.toHaveBeenCalled();
+    });
+
+    it('preloading 文件名带源扩展名（<hash>.dwg.mxweb_preloading.json）时仍能定位并复制 xref', async () => {
+      // 回归：引擎产物名按 src_file_md5 带源扩展名，preloading.json 实际落位为
+      // <hash>.dwg.mxweb_preloading.json；此前硬拼 <hash>.mxweb_preloading.json 永远 existsSync
+      // 失败，外部参照静默丢失。现走 hash 前缀 + 后缀降级查找，须能定位并复制 xref 物理目录。
+      const srcHash = '4b298dd48355af1202b532fc4d051658';
+      (fs.readdirSync as jest.Mock).mockImplementation((dir: any) => {
+        if (String(dir).includes('uploads')) {
+          return [`${srcHash}.dwg.mxweb`, `${srcHash}.dwg.mxweb_preloading.json`];
+        }
+        return [];
+      });
+      // 只有 xref 物理目录 existsSync 为真（preloading 文件本身走 readdirSync 定位，不依赖 existsSync）
+      (fs.existsSync as jest.Mock).mockImplementation(
+        (p: any) => !String(p).endsWith('_preloading.json')
+      );
+      (fs.promises.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          images: [],
+          externalReference: ['A1.dwg'],
+          tz: false,
+          src_file_md5: srcHash,
+        })
+      );
+      const copySpy = jest
+        .spyOn(service as any, 'copyDirectoryContents')
+        .mockResolvedValue(undefined);
+
+      await (service as any).copyPreloadingData({
+        newNodeId: 'node1',
+        nodeDirectory: '/storage/node1',
+        sourceFileHash: srcHash,
+      });
+
+      // 命中带源扩展名的 preloading，读出 src_file_md5 并复制 xref 物理目录到新节点
+      expect(copySpy).toHaveBeenCalledTimes(1);
+      const [srcDir, destDir] = copySpy.mock.calls[0];
+      expect(String(srcDir).includes(srcHash)).toBe(true);
+      expect(String(destDir).includes(srcHash)).toBe(true);
     });
   });
 });

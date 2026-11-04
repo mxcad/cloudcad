@@ -1,40 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   User,
   AlertTriangle,
   CheckCircle,
   AlertCircle,
-} from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
-import { useWechatAuth } from '../../hooks/useWechatAuth';
-import { usePermission } from '../../hooks/usePermission';
-import { useNotification } from '../../contexts/NotificationContext';
-import { useWechatBind, isWechatBindConflict } from './hooks/useWechatBind';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { useTheme } from '../../contexts/ThemeContext';
-import { t } from '@/languages';
-import { Button, TabButton, Tabs } from '@/components/ui';
-import { useMembership } from '@/hooks/useMembership';
-import { ProfileInfoTab } from './ProfileInfoTab';
-import { ProfilePasswordTab } from './ProfilePasswordTab';
-import { ProfileEmailTab } from './ProfileEmailTab';
-import { ProfilePhoneTab } from './ProfilePhoneTab';
-import { ProfileWechatTab } from './ProfileWechatTab';
-import { ProfileDeactivateTab } from './ProfileDeactivateTab';
-import { ProfileHeader } from './ProfileHeader';
-import { usePasswordProfile } from './hooks/usePasswordProfile';
-import { useEmailProfile } from './hooks/useEmailProfile';
-import { usePhoneProfile } from './hooks/usePhoneProfile';
-import { useDeactivateProfile } from './hooks/useDeactivateProfile';
-import styles from './Profile.module.css';
+} from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useRuntimeConfig } from "../../contexts/RuntimeConfigContext";
+import { useWechatAuth } from "../../hooks/useWechatAuth";
+import { usePermission } from "../../hooks/usePermission";
+import { useNotification } from "../../contexts/NotificationContext";
+import { useWechatBind, isWechatBindConflict } from "./hooks/useWechatBind";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { useTheme } from "../../contexts/ThemeContext";
+import { t } from "@/languages";
+import { Button, TabButton, Tabs } from "@/components/ui";
+import { useMembership } from "@/hooks/useMembership";
+import { ProfileInfoTab } from "./ProfileInfoTab";
+import { ProfilePasswordTab } from "./ProfilePasswordTab";
+import { ProfileEmailTab } from "./ProfileEmailTab";
+import { ProfilePhoneTab } from "./ProfilePhoneTab";
+import { ProfileWechatTab } from "./ProfileWechatTab";
+import { ProfileDeactivateTab } from "./ProfileDeactivateTab";
+import { ProfileHeader } from "./ProfileHeader";
+import { usePasswordProfile } from "./hooks/usePasswordProfile";
+import { useEmailProfile } from "./hooks/useEmailProfile";
+import { usePhoneProfile } from "./hooks/usePhoneProfile";
+import { useDeactivateProfile } from "./hooks/useDeactivateProfile";
+import styles from "./Profile.module.css";
 
-type TabType = 'info' | 'deactivate';
+type TabType = "info" | "deactivate";
 
-type InfoSubView = 'grid' | 'password' | 'email' | 'phone' | 'wechat';
+type InfoSubView = "grid" | "password" | "email" | "phone" | "wechat";
 
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -50,14 +50,14 @@ export const Profile: React.FC = () => {
   const wechatEnabled = runtimeConfig.wechatEnabled ?? false;
 
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabType>('info');
+  const [activeTab, setActiveTab] = useState<TabType>("info");
   // 弱口令横幅「去修改」深链：/profile?section=password 直达修改密码子页
   const [infoSubView, setInfoSubView] = useState<InfoSubView>(
-    searchParams.get('section') === 'password' ? 'password' : 'grid'
+    searchParams.get("section") === "password" ? "password" : "grid",
   );
   const membership = useMembership();
 
-  useDocumentTitle(t('个人资料'));
+  useDocumentTitle(t("个人资料"));
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +66,16 @@ export const Profile: React.FC = () => {
 
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash.includes('wechat_result')) {
+    if (hash.includes("wechat_result")) {
       try {
-        const hashValue = hash.split('wechat_result=')[1];
+        const hashValue = hash.split("wechat_result=")[1];
         if (hashValue) {
           const result = JSON.parse(decodeURIComponent(hashValue));
-          if (result.purpose === 'bind') {
-            setActiveTab('info');
-            setInfoSubView('wechat');
-          } else if (result.purpose === 'deactivate')
-            setActiveTab('deactivate');
+          if (result.purpose === "bind") {
+            setActiveTab("info");
+            setInfoSubView("wechat");
+          } else if (result.purpose === "deactivate")
+            setActiveTab("deactivate");
         }
       } catch {
         /* ignore */
@@ -84,7 +84,7 @@ export const Profile: React.FC = () => {
   }, []);
 
   const { open: wechatBindOpen } = useWechatAuth({
-    purpose: 'bind',
+    purpose: "bind",
     onSuccess: async (result) => {
       try {
         const bindRes = await bindWechat({
@@ -92,23 +92,23 @@ export const Profile: React.FC = () => {
           state: result.state!,
         });
         if (bindRes?.success) {
-          setSuccess(t('微信绑定成功'));
+          setSuccess(t("微信绑定成功"));
           await refreshUser();
         } else {
-          setError(bindRes?.message || t('绑定失败'));
+          setError(bindRes?.message || t("绑定失败"));
         }
       } catch (bindErr) {
         // 该微信已绑定其他账号（409，code=CONFLICT）：询问是否接管绑定——
         // 典型场景：解绑后微信登录自动注册了新账号占用了 openid，原账号重新绑定
         if (isWechatBindConflict(bindErr)) {
           const confirmed = await showConfirm({
-            title: t('绑定微信'),
+            title: t("绑定微信"),
             message: t(
-              '该微信已绑定其他账号，是否解绑该账号的微信并绑定到当前账号？'
+              "该微信已绑定其他账号，是否解绑该账号的微信并绑定到当前账号？",
             ),
-            confirmText: t('确认接管绑定'),
-            cancelText: t('取消'),
-            type: 'warning',
+            confirmText: t("确认接管绑定"),
+            cancelText: t("取消"),
+            type: "warning",
           });
           if (confirmed) {
             try {
@@ -118,16 +118,16 @@ export const Profile: React.FC = () => {
                 takeover: true,
               });
               if (takeoverRes?.success) {
-                setSuccess(t('微信绑定成功'));
+                setSuccess(t("微信绑定成功"));
                 await refreshUser();
               } else {
-                setError(takeoverRes?.message || t('绑定失败'));
+                setError(takeoverRes?.message || t("绑定失败"));
               }
             } catch (takeoverErr) {
               setError(getErrorMessage(takeoverErr));
             }
           } else {
-            setError(t('该微信已绑定其他账号'));
+            setError(t("该微信已绑定其他账号"));
           }
         } else {
           setError(getErrorMessage(bindErr));
@@ -172,11 +172,11 @@ export const Profile: React.FC = () => {
 
   const handleUnbindWechat = async () => {
     const confirmed = await showConfirm({
-      title: t('解绑微信'),
-      message: t('确定要解绑微信吗？解绑后需要重新绑定。'),
-      confirmText: t('确认解绑'),
-      cancelText: t('取消'),
-      type: 'warning',
+      title: t("解绑微信"),
+      message: t("确定要解绑微信吗？解绑后需要重新绑定。"),
+      confirmText: t("确认解绑"),
+      cancelText: t("取消"),
+      type: "warning",
     });
     if (!confirmed) return;
     try {
@@ -184,32 +184,32 @@ export const Profile: React.FC = () => {
       setError(null);
       const response = await unbindWechat();
       if (response?.success) {
-        showToast(t('微信解绑成功'), 'success');
-        setSuccess(t('微信解绑成功'));
+        showToast(t("微信解绑成功"), "success");
+        setSuccess(t("微信解绑成功"));
         await refreshUser();
       } else {
-        setError(response?.message || t('解绑失败'));
-        showToast(response?.message || t('解绑失败'), 'error');
+        setError(response?.message || t("解绑失败"));
+        showToast(response?.message || t("解绑失败"), "error");
       }
     } catch (err) {
       const errorMsg =
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
         (err as Error).message ||
-        t('解绑失败');
+        t("解绑失败");
       setError(errorMsg);
-      showToast(errorMsg, 'error');
+      showToast(errorMsg, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const resetInfoSubForms = () => {
-    setInfoSubView('grid');
+    setInfoSubView("grid");
     emailProfile.setIsEditingEmail(false);
-    emailProfile.setEmailStep('input');
+    emailProfile.setEmailStep("input");
     phoneProfile.setIsEditingPhone(false);
-    phoneProfile.setPhoneStep('verifyOld');
+    phoneProfile.setPhoneStep("verifyOld");
   };
 
   const switchTab = (tab: TabType) => {
@@ -222,10 +222,10 @@ export const Profile: React.FC = () => {
   return (
     <div
       className={`min-h-screen p-6 ${styles.profilePage}`}
-      data-theme={isDark ? 'dark' : 'light'}
+      data-theme={isDark ? "dark" : "light"}
     >
       <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate(-1)}>
-        {t('返回')}
+        {t("返回")}
       </Button>
 
       <div className={styles.profileContainer}>
@@ -242,18 +242,18 @@ export const Profile: React.FC = () => {
 
           <Tabs className="ml-6 mr-6 mt-6">
             <TabButton
-              active={activeTab === 'info'}
+              active={activeTab === "info"}
               icon={User}
-              onClick={() => switchTab('info')}
+              onClick={() => switchTab("info")}
             >
-              {t('个人信息')}
+              {t("个人信息")}
             </TabButton>
             <TabButton
-              active={activeTab === 'deactivate'}
+              active={activeTab === "deactivate"}
               icon={AlertTriangle}
-              onClick={() => switchTab('deactivate')}
+              onClick={() => switchTab("deactivate")}
             >
-              {t('注销账户')}
+              {t("注销账户")}
             </TabButton>
           </Tabs>
 
@@ -271,8 +271,8 @@ export const Profile: React.FC = () => {
           )}
 
           <div className={styles.contentArea}>
-            {activeTab === 'info' &&
-              (infoSubView === 'grid' ? (
+            {activeTab === "info" &&
+              (infoSubView === "grid" ? (
                 <ProfileInfoTab
                   user={user}
                   mailEnabled={mailEnabled}
@@ -286,26 +286,26 @@ export const Profile: React.FC = () => {
                     <h2
                       className={`text-xl font-semibold ${styles.textTextPrimary}`}
                     >
-                      {infoSubView === 'password'
+                      {infoSubView === "password"
                         ? user?.hasPassword === false
-                          ? t('设置密码')
-                          : t('修改密码')
-                        : infoSubView === 'email'
-                          ? t('邮箱绑定')
-                          : infoSubView === 'phone'
-                            ? t('手机绑定')
-                            : t('微信绑定')}
+                          ? t("设置密码")
+                          : t("修改密码")
+                        : infoSubView === "email"
+                          ? t("邮箱绑定")
+                          : infoSubView === "phone"
+                            ? t("手机绑定")
+                            : t("微信绑定")}
                     </h2>
                     <Button
                       variant="secondary"
                       icon={ArrowLeft}
                       onClick={resetInfoSubForms}
                     >
-                      {t('返回')}
+                      {t("返回")}
                     </Button>
                   </div>
 
-                  {infoSubView === 'password' && (
+                  {infoSubView === "password" && (
                     <ProfilePasswordTab
                       user={passwordProfile.user}
                       passwordForm={passwordProfile.passwordForm}
@@ -321,7 +321,7 @@ export const Profile: React.FC = () => {
                     />
                   )}
 
-                  {infoSubView === 'email' && mailEnabled && (
+                  {infoSubView === "email" && mailEnabled && (
                     <ProfileEmailTab
                       user={user}
                       emailForm={emailProfile.emailForm}
@@ -347,7 +347,7 @@ export const Profile: React.FC = () => {
                     />
                   )}
 
-                  {infoSubView === 'phone' && smsEnabled && (
+                  {infoSubView === "phone" && smsEnabled && (
                     <ProfilePhoneTab
                       user={user}
                       phoneForm={phoneProfile.phoneForm}
@@ -371,7 +371,7 @@ export const Profile: React.FC = () => {
                     />
                   )}
 
-                  {infoSubView === 'wechat' && wechatEnabled && (
+                  {infoSubView === "wechat" && wechatEnabled && (
                     <ProfileWechatTab
                       wechatId={user?.wechatId as string | null | undefined}
                       loading={loading}
@@ -382,7 +382,7 @@ export const Profile: React.FC = () => {
                 </>
               ))}
 
-            {activeTab === 'deactivate' && (
+            {activeTab === "deactivate" && (
               <ProfileDeactivateTab
                 user={deactivateProfile.user}
                 deactivateForm={deactivateProfile.deactivateForm}
@@ -395,15 +395,15 @@ export const Profile: React.FC = () => {
                 }
                 loading={loading}
                 onVerificationMethodChange={(
-                  method: '' | 'password' | 'phone' | 'email' | 'wechat'
+                  method: "" | "password" | "phone" | "email" | "wechat",
                 ) =>
                   deactivateProfile.setDeactivateForm((f) => ({
                     ...f,
                     verificationMethod: method,
-                    password: '',
-                    phoneCode: '',
-                    emailCode: '',
-                    wechatCode: '',
+                    password: "",
+                    phoneCode: "",
+                    emailCode: "",
+                    wechatCode: "",
                   }))
                 }
                 onPasswordChange={(password: string) =>
@@ -442,7 +442,7 @@ export const Profile: React.FC = () => {
                     wechatCode: code,
                   }));
                   // 授权完成 ≠ 验证通过：openid 校验在提交注销时由后端执行
-                  setSuccess(t('微信授权完成，确认注销时自动验证'));
+                  setSuccess(t("微信授权完成，确认注销时自动验证"));
                 }}
                 onDeactivate={deactivateProfile.handleDeactivate}
                 onShowConfirm={showConfirm}

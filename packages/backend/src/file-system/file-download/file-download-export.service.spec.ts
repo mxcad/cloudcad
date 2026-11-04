@@ -23,6 +23,8 @@ import {
   FileDownloadExportService,
   isConversionCacheEntry,
 } from './file-download-export.service';
+import { FileDownloadExportConversionService } from './file-download-export-conversion.service';
+import { FileDownloadArchiveService } from './file-download-archive.service';
 
 describe('isConversionCacheEntry（清理 cron 的缓存产物判据）', () => {
   const H = 'a'.repeat(32);
@@ -128,6 +130,8 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileDownloadExportService,
+        FileDownloadExportConversionService,
+        FileDownloadArchiveService,
         { provide: DatabaseService, useValue: prisma },
         {
           provide: IStorageService,

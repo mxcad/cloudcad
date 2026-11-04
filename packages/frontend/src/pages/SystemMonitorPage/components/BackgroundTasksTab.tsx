@@ -1,15 +1,15 @@
-import React from 'react';
-import { Play, RefreshCw } from 'lucide-react';
-import { t } from '@/languages';
-import { Button, Tag } from '@/components/ui';
-import { TASK_ENABLED_KEY_BY_NAME } from '../types';
-import type { TaskRunRecord, TaskInfo } from '../types';
-import type { BackgroundTasksState } from '../hooks/useBackgroundTasks';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import styles from '../SystemMonitorPage.module.css';
+import React from "react";
+import { Play, RefreshCw } from "lucide-react";
+import { t } from "@/languages";
+import { Button, Tag } from "@/components/ui";
+import { TASK_ENABLED_KEY_BY_NAME } from "../types";
+import type { TaskRunRecord, TaskInfo } from "../types";
+import type { BackgroundTasksState } from "../hooks/useBackgroundTasks";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import styles from "../SystemMonitorPage.module.css";
 
 const formatDuration = (ms: number | null | undefined): string => {
-  if (ms == null) return '--';
+  if (ms == null) return "--";
   if (ms < 1000) return `${ms} ms`;
   return `${(ms / 1000).toFixed(1)} s`;
 };
@@ -49,25 +49,24 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
     toggleTask,
   } = state;
 
-  const registryColSpan =
-    3 + (canToggle ? 1 : 0) + (canTrigger ? 1 : 0);
+  const registryColSpan = 3 + (canToggle ? 1 : 0) + (canTrigger ? 1 : 0);
 
   return (
     <section className={styles.section}>
       {/* 任务清单（任务级控件） */}
       <div className={styles.sectionHeader}>
-        <h2>{t('任务清单')}</h2>
+        <h2>{t("任务清单")}</h2>
       </div>
       <div className={styles.tableContainer}>
         <div className={styles.tableScroll}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>{t('任务名')}</th>
-                <th>{t('描述')}</th>
-                <th>{t('定时')}</th>
-                {canToggle && <th>{t('启用')}</th>}
-                {canTrigger && <th>{t('操作')}</th>}
+                <th>{t("任务名")}</th>
+                <th>{t("描述")}</th>
+                <th>{t("定时")}</th>
+                {canToggle && <th>{t("启用")}</th>}
+                {canTrigger && <th>{t("操作")}</th>}
               </tr>
             </thead>
             <tbody>
@@ -75,14 +74,14 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
                 <tr>
                   <td colSpan={registryColSpan} className={styles.tableEmpty}>
                     <span className={styles.loadingText}>
-                      {t('正在获取数据')}
+                      {t("正在获取数据")}
                     </span>
                   </td>
                 </tr>
               ) : taskList.length === 0 ? (
                 <tr>
                   <td colSpan={registryColSpan} className={styles.tableEmpty}>
-                    {t('暂无已注册任务')}
+                    {t("暂无已注册任务")}
                   </td>
                 </tr>
               ) : (
@@ -93,7 +92,7 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
                     enabled={
                       enabledByName
                         ? (enabledByName[
-                            TASK_ENABLED_KEY_BY_NAME[task.taskName] ?? ''
+                            TASK_ENABLED_KEY_BY_NAME[task.taskName] ?? ""
                           ] ?? true)
                         : true
                     }
@@ -113,10 +112,10 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
 
       {/* 执行历史（记录级） */}
       <div className={styles.sectionHeader}>
-        <h2>{t('执行历史')}</h2>
+        <h2>{t("执行历史")}</h2>
         <div className={styles.sectionHeaderRight}>
           <span className={styles.refreshCountdown}>
-            {t('{seconds}s 后自动刷新', {
+            {t("{seconds}s 后自动刷新", {
               seconds: String(refreshCountdown),
             })}
           </span>
@@ -127,7 +126,7 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
             loading={loading}
             icon={RefreshCw}
           >
-            {loading ? t('刷新中...') : t('立即刷新')}
+            {loading ? t("刷新中...") : t("立即刷新")}
           </Button>
         </div>
       </div>
@@ -135,7 +134,7 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
       {error && <div className={styles.errorBanner}>{error}</div>}
       {configUnavailable && (
         <div className={styles.configUnavailableBanner}>
-          {t('无法读取任务启用状态，开关已禁用')}
+          {t("无法读取任务启用状态，开关已禁用")}
         </div>
       )}
 
@@ -144,11 +143,11 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>{t('任务名')}</th>
-                <th>{t('最近执行时间')}</th>
-                <th>{t('最近结果')}</th>
-                <th>{t('耗时')}</th>
-                <th>{t('触发方式')}</th>
+                <th>{t("任务名")}</th>
+                <th>{t("最近执行时间")}</th>
+                <th>{t("最近结果")}</th>
+                <th>{t("耗时")}</th>
+                <th>{t("触发方式")}</th>
               </tr>
             </thead>
             <tbody>
@@ -156,14 +155,14 @@ export const BackgroundTasksTab: React.FC<BackgroundTasksTabProps> = ({
                 <tr>
                   <td colSpan={5} className={styles.tableEmpty}>
                     <span className={styles.loadingText}>
-                      {t('正在获取数据')}
+                      {t("正在获取数据")}
                     </span>
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
                   <td colSpan={5} className={styles.tableEmpty}>
-                    {t('暂无任务执行记录')}
+                    {t("暂无任务执行记录")}
                   </td>
                 </tr>
               ) : (
@@ -225,11 +224,8 @@ const TaskRegistryRow: React.FC<TaskRegistryRowProps> = ({
         ) : task.schedule ? (
           <span className={styles.taskScheduleCell}>{task.schedule}</span>
         ) : (
-          <span
-            className={styles.taskNoToggle}
-            title={t('该任务无独立定时')}
-          >
-            {t('—')}
+          <span className={styles.taskNoToggle} title={t("该任务无独立定时")}>
+            {t("—")}
           </span>
         )}
       </td>
@@ -248,8 +244,8 @@ const TaskRegistryRow: React.FC<TaskRegistryRowProps> = ({
           </td>
         ) : (
           <td>
-            <span className={styles.taskNoToggle} title={t('该任务无独立开关')}>
-              {t('—')}
+            <span className={styles.taskNoToggle} title={t("该任务无独立开关")}>
+              {t("—")}
             </span>
           </td>
         ))}
@@ -263,7 +259,7 @@ const TaskRegistryRow: React.FC<TaskRegistryRowProps> = ({
             disabled={triggering !== null}
             onClick={() => onTrigger(task.taskName)}
           >
-            {t('手动触发')}
+            {t("手动触发")}
           </Button>
         </td>
       )}
@@ -275,7 +271,7 @@ const TaskRegistryRow: React.FC<TaskRegistryRowProps> = ({
  * 执行历史行：纯记录展示（无操作列），失败红色高亮
  */
 const HistoryRow: React.FC<{ record: TaskRunRecord }> = ({ record }) => {
-  const isFailed = record.status === 'FAILED';
+  const isFailed = record.status === "FAILED";
   return (
     <tr
       data-status={record.status}
@@ -284,10 +280,7 @@ const HistoryRow: React.FC<{ record: TaskRunRecord }> = ({ record }) => {
       <td>
         <span className={styles.taskNameCell}>{record.taskName}</span>
         {isFailed && record.errorSummary && (
-          <span
-            className={styles.taskErrorSummary}
-            title={record.errorSummary}
-          >
+          <span className={styles.taskErrorSummary} title={record.errorSummary}>
             {record.errorSummary}
           </span>
         )}
@@ -296,16 +289,16 @@ const HistoryRow: React.FC<{ record: TaskRunRecord }> = ({ record }) => {
       <td>
         {isFailed ? (
           <Tag variant="error" dot>
-            {t('失败')}
+            {t("失败")}
           </Tag>
         ) : (
           <Tag variant="success" dot>
-            {t('成功')}
+            {t("成功")}
           </Tag>
         )}
       </td>
       <td>{formatDuration(record.durationMs)}</td>
-      <td>{record.trigger === 'MANUAL' ? t('手动') : t('定时')}</td>
+      <td>{record.trigger === "MANUAL" ? t("手动") : t("定时")}</td>
     </tr>
   );
 };

@@ -69,6 +69,14 @@ pnpm i18nCompile      # 编译语言包
 - 自定义/非源码提取文本写入 `translates/messages/mxUIConfig.json`（`default.json` 会被 extract 覆盖，勿手动编辑）
 - 语言列表：zh-CN（默认）/ en-US / zh-TW / ko-KR
 
+**⚠️ 禁止手动加 i18n key**：新增任何中文文案，**只写 `t('中文')`，禁止手动添加 id**。voerkai18n 的 `pnpm i18nExtract` 扫描 `t('中文')` 自动把新文案提取到 `default.json` 并**自动分配 id** 到 `idMap.json`；随后只补各语言翻译（`messages/*.ts`）、跑 `pnpm i18nCompile` 编译。
+
+- 禁止手动往 `idMap.json` 加 `"中文文案": 数字` 条目
+- 禁止手动往 `messages/*.ts` 加 `"数字": "译文"` 条目
+- 禁止手动改 `default.json`（会被 extract 覆盖）
+
+验证：新文案提取后 `idMap.json` 应自动多出该中文 key 且 id 连续递增；凡 diff 里出现手插 id 条目即违规。
+
 ### ④ 样式 token
 
 - 颜色使用全局 CSS 变量（`--text-primary` / `--bg-elevated` / `--border-color` / `--font-size-body` / `--space-*`），**禁止硬编码色值**（`#333` / `white`）

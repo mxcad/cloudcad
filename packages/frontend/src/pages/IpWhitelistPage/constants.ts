@@ -10,44 +10,52 @@ import type { IpWhitelistPreset } from './types';
 /** 管理员 IP 白名单每页条数（前端默认值，前端恒显式传 pageSize） */
 export const IP_WHITELIST_PAGE_SIZE = 30;
 
-/** 条目来源展示映射（manual=界面添加，auto=首次启动系统默认，file=服务器本地文件兜底） */
-export const IP_WHITELIST_SOURCE_META: Record<
-  string,
-  { label: string }
-> = {
-  manual: { label: t('手动添加') },
-  auto: { label: t('系统默认') },
-  file: { label: t('本地文件') },
-};
+/** 条目来源展示文案（manual=界面添加，auto=首次启动系统默认，file=服务器本地文件兜底）
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新 */
+export function getIpWhitelistSourceLabel(source: string): string | undefined {
+  switch (source) {
+    case 'manual':
+      return t('手动添加');
+    case 'auto':
+      return t('系统默认');
+    case 'file':
+      return t('本地文件');
+    default:
+      return undefined;
+  }
+}
 
 /**
  * 快速添加预设组：一键放行整段网络，免去逐个填写 CIDR。
  *
  * IPv4 与 IPv6 必须成对给出——后端 cidrContains 要求版本一致，
  * 单给 0.0.0.0/0 会漏掉纯 IPv6 客户端。
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新
  */
-export const IP_WHITELIST_PRESETS: IpWhitelistPreset[] = [
-  {
-    key: 'lan',
-    label: t('局域网'),
-    description: t('放行内网网段（10/8、172.16/12、192.168/16 与 IPv6 私网）'),
-    reason: t('快速添加：局域网网段'),
-    ips: [
-      '10.0.0.0/8',
-      '172.16.0.0/12',
-      '192.168.0.0/16',
-      'fc00::/7',
-      'fe80::/10',
-    ],
-  },
-  {
-    key: 'all',
-    label: t('全网'),
-    description: t('放行全部 IPv4 与 IPv6 地址'),
-    reason: t('快速添加：全局可访问'),
-    ips: ['0.0.0.0/0', '::/0'],
-  },
-];
+export function getIpWhitelistPresets(): IpWhitelistPreset[] {
+  return [
+    {
+      key: 'lan',
+      label: t('局域网'),
+      description: t('放行内网网段（10/8、172.16/12、192.168/16 与 IPv6 私网）'),
+      reason: t('快速添加：局域网网段'),
+      ips: [
+        '10.0.0.0/8',
+        '172.16.0.0/12',
+        '192.168.0.0/16',
+        'fc00::/7',
+        'fe80::/10',
+      ],
+    },
+    {
+      key: 'all',
+      label: t('全网'),
+      description: t('放行全部 IPv4 与 IPv6 地址'),
+      reason: t('快速添加：全局可访问'),
+      ips: ['0.0.0.0/0', '::/0'],
+    },
+  ];
+}
 
 /** 本地文件条目 ID 前缀（与后端 FILE_ENTRY_ID_PREFIX 保持一致） */
 export const FILE_ENTRY_ID_PREFIX = 'file:';

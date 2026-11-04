@@ -21,20 +21,21 @@
  * 按钮保持同一套（React 19 下函数组件的 ref 经 props 透传到真实 button）。
  */
 
-import React from 'react';
-import { Bell } from 'lucide-react';
+import React from "react";
+import { Bell } from "lucide-react";
 
-import { Button } from '@/components/ui/Button';
 import {
+  Button,
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { t } from '@/languages';
+  Tooltip,
+} from "@/components/ui";
 
-import { useNotice } from './NoticeProvider';
-import { NoticeListView } from './NoticeListView';
+import { t } from "@/languages";
+
+import { useNotice } from "./NoticeProvider";
+import { NoticeListView } from "./NoticeListView";
 
 export const NoticeBellDropdown: React.FC = () => {
   const {
@@ -49,7 +50,7 @@ export const NoticeBellDropdown: React.FC = () => {
 
   return (
     <div className="p-0.5">
-      <Tooltip content={t('通知')}>
+      <Tooltip content={t("通知")}>
         <Popover open={bellOpen} onOpenChange={setNoticeBellOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -58,7 +59,7 @@ export const NoticeBellDropdown: React.FC = () => {
                          hover:scale-110 active:scale-95
                          hover:bg-[var(--bg-tertiary)]
                          group"
-              aria-label={t('通知')}
+              aria-label={t("通知")}
               aria-expanded={bellOpen}
             >
               <Bell
@@ -72,7 +73,7 @@ export const NoticeBellDropdown: React.FC = () => {
                              min-w-[16px] h-[16px] px-1 rounded-full text-[10px] font-semibold
                              text-[var(--text-inverse)] bg-[var(--primary-500)]"
                 >
-                  {unread.length > 99 ? '99+' : unread.length}
+                  {unread.length > 99 ? "99+" : unread.length}
                 </span>
               )}
             </Button>

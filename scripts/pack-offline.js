@@ -69,6 +69,9 @@ const {
   enableImplInEnvExample,
 } = require('./pack-lib/pack-assertions');
 
+// 部署/升级包「剥离 pnpm.patchedDependencies」纯转换（背景见 pack-lib/strip-patched-deps.js）
+const { stripPatchedDependencies } = require('./pack-lib/strip-patched-deps');
+
 // 前端构建唯一出口（pack-linux-deploy.js 与本文件共用，2026-10-09 收敛双份漂移）
 const { buildFrontendLocally } = require('./pack-lib/build-frontend');
 
@@ -167,9 +170,13 @@ function find7z() {
   return null;
 }
 
-/** 命令行判据（辅助）：形态可辨的 dev server。形态多变时由下面的模块扫描兜底 */
+/**
+ * 命令行判据（辅助）：形态可辨的 dev server。形态多变时由下面的模块扫描兜底。
+ * pnpm 判据限定 dev 子命令（pnpm dev / pnpm run dev / pnpm -r dev / pnpm --filter x dev），
+ * 避免误伤并行会话的 pnpm i18n / build / test 等长任务（它们不占用 dev 环境）。
+ */
 const DEV_SERVER_CMD_RE =
-  /(?:corepack[\/\\]dist[\/\\]pnpm\.js|vite[\/\\]bin[\/\\]vite\.js|@nestjs[\/\\]cli[\/\\]bin[\/\\]nest\.js)/;
+  /(?:corepack[\/\\]dist[\/\\]pnpm\.js(?:\s+(?:--?[\w-]+(?:[= ][^\s]+)?|run|exec))*(?:\s+dev(?::[\w-]+)?)(?=\s|$)|vite[\/\\]bin[\/\\]vite\.js|@nestjs[\/\\]cli[\/\\]bin[\/\\]nest\.js)/;
 
 /**
  * Windows：找出已 dlopen 本仓 node_modules 原生模块的 node.exe 进程。
@@ -203,48 +210,37 @@ function findNodeModulesLockingPids() {
 }
 
 /**
- * 打包前置守卫：开发服务器存活时拒绝打包（原生打包机：Windows / Linux）
+ * 探测 dev server / node_modules 占用进程 PID。
  *
- * vite / nest --watch 长期占用 node_modules 与 dist：Windows 上 dlopen native
- * addon（lightningcss / swc / oxc-sys 等）后文件句柄无法被 pnpm unlink，
- * 打包重建 node_modules 会 EPERM 失败，且恢复步骤连带失效，
- * 留下一个 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境；
- * Linux 上文件可 unlink，但打包 --prod 重建 node_modules + 清 dist 同样会
- * 打挂存活 dev server。打包是离线操作，前置阻断成本低于事后修复。
- * 容器内为一次性环境，无 dev 场景，直接跳过。
- *
- * --allow-dev-running 或 ALLOW_DEV_RUNNING=1 可跳过（CI 环境无 dev server）。
+ * 两路判据取并集：
+ * 1. 命令行形态（corepack pnpm / vite / nest --watch）——形态可辨的 dev server；
+ * 2. Windows 原生模块扫描（findNodeModulesLockingPids）——兜底命令行识别不到的
+ *    占用者（如 `node dist/main` 起的后端）。
  */
-function assertNoDevServerRunning(allowDevRunning) {
-  if (IN_CONTAINER) return;
-  if (allowDevRunning || process.env.ALLOW_DEV_RUNNING === '1') return;
-
-  let found = [];
+function detectDevServerPids() {
+  const found = [];
 
   if (os.platform() === 'win32') {
-    // 逐条查命令行，避免整表输出经 shell 变量中转产生编码问题
-    const rows = [];
-    let cursor = -1;
-    for (let i = 0; i < 200; i++) {
-      cursor = spawnSync(
-        'powershell',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select-Object -Skip ${cursor} -First 1 Id, CommandLine | ConvertTo-Csv -NoTypeInformation`,
-        ],
-        { encoding: 'utf8' }
-      );
-      const line = (cursor.stdout || '').trim().split('\n')[0];
-      if (!line) break;
-      const m = line.match(/^(\d+),\s*"?(.*?)"$/);
-      if (!m || Number(m[1]) === process.pid) continue;
-      rows.push([m[1], m[2] || '']);
+    // 整表经 spawnSync 管道直取（utf8），不经 shell 变量中转，无 GBK 双重转码问题；
+    // 输出端强制 UTF8，防 PS 5.1 重定向时按 OEM 码页（GBK）转码。
+    // 注意：Get-CimInstance 的进程号属性是 ProcessId（不是 Id，Id 会输出空列）。
+    const res = spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select-Object ProcessId, CommandLine | ConvertTo-Csv -NoTypeInformation`,
+      ],
+      { encoding: 'utf8' }
+    );
+    if (res.status === 0) {
+      for (const line of (res.stdout || '').split('\n')) {
+        const m = line.trim().match(/^"?(\d+)"?,\s*"?(.*?)"?$/);
+        if (!m || Number(m[1]) === process.pid) continue;
+        if (DEV_SERVER_CMD_RE.test(m[2] || '')) found.push(m[1]);
+      }
     }
-    found = rows
-      .filter(([, cmd]) => DEV_SERVER_CMD_RE.test(cmd))
-      .map(([pid]) => pid);
   } else if (os.platform() === 'linux') {
     // Linux：ps 枚举进程命令行（procps 为开发机标配；ps 不可用时不阻断，与 Windows 探测失败同语义）
     const res = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' });
@@ -252,8 +248,12 @@ function assertNoDevServerRunning(allowDevRunning) {
       for (const line of (res.stdout || '').split('\n')) {
         const m = line.match(/^\s*(\d+)\s+(.*)$/);
         if (!m || Number(m[1]) === process.pid) continue;
-        // 与 Windows 判据同族：corepack pnpm / vite（.bin 符号链接或解析后路径）/ nest --watch
-        if (/(?:corepack[\/]dist[\/]pnpm\.js|\.bin[\/]vite(\s|$)|vite[\/]bin[\/]vite\.js|nest\.js start --watch)/.test(m[2])) {
+        // 与 Windows 判据同族：corepack pnpm dev（限定 dev 子命令）/ vite（.bin 符号链接或解析后路径）/ nest --watch
+        if (
+          /(?:corepack[\/]dist[\/]pnpm\.js(?:\s+(?:--?[\w-]+(?:[= ][^\s]+)?|run|exec))*(?:\s+dev(?::[\w-]+)?)(?=\s|$)|\.bin[\/]vite(\s|$)|vite[\/]bin[\/]vite\.js|nest\.js start --watch)/.test(
+            m[2]
+          )
+        ) {
           found.push(m[1]);
         }
       }
@@ -262,21 +262,172 @@ function assertNoDevServerRunning(allowDevRunning) {
 
   // 兜底：命令行形态识别不到的占用者（如 `node dist/main` 起的后端），
   // 按「已加载本仓 node_modules 原生模块」判定。两者取并集去重。
-  found = [...new Set(found.concat(findNodeModulesLockingPids()))];
+  return [...new Set(found.concat(findNodeModulesLockingPids()))];
+}
 
-  if (found.length === 0) return;
+/**
+ * 收集本进程的祖先 PID 链（向上到系统/init）。
+ *
+ * 自动关闭 dev server 前必须排除它们：打包脚本常由 pnpm/corepack 拉起，
+ * 启动器命令行可能命中 dev server 判据（corepack pnpm），误杀会杀掉本脚本自己。
+ *
+ * @returns {Set<number>|null} 祖先 PID 集合；探测失败返回 null（调用方降级为中止）
+ */
+function getAncestorPids() {
+  const ancestors = new Set();
+  if (os.platform() === 'win32') {
+    const res = spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `$p = ${process.pid}; while ($true) { $i = Get-CimInstance Win32_Process -Filter "ProcessId=$p" -ErrorAction SilentlyContinue; if (-not $i -or -not $i.ParentProcessId -or $i.ParentProcessId -le 4) { break }; Write-Output $i.ParentProcessId; $p = $i.ParentProcessId }`,
+      ],
+      { encoding: 'utf8' }
+    );
+    if (res.status !== 0) return null;
+    for (const line of (res.stdout || '').split(/\r?\n/)) {
+      const n = Number(line.trim());
+      if (n > 0) ancestors.add(n);
+    }
+    return ancestors;
+  }
+  const res = spawnSync('ps', ['-eo', 'pid=,ppid='], { encoding: 'utf8' });
+  if (res.status !== 0) return null;
+  const ppidOf = new Map();
+  for (const line of (res.stdout || '').split('\n')) {
+    const m = line.match(/^\s*(\d+)\s+(\d+)$/);
+    if (m) ppidOf.set(Number(m[1]), Number(m[2]));
+  }
+  let pid = process.pid;
+  for (let i = 0; i < 20; i++) {
+    const ppid = ppidOf.get(pid);
+    if (!ppid || ppid <= 1) break;
+    ancestors.add(ppid);
+    pid = ppid;
+  }
+  return ancestors;
+}
 
+/** 进程是否存活（Windows: tasklist 按 PID 过滤；Linux: kill -0） */
+function isProcessAlive(pid) {
+  if (os.platform() === 'win32') {
+    const res = spawnSync('tasklist', ['/NH', '/FI', `PID eq ${pid}`], { encoding: 'utf8' });
+    return (res.stdout || '')
+      .split('\n')
+      .some((line) => {
+        const cols = line.trim().split(/\s+/);
+        return cols.length >= 2 && cols[1] === String(pid);
+      });
+  }
+  return spawnSync('kill', ['-0', String(pid)], { stdio: 'ignore' }).status === 0;
+}
+
+/** 同步睡眠（不引入依赖） */
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * 关闭给定 PID 的进程树并等待退出。
+ *
+ * Windows: taskkill /F /T 强杀整棵进程树（含 vite 的 esbuild 子进程、nest --watch 的 tsc）；
+ * Linux: 先 TERM 子进程与主进程，宽限期后对幸存者升级 KILL。
+ *
+ * @returns {string[]} 超时后仍存活的 PID（空数组 = 全部关闭成功）
+ */
+function killDevServerPids(pids) {
+  const isWin = os.platform() === 'win32';
+  for (const pid of pids) {
+    if (isWin) {
+      spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { windowsHide: true, stdio: 'ignore' });
+    } else {
+      spawnSync('pkill', ['-TERM', '-P', String(pid)], { stdio: 'ignore' });
+      spawnSync('kill', ['-TERM', String(pid)], { stdio: 'ignore' });
+    }
+  }
+  const deadline = Date.now() + 10000;
+  let alive = pids;
+  for (;;) {
+    alive = pids.filter((pid) => isProcessAlive(pid));
+    if (alive.length === 0) return [];
+    if (Date.now() >= deadline) break;
+    sleepSync(500);
+  }
+  if (!isWin) {
+    for (const pid of alive) spawnSync('kill', ['-KILL', String(pid)], { stdio: 'ignore' });
+    const deadline2 = Date.now() + 3000;
+    for (;;) {
+      alive = pids.filter((pid) => isProcessAlive(pid));
+      if (alive.length === 0) return [];
+      if (Date.now() >= deadline2) break;
+      sleepSync(500);
+    }
+  }
+  return alive;
+}
+
+/** 守卫中止统一出口：列出 PID + 原因 + 手动处置提示 */
+function abortDevServerGuard(pids, reason, action) {
   error('');
-  error('检测到开发服务器 / node_modules 占用进程正在运行，已中止打包：');
-  for (const pid of found) error(`  - PID ${pid}`);
+  error(reason);
+  for (const pid of pids) error(`  - PID ${pid}`);
   error('');
   error('原因：vite / nest --watch 长期占用 node_modules 与 dist，打包以 --prod');
   error('      重建 node_modules 并清理构建产物，会打挂存活的开发环境');
   error('      （Windows 下文件句柄还会致 EPERM，留下破损的 node_modules）。');
   error('');
-  error('请先关闭开发服务器（pnpm dev 按 Ctrl+C），再执行打包。');
+  error(action);
   error('必须带存活 dev server 打包时，加 --allow-dev-running 或设 ALLOW_DEV_RUNNING=1。');
   process.exit(1);
+}
+
+/**
+ * 打包前置守卫：开发服务器存活时自动关闭后再继续打包（原生打包机：Windows / Linux）
+ *
+ * vite / nest --watch 长期占用 node_modules 与 dist：Windows 上 dlopen native
+ * addon（lightningcss / swc / oxc-sys 等）后文件句柄无法被 pnpm unlink，
+ * 打包重建 node_modules 会 EPERM 失败，且恢复步骤连带失效，
+ * 留下一个 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境；
+ * Linux 上文件可 unlink，但打包 --prod 重建 node_modules + 清 dist 同样会
+ * 打挂存活 dev server。打包是离线操作，自动关闭 dev server 成本低于事后修复，
+ * 也免去手动 Ctrl+C。
+ * 容器内为一次性环境，无 dev 场景，直接跳过。
+ *
+ * --allow-dev-running 或 ALLOW_DEV_RUNNING=1 可跳过检测与关闭（CI 环境无 dev server，
+ * 或必须带存活 dev server 打包的场景）。
+ * 自动关闭会排除本进程祖先链（pnpm/corepack 启动器可能命中判据，误杀会杀掉本脚本自己）；
+ * 祖先链探测失败时保守降级为中止，不做自动关闭。
+ */
+function assertNoDevServerRunning(allowDevRunning) {
+  if (IN_CONTAINER) return;
+  if (allowDevRunning || process.env.ALLOW_DEV_RUNNING === '1') return;
+
+  const found = detectDevServerPids();
+  if (found.length === 0) return;
+
+  const ancestors = getAncestorPids();
+  if (!ancestors) {
+    abortDevServerGuard(
+      found,
+      '检测到开发服务器 / node_modules 占用进程正在运行（祖先进程探测失败，无法安全自动关闭），已中止打包：',
+      '请先关闭开发服务器（pnpm dev 按 Ctrl+C），再执行打包。'
+    );
+  }
+  const targets = found.filter((pid) => !ancestors.has(Number(pid)));
+  if (targets.length === 0) return;
+
+  log(`检测到开发服务器 / node_modules 占用进程，正在自动关闭：${targets.join(', ')}`);
+  const survivors = killDevServerPids(targets);
+  if (survivors.length > 0) {
+    abortDevServerGuard(
+      survivors,
+      '以下进程自动关闭失败，已中止打包：',
+      '请手动关闭（Windows: taskkill /F /T /PID <pid>；Linux: kill <pid>）后重试。'
+    );
+  }
+  log('开发服务器已自动关闭，继续打包（重启开发环境：pnpm dev）。');
 }
 
 /**
@@ -1857,6 +2008,29 @@ function enableImplInPackDir(tempDir, variant) {
 }
 
 /**
+ * 剥离包目录内的 pnpm.patchedDependencies（package.json + pnpm-lock.yaml）。
+ *
+ * 补丁（当前 @voerkai18n/cli，dev-only i18n 翻译 CLI 的百度 provider 修复）只服务
+ * 开发期翻译流程，部署包不携带 patches/ 目录；而目标机 pnpm install --offline
+ * --prod 即使装不到该包（dev 依赖 + filter 排除）也会按声明校验 patch 文件哈希
+ * → 包内声明残留即 ENOENT 中断安装（2026-11-04 windows 部署包实测）。
+ * deploy/upgrade 两路拷贝循环结束后都必须调用（无补丁声明时为空操作）。
+ */
+function stripPatchedDepsFromDir(pkgDir) {
+  const pkgPath = path.join(pkgDir, 'package.json');
+  const lockPath = path.join(pkgDir, 'pnpm-lock.yaml');
+  if (!fs.existsSync(pkgPath) || !fs.existsSync(lockPath)) return;
+  const { packageJson, lockfile, changed } = stripPatchedDependencies(
+    fs.readFileSync(pkgPath, 'utf8'),
+    fs.readFileSync(lockPath, 'utf8')
+  );
+  if (!changed) return;
+  fs.writeFileSync(pkgPath, packageJson);
+  fs.writeFileSync(lockPath, lockfile);
+  log('已剥离包内 pnpm.patchedDependencies（dev-only 补丁，目标机离线安装不需要）');
+}
+
+/**
  * 部署包：复制文件到临时目录
  */
 function prepareDeployDir(platform, variant = 'oss') {
@@ -1903,6 +2077,10 @@ function prepareDeployDir(platform, variant = 'oss') {
       log(`复制 ${item.src}`);
     }
   }
+
+  // 剥离 pnpm.patchedDependencies：包不携带 patches/ 目录，声明残留会让目标机
+  // 离线安装 ENOENT（见 stripPatchedDepsFromDir 注释）
+  stripPatchedDepsFromDir(tempDir);
 
   // 暂存副本脚本行尾归一化（.sh → LF、.bat/.cmd → CRLF）：源码树行尾脏也不中断出包
   normalizeStagingScripts(tempDir, [
@@ -2356,6 +2534,9 @@ async function packUpgrade(platform, variant = 'oss') {
       }
     }
 
+    // 剥离 pnpm.patchedDependencies（与部署包一致；升级包同样触发目标机离线安装）
+    stripPatchedDepsFromDir(tempDir);
+
     // 暂存副本脚本行尾归一化（与部署包一致；升级包不含入口脚本模板，只归一 runtime/scripts）
     normalizeStagingScripts(tempDir, ['runtime/scripts']);
 
@@ -2541,7 +2722,7 @@ async function main() {
     process.env.PRIVATE_MXCAD = '1';
   }
 
-  // 打包会重建 workspace node_modules，开发服务器存活时须先阻断（deploy / upgrade 均会波及）
+  // 打包会重建 workspace node_modules，开发服务器存活时先自动关闭（deploy / upgrade 均会波及）
   assertNoDevServerRunning(args.includes('--allow-dev-running'));
 
   try {

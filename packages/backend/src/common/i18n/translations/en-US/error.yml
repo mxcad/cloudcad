@@ -458,7 +458,7 @@ feedback:
   content_too_long: Feedback content is too long. Please shorten it.
   code_not_found: Feedback not found or invalid query code.
   not_found: Feedback not found.
-  status_locked_adopted: Adopted feedback cannot change status. To withdraw, handle the reward instead.
+  status_locked_adopted: Adopted feedback cannot change status.
   reject_reason_required: A rejection reason is required.
   already_adopted: This feedback has already been adopted.
   reward_exists: A reward record already exists for this feedback.

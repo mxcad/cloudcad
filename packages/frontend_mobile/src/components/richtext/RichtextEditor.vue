@@ -59,6 +59,9 @@ const emit = defineEmits<{
 
 const editorRef = ref<HTMLDivElement | null>(null)
 const activeCmds = ref<Record<string, boolean>>({})
+// 编辑器内最后一次有效选区：弹层/文件对话框夺走焦点后，insertHTML 据此
+// 恢复原光标位置（否则 focus() 会把 caret 放到编辑器开头）
+let savedRange: Range | null = null
 
 interface ToolbarAction {
   command: string
@@ -119,20 +122,30 @@ function insertHTML(html: string) {
   // 临时恢复可编辑态以完成插入；同步执行完毕，框架下次渲染按 disabled 重置。
   const wasEditable = el.contentEditable === 'true'
   if (!wasEditable) el.contentEditable = 'true'
-  el.focus()
   // caret 兜底：插入按钮（上传图片/图纸/引用）点击后焦点已离开编辑器，
-  // 无有效选区时 execCommand 会插入到文档当前选区（可能在编辑器外）或失败，
-  // 故把 caret 移到内容末尾再插入。
+  // 无有效选区时 execCommand 会插入到文档当前选区（可能在编辑器外）或失败。
+  // 必须在 focus() 之前检查当前选区（focus 会把 caret 放到编辑器开头，
+  // 使检查恒为 true、插入落到开头）：优先恢复最后一次编辑器内选区
+  // （即点击按钮前的光标位置）；保存选区节点已被移除（如 clear 后）
+  // 则退到内容末尾。
   const sel = window.getSelection()
   const rangeInEditor =
     sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)
   if (!rangeInEditor) {
-    const range = document.createRange()
-    range.selectNodeContents(el)
-    range.collapse(false)
+    const savedValid =
+      savedRange && el.contains(savedRange.startContainer) && el.contains(savedRange.endContainer)
+    const range = savedValid
+      ? savedRange!
+      : (() => {
+          const r = document.createRange()
+          r.selectNodeContents(el)
+          r.collapse(false)
+          return r
+        })()
     sel?.removeAllRanges()
     sel?.addRange(range)
   }
+  el.focus()
   document.execCommand('insertHTML', false, html)
   emit('change', el.innerHTML)
 }
@@ -242,7 +255,22 @@ function onInput() {
   emit('change', editorRef.value?.innerHTML ?? '')
 }
 
-/** 同步工具条按钮激活态（selectionchange 全局监听，卸载时移除） */
+/** selectionchange 全局监听（卸载时移除）：记录编辑器内最后选区 + 同步工具条激活态 */
+function onSelectionChange() {
+  const el = editorRef.value
+  if (el) {
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0)
+      if (el.contains(range.commonAncestorContainer)) {
+        savedRange = range.cloneRange()
+      }
+    }
+  }
+  syncToolbarStates()
+}
+
+/** 同步工具条按钮激活态 */
 function syncToolbarStates() {
   const el = editorRef.value
   if (!el || !props.showToolbar) return
@@ -260,11 +288,11 @@ function syncToolbarStates() {
 }
 
 onMounted(() => {
-  document.addEventListener('selectionchange', syncToolbarStates)
+  document.addEventListener('selectionchange', onSelectionChange)
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('selectionchange', syncToolbarStates)
+  document.removeEventListener('selectionchange', onSelectionChange)
 })
 
 /** 反转义属性值 */

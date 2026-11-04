@@ -14,6 +14,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
+import { fillTemplate } from '@/utils/i18nFill'
 import { errMsg } from '@/utils/apiError'
 import { useMemberCenter } from '@/composables/useMemberCenter'
 import { formatSize, formatStorageSize } from '@/composables/useNodeFormatter'
@@ -140,7 +141,7 @@ const conversionCount = computed(() =>
 const conversionBenefit = computed<BenefitDef>(() => {
   const hours = conversionHours.value
   const count = conversionCount.value
-  const windowText = t('每 {hours} 小时 {count} 次', {
+  const windowText = fillTemplate('每 {hours} 小时 {count} 次', {
     hours: String(hours),
     count: String(count),
   })

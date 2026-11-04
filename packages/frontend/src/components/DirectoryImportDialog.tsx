@@ -10,25 +10,25 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Modal } from './ui/Modal';
-import { Button } from './ui/Button';
-import { Checkbox } from './ui/Checkbox';
-import { FolderPlus, Upload, CheckCircle, XCircle, X } from 'lucide-react';
+import React, { useState, useRef, useCallback } from "react";
+import { Modal, Button, Checkbox } from "@/components/ui";
+
+import { FolderPlus, Upload, CheckCircle, XCircle, X } from "lucide-react";
 import {
   useDirectoryImport,
   ConflictStrategy,
   ImportMode,
-} from '../hooks/useDirectoryImport';
-import type { ExtRefSummary } from '../hooks/useDirectoryImport';
-import { globalShowToast } from '../utils/notificationEvents';
-import { t } from '@/languages';
+} from "../hooks/useDirectoryImport";
+import type { ExtRefSummary } from "../hooks/useDirectoryImport";
+import { globalShowToast } from "../utils/notificationEvents";
+import { t } from "@/languages";
+import { fillTemplate } from "@/utils/i18nFill";
 
 interface DirectoryImportDialogProps {
   open: boolean;
   onClose: () => void;
   targetParentId: string;
-  libraryType: 'drawing' | 'block';
+  libraryType: "drawing" | "block";
   onSuccess?: (success: boolean) => void;
   /** 是否自动发现并上传外部参照文件，默认 false */
   enableAutoXrefDiscovery?: boolean;
@@ -46,16 +46,16 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   enableAutoXrefDiscovery = false,
 }) => {
   const [step, setStep] = useState<
-    'select' | 'preview' | 'importing' | 'result'
-  >('select');
-  const [strategy, setStrategy] = useState<ConflictStrategy>('skip');
-  const [importMode, setImportMode] = useState<ImportMode>('content');
-  const [error, setError] = useState<string>('');
+    "select" | "preview" | "importing" | "result"
+  >("select");
+  const [strategy, setStrategy] = useState<ConflictStrategy>("skip");
+  const [importMode, setImportMode] = useState<ImportMode>("content");
+  const [error, setError] = useState<string>("");
   const [autoXrefDiscovery, setAutoXrefDiscovery] = useState(
-    enableAutoXrefDiscovery
+    enableAutoXrefDiscovery,
   );
   const [extRefSummary, setExtRefSummary] = useState<ExtRefSummary | null>(
-    null
+    null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importResultRef = useRef<{ success: boolean } | null>(null);
@@ -73,7 +73,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   /**
    * 支持的扩展名
    */
-  const SUPPORTED_EXTENSIONS = ['.mxweb', '.dwg', '.dxf'];
+  const SUPPORTED_EXTENSIONS = [".mxweb", ".dwg", ".dxf"];
 
   /**
    * 外部参照图片扩展名
@@ -81,14 +81,14 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    * （仅作为外部参照匹配源，不会作为普通文件上传）
    */
   const XREF_IMAGE_EXTENSIONS = [
-    '.png',
-    '.jpg',
-    '.jpeg',
-    '.gif',
-    '.bmp',
-    '.tiff',
-    '.tif',
-    '.webp',
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".webp",
   ];
 
   /**
@@ -101,7 +101,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
 
       const fileArray = Array.from(files);
       const allowedFiles = fileArray.filter((file) => {
-        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+        const ext = "." + file.name.split(".").pop()?.toLowerCase();
         if (SUPPORTED_EXTENSIONS.includes(ext)) return true;
         // 开启外部参照自动发现时，保留图片文件作为外部参照匹配源
         return autoXrefDiscovery && XREF_IMAGE_EXTENSIONS.includes(ext);
@@ -109,8 +109,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
 
       if (allowedFiles.length === 0) {
         globalShowToast(
-          t('所选目录中无支持的格式文件（支持 .mxweb, .dwg, .dxf）'),
-          'warning'
+          t("所选目录中无支持的格式文件（支持 .mxweb, .dwg, .dxf）"),
+          "warning",
         );
         return;
       }
@@ -118,21 +118,21 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
       if (allowedFiles.length !== fileArray.length) {
         globalShowToast(
           t(
-            `已过滤 ${fileArray.length - allowedFiles.length} 个不支持格式的文件（仅支持 .mxweb, .dwg, .dxf）`
+            `已过滤 ${fileArray.length - allowedFiles.length} 个不支持格式的文件（仅支持 .mxweb, .dwg, .dxf）`,
           ),
-          'info'
+          "info",
         );
       }
 
       try {
-        setError('');
+        setError("");
         await scanDirectory(allowedFiles as unknown as FileList, importMode);
-        setStep('preview');
+        setStep("preview");
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('扫描目录失败'));
+        setError(err instanceof Error ? err.message : t("扫描目录失败"));
       }
     },
-    [scanDirectory, importMode, autoXrefDiscovery]
+    [scanDirectory, importMode, autoXrefDiscovery],
   );
 
   /**
@@ -140,8 +140,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    */
   const handleReselect = useCallback(() => {
     reset();
-    setStep('select');
-    setError('');
+    setStep("select");
+    setError("");
     setExtRefSummary(null);
   }, [reset]);
 
@@ -149,19 +149,19 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    * 外部参照汇总文案（结果页行 + 完成 Toast 共用）
    */
   const formatExtRefSummary = useCallback((s: ExtRefSummary): string => {
-    if (s.status === 'processing') {
-      return t('正在自动发现并上传外部参照...');
+    if (s.status === "processing") {
+      return t("正在自动发现并上传外部参照...");
     }
-    if (s.status === 'error') {
-      return t('外部参照处理异常，可在图纸的「外部参照管理」中手动上传');
+    if (s.status === "error") {
+      return t("外部参照处理异常，可在图纸的「外部参照管理」中手动上传");
     }
     return t(
-      '外部参照：成功上传 {uploaded} 个，失败 {failed} 个，未找到 {missing} 个',
+      "外部参照：成功上传 {uploaded} 个，失败 {failed} 个，未找到 {missing} 个",
       {
         uploaded: String(s.uploaded),
         failed: String(s.failed),
         missing: String(s.missing),
-      }
+      },
     );
   }, []);
 
@@ -171,14 +171,14 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   const handleExtRefUpdate = useCallback(
     (s: ExtRefSummary) => {
       setExtRefSummary(s);
-      if (s.status === 'done') {
+      if (s.status === "done") {
         globalShowToast(
           formatExtRefSummary(s),
-          s.failed > 0 || s.missing > 0 ? 'warning' : 'success'
+          s.failed > 0 || s.missing > 0 ? "warning" : "success",
         );
       }
     },
-    [formatExtRefSummary]
+    [formatExtRefSummary],
   );
 
   /**
@@ -186,8 +186,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    */
   const handleStartImport = useCallback(async () => {
     try {
-      setError('');
-      setStep('importing');
+      setError("");
+      setStep("importing");
 
       const result = await executeImport(
         fileTree!,
@@ -195,10 +195,10 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         libraryType,
         strategy,
         autoXrefDiscovery,
-        handleExtRefUpdate
+        handleExtRefUpdate,
       );
 
-      setStep('result');
+      setStep("result");
       importResultRef.current = result;
 
       if (onSuccess) {
@@ -206,15 +206,15 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
           onSuccess(result.success);
           reset();
           importResultRef.current = null;
-          setStep('select');
-          setError('');
+          setStep("select");
+          setError("");
           setExtRefSummary(null);
           onClose();
         }, 2000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('导入失败'));
-      setStep('preview');
+      setError(err instanceof Error ? err.message : t("导入失败"));
+      setStep("preview");
     }
   }, [
     executeImport,
@@ -238,18 +238,18 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
       closeTimerRef.current = null;
     }
 
-    if (step === 'importing') {
+    if (step === "importing") {
       cancelImport();
     }
 
-    if (step === 'result' && importResultRef.current && onSuccess) {
+    if (step === "result" && importResultRef.current && onSuccess) {
       onSuccess(importResultRef.current.success);
     }
 
     reset();
     importResultRef.current = null;
-    setStep('select');
-    setError('');
+    setStep("select");
+    setError("");
     setExtRefSummary(null);
     onClose();
   }, [step, cancelImport, reset, onSuccess, onClose]);
@@ -258,7 +258,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    * 统计文件树（按扩展名分类）
    */
   const countFilesAndFolders = (
-    node: typeof fileTree
+    node: typeof fileTree,
   ): {
     files: number;
     folders: number;
@@ -282,7 +282,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         }
       } else {
         files++;
-        const ext = (child.name.split('.').pop() || '').toLowerCase();
+        const ext = (child.name.split(".").pop() || "").toLowerCase();
         byExtension[ext] = (byExtension[ext] || 0) + 1;
       }
     }
@@ -294,14 +294,14 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    * 获取目录名称
    */
   const getDirectoryName = () => {
-    if (!fileTree) return '';
+    if (!fileTree) return "";
     if (fileTree.children && fileTree.children.length > 0) {
       const firstChild = fileTree.children[0];
       if (firstChild?.isFolder) {
         return firstChild.name;
       }
     }
-    return t('选择的内容');
+    return t("选择的内容");
   };
 
   /**
@@ -310,22 +310,22 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   const renderSelectStep = () => (
     <div className="text-center py-8">
       <Upload size={64} className="mx-auto text-[var(--text-tertiary)] mb-4" />
-      <h3 className="text-lg font-semibold mb-2">{t('选择要导入的目录')}</h3>
+      <h3 className="text-lg font-semibold mb-2">{t("选择要导入的目录")}</h3>
       <p className="text-sm text-[var(--text-secondary)] mb-2">
-        {t('将目录中的文件导入到当前资源库')}
+        {t("将目录中的文件导入到当前资源库")}
       </p>
       <p className="text-xs text-[var(--text-tertiary)] mb-6">
         {autoXrefDiscovery
           ? t(
-              '支持 .mxweb, .dwg, .dxf 格式；开启外部参照自动发现后，图片文件将作为外部参照匹配源一并扫描'
+              "支持 .mxweb, .dwg, .dxf 格式；开启外部参照自动发现后，图片文件将作为外部参照匹配源一并扫描",
             )
-          : t('仅支持 .mxweb, .dwg, .dxf 格式，其他格式将自动过滤')}
+          : t("仅支持 .mxweb, .dwg, .dxf 格式，其他格式将自动过滤")}
       </p>
 
       {/* 导入模式选择 */}
       <div className="mb-6">
         <label className="block text-sm font-medium mb-2 text-left">
-          {t('导入方式：')}
+          {t("导入方式：")}
         </label>
         <div className="flex gap-4 justify-center">
           <label className="flex items-center">
@@ -333,28 +333,28 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
               type="radio"
               name="importMode"
               value="content"
-              checked={importMode === 'content'}
-              onChange={() => setImportMode('content')}
+              checked={importMode === "content"}
+              onChange={() => setImportMode("content")}
               className="mr-2"
             />
-            <span className="text-sm">{t('导入目录内容')}</span>
+            <span className="text-sm">{t("导入目录内容")}</span>
           </label>
           <label className="flex items-center">
             <input
               type="radio"
               name="importMode"
               value="folder"
-              checked={importMode === 'folder'}
-              onChange={() => setImportMode('folder')}
+              checked={importMode === "folder"}
+              onChange={() => setImportMode("folder")}
               className="mr-2"
             />
-            <span className="text-sm">{t('将目录作为子目录')}</span>
+            <span className="text-sm">{t("将目录作为子目录")}</span>
           </label>
         </div>
         <p className="text-xs text-[var(--text-tertiary)] mt-1 text-left">
-          {importMode === 'content'
-            ? t('将选中目录的内部文件/文件夹导入到当前目录')
-            : t('将整个选中目录作为子目录导入')}
+          {importMode === "content"
+            ? t("将选中目录的内部文件/文件夹导入到当前目录")
+            : t("将整个选中目录作为子目录导入")}
         </p>
       </div>
 
@@ -372,7 +372,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         onClick={() => fileInputRef.current?.click()}
       >
         <FolderPlus size={18} className="mr-2" />
-        {t('选择目录')}
+        {t("选择目录")}
       </Button>
     </div>
   );
@@ -384,31 +384,38 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
     const { files, folders, byExtension } = countFilesAndFolders(fileTree);
     const dirName = getDirectoryName();
     const extSummary = Object.entries(byExtension)
-      .map(([ext, count]) => t(`${count} 个.${ext}`))
-      .join(t('、'));
+      .map(([ext, count]) =>
+        fillTemplate("{count} 个.{ext}", { count: String(count), ext })
+      )
+      .join(t("、"));
 
     return (
       <div>
         {/* 已选择的目录信息 */}
         <div className="bg-[var(--bg-secondary)] border border-[var(--primary-200)] rounded-lg p-3 mb-4">
-          <p className="text-sm font-medium">{t('已选择目录：{dirName}', { dirName })}</p>
+          <p className="text-sm font-medium">
+            {t("已选择目录：{dirName}", { dirName })}
+          </p>
           <p className="text-xs text-[var(--text-tertiary)] mt-1">
-            {t(
-              '共 {extSummary} 文件导入到当前目录{folders}',
-              { extSummary, folders: folders > 0 ? t(' 以及 {count} 个文件夹', { count: String(folders) }) : '' }
-            )}
+            {t("共 {extSummary} 文件导入到当前目录{folders}", {
+              extSummary,
+              folders:
+                folders > 0
+                  ? t(" 以及 {count} 个文件夹", { count: String(folders) })
+                  : "",
+            })}
           </p>
           <p className="text-xs text-[var(--text-tertiary)]">
-            {t('导入方式：')}
-            {importMode === 'content'
-              ? t('导入目录内容')
-              : t('将目录作为子目录')}
+            {t("导入方式：")}
+            {importMode === "content"
+              ? t("导入目录内容")
+              : t("将目录作为子目录")}
           </p>
         </div>
 
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            {t('冲突处理策略：')}
+            {t("冲突处理策略：")}
           </label>
           <div className="space-y-2">
             <label className="flex items-center">
@@ -416,39 +423,39 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
                 type="radio"
                 name="strategy"
                 value="skip"
-                checked={strategy === 'skip'}
+                checked={strategy === "skip"}
                 onChange={(e) =>
                   setStrategy(e.target.value as ConflictStrategy)
                 }
                 className="mr-2"
               />
-              <span className="text-sm">{t('跳过同名文件')}</span>
+              <span className="text-sm">{t("跳过同名文件")}</span>
             </label>
             <label className="flex items-center">
               <input
                 type="radio"
                 name="strategy"
                 value="overwrite"
-                checked={strategy === 'overwrite'}
+                checked={strategy === "overwrite"}
                 onChange={(e) =>
                   setStrategy(e.target.value as ConflictStrategy)
                 }
                 className="mr-2"
               />
-              <span className="text-sm">{t('覆盖同名文件')}</span>
+              <span className="text-sm">{t("覆盖同名文件")}</span>
             </label>
             <label className="flex items-center">
               <input
                 type="radio"
                 name="strategy"
                 value="rename"
-                checked={strategy === 'rename'}
+                checked={strategy === "rename"}
                 onChange={(e) =>
                   setStrategy(e.target.value as ConflictStrategy)
                 }
                 className="mr-2"
               />
-              <span className="text-sm">{t('自动重命名（添加序号）')}</span>
+              <span className="text-sm">{t("自动重命名（添加序号）")}</span>
             </label>
           </div>
         </div>
@@ -458,11 +465,11 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
           <Checkbox
             checked={autoXrefDiscovery}
             onChange={(e) => setAutoXrefDiscovery(e.target.checked)}
-            label={t('自动发现并上传外部参照文件')}
+            label={t("自动发现并上传外部参照文件")}
           />
           <p className="text-xs text-[var(--text-tertiary)] mt-1 ml-7">
             {t(
-              '启用后，导入完成时将自动在目录中搜索图纸的外部参照文件并静默上传（不阻塞弹框关闭）'
+              "启用后，导入完成时将自动在目录中搜索图纸的外部参照文件并静默上传（不阻塞弹框关闭）",
             )}
           </p>
         </div>
@@ -477,7 +484,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         <div className="mb-4">
           <Button variant="outline" size="sm" onClick={handleReselect}>
             <X size={14} className="mr-1" />
-            {t('重新选择')}
+            {t("重新选择")}
           </Button>
         </div>
       </div>
@@ -509,7 +516,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         onClick={cancelImport}
         className="text-[var(--error)] border-[var(--error-dim)]"
       >
-        {t('取消导入')}
+        {t("取消导入")}
       </Button>
     </div>
   );
@@ -518,7 +525,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    * 渲染结果
    */
   const renderResultStep = () => {
-    const isSuccess = progress.status === 'completed';
+    const isSuccess = progress.status === "completed";
 
     return (
       <div className="text-center py-8">
@@ -531,7 +538,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
           <XCircle size={64} className="mx-auto text-[var(--error)] mb-4" />
         )}
         <h3 className="text-lg font-semibold mb-2">
-          {isSuccess ? t('导入完成') : t('导入失败')}
+          {isSuccess ? t("导入完成") : t("导入失败")}
         </h3>
         <p className="text-sm text-[var(--text-secondary)]">
           {progress.message}
@@ -549,32 +556,36 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
     <Modal
       isOpen={open}
       onClose={handleCloseModal}
-      title={libraryType === 'drawing' ? t('批量导入 - 图纸库') : t('批量导入 - 图块库')}
+      title={
+        libraryType === "drawing"
+          ? t("批量导入 - 图纸库")
+          : t("批量导入 - 图块库")
+      }
       className="max-w-md"
       footer={
         <div className="flex justify-end gap-2">
-          {step === 'preview' && (
+          {step === "preview" && (
             <>
               <Button variant="outline" onClick={handleCloseModal}>
-                {t('取消')}
+                {t("取消")}
               </Button>
               <Button variant="primary" onClick={handleStartImport}>
-                {t('开始导入')}
+                {t("开始导入")}
               </Button>
             </>
           )}
-          {(step === 'result' || step === 'importing') && (
+          {(step === "result" || step === "importing") && (
             <Button variant="primary" onClick={handleCloseModal}>
-              {step === 'importing' ? t('取消') : t('关闭')}
+              {step === "importing" ? t("取消") : t("关闭")}
             </Button>
           )}
         </div>
       }
     >
-      {step === 'select' && renderSelectStep()}
-      {step === 'preview' && renderPreviewStep()}
-      {step === 'importing' && renderImportingStep()}
-      {step === 'result' && renderResultStep()}
+      {step === "select" && renderSelectStep()}
+      {step === "preview" && renderPreviewStep()}
+      {step === "importing" && renderImportingStep()}
+      {step === "result" && renderResultStep()}
     </Modal>
   );
 };

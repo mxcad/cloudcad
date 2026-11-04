@@ -68,8 +68,8 @@ describe('extRefManageService', () => {
   describe('fetchExtRefList', () => {
     it('公开场景：逐项标注 exists（存在=success，缺失=notSelected）', async () => {
       mockGetPublicPreloadingData.mockResolvedValue({
-        images: ['a.png'],
-        externalReference: ['b.dwg'],
+        images: [{ name: 'a.png', size: 100, type: 'image' }],
+        externalReference: [{ name: 'b.dwg', size: 0, type: 'dwg' }],
       });
       mockParseExtRefFileNames.mockReturnValue([
         { name: 'a.png', type: 'img' },
@@ -82,6 +82,9 @@ describe('extRefManageService', () => {
 
       const items = await fetchExtRefList(PUBLIC_CTX);
 
+      // preloading 的 images/externalReference 是对象数组（PreloadingFileInfoDto[]），
+      // 必须提取 name 后传给 parseExtRefFileNames，不能把对象当字符串（会抛 TypeError）
+      expect(mockParseExtRefFileNames).toHaveBeenCalledWith(['a.png', 'b.dwg']);
       expect(items).toEqual([
         { name: 'a.png', type: 'img', exists: true, uploadState: 'success', progress: 100 },
         { name: 'b.dwg', type: 'ref', exists: false, uploadState: 'notSelected', progress: 0 },
@@ -97,8 +100,8 @@ describe('extRefManageService', () => {
     it('节点场景：checkExternalReferences 返回缺失清单，反推 exists', async () => {
       mockGetPreloadingData.mockResolvedValue({
         hash: 'h',
-        images: ['a.png'],
-        externalReference: ['b.dwg'],
+        images: [{ name: 'a.png', size: 100, type: 'image' }],
+        externalReference: [{ name: 'b.dwg', size: 0, type: 'dwg' }],
       });
       mockParseExtRefFileNames.mockReturnValue([
         { name: 'a.png', type: 'img' },
@@ -109,6 +112,7 @@ describe('extRefManageService', () => {
 
       const items = await fetchExtRefList(NODE_CTX);
 
+      expect(mockParseExtRefFileNames).toHaveBeenCalledWith(['a.png', 'b.dwg']);
       expect(items).toEqual([
         { name: 'a.png', type: 'img', exists: true, uploadState: 'success', progress: 100 },
         { name: 'b.dwg', type: 'ref', exists: false, uploadState: 'notSelected', progress: 0 },

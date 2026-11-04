@@ -1,14 +1,10 @@
-import React, { memo, useMemo } from 'react';
-import { FolderOpen, Users, XCircle } from 'lucide-react';
-import { FileSystemNode } from '../../types/filesystem';
-import { formatDate, formatFileSize } from '../../utils/fileUtils';
-import {
-  FileNameText,
-  DescriptionText,
-  TruncateText,
-} from '../ui/TruncateText';
-import { t } from '@/languages';
-import { isFailedStatus } from '@/lib/fileStatus';
+import React, { memo, useMemo } from "react";
+import { FolderOpen, Users, XCircle } from "lucide-react";
+import { FileSystemNode } from "../../types/filesystem";
+import { formatDate, formatFileSize } from "../../utils/fileUtils";
+import { FileNameText, DescriptionText, TruncateText } from "@/components/ui";
+import { t } from "@/languages";
+import { isFailedStatus } from "@/lib/fileStatus";
 
 interface FileItemInfoProps {
   node: FileSystemNode;
@@ -32,22 +28,22 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
     // 图库模式：文件名去后缀（文件夹保留原名）
     const displayName = useMemo(() => {
       if (!galleryMode || node.isFolder) return node.name;
-      const lastDot = node.name.lastIndexOf('.');
+      const lastDot = node.name.lastIndexOf(".");
       if (lastDot > 0) return node.name.slice(0, lastDot);
       return node.name;
     }, [galleryMode, node.name, node.isFolder]);
 
     // 图库模式：统一 12px 字号
-    const resolvedFontSize = fontSize || '12px';
+    const resolvedFontSize = fontSize || "12px";
 
     const descriptionText = useMemo(() => {
       if (isRoot) {
-        return node.description || t('暂无描述');
+        return node.description || t("暂无描述");
       }
       if (node.isFolder) {
-        return t(
-          `${node.childrenCountTrash ?? node._count?.children ?? 0} 个项目`
-        );
+        return t("{count} 个项目", {
+          count: String(node.childrenCountTrash ?? node._count?.children ?? 0),
+        });
       }
       if (galleryMode) {
         return formatDate(node.updatedAt);
@@ -70,11 +66,11 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
       return (
         <span
           className="inline-flex items-center gap-0.5 text-xs font-medium"
-          style={{ color: 'var(--danger)' }}
-          title={t('该文件转换失败，请检查文件内容')}
+          style={{ color: "var(--danger)" }}
+          title={t("该文件转换失败，请检查文件内容")}
         >
           <XCircle size={13} aria-hidden />
-          {t('转换失败')}
+          {t("转换失败")}
         </span>
       );
     }, [node.isFolder, node.fileStatus]);
@@ -88,18 +84,18 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
       return (
         <div
           className="flex items-center justify-center gap-2 mt-1 text-xs leading-none"
-          style={{ color: 'var(--text-muted)' }}
+          style={{ color: "var(--text-muted)" }}
         >
           {node.childrenCount !== undefined && (
             <span className="inline-flex items-center gap-1">
               <FolderOpen size={12} aria-hidden />
-              {t('{count} 个文件', { count: String(node.childrenCount) })}
+              {t("{count} 个文件", { count: String(node.childrenCount) })}
             </span>
           )}
           {node.memberCount !== undefined && (
             <span className="inline-flex items-center gap-1">
               <Users size={12} aria-hidden />
-              {t('{count} 个成员', { count: String(node.memberCount) })}
+              {t("{count} 个成员", { count: String(node.memberCount) })}
             </span>
           )}
         </div>
@@ -114,7 +110,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             style={{
               minWidth: 0,
               fontSize: resolvedFontSize,
-              color: 'var(--text-primary)',
+              color: "var(--text-primary)",
             }}
           >
             {galleryMode ? (
@@ -123,10 +119,10 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
                 showTooltip={true}
                 style={{
                   minWidth: 0,
-                  width: '100%',
-                  display: 'block',
+                  width: "100%",
+                  display: "block",
                   fontSize: resolvedFontSize,
-                  textAlign: 'center' as const,
+                  textAlign: "center" as const,
                 }}
               >
                 {displayName}
@@ -136,9 +132,9 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
                 showTooltip={true}
                 style={{
                   minWidth: 0,
-                  width: '100%',
+                  width: "100%",
                   fontSize: resolvedFontSize,
-                  justifyContent: 'center' as const,
+                  justifyContent: "center" as const,
                 }}
               >
                 {displayName}
@@ -146,7 +142,9 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             )}
           </h3>
           {failedBadge ? (
-            <div className="mt-0.5 w-full flex justify-center">{failedBadge}</div>
+            <div className="mt-0.5 w-full flex justify-center">
+              {failedBadge}
+            </div>
           ) : null}
           {searchPathBadge ? (
             <div className="mt-1 w-full flex justify-center">
@@ -187,14 +185,14 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
           style={{
             minWidth: 0,
             fontSize: resolvedFontSize,
-            color: 'var(--text-primary)',
+            color: "var(--text-primary)",
           }}
         >
           {galleryMode ? (
             <TruncateText
               mode="end"
               showTooltip={true}
-              style={{ display: 'block', fontSize: resolvedFontSize }}
+              style={{ display: "block", fontSize: resolvedFontSize }}
             >
               {displayName}
             </TruncateText>
@@ -217,17 +215,17 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             {node.isRoot && !galleryMode ? (
               <p
                 className="text-xs overflow-hidden w-full"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: "var(--text-muted)" }}
               >
                 <DescriptionText
                   showTooltip={true}
-                  style={{ display: 'block' }}
+                  style={{ display: "block" }}
                 >
                   {descriptionText}
                 </DescriptionText>
               </p>
             ) : !galleryMode ? (
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                 {formatDate(node.updatedAt)}
                 {!node.isFolder && ` • ${formatFileSize(node.size)}`}
               </p>
@@ -236,5 +234,5 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
         )}
       </div>
     );
-  }
+  },
 );

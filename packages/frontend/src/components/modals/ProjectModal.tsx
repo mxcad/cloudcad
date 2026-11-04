@@ -1,28 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { Select } from '@/components/ui/Select';
+import React, { useEffect, useState } from "react";
+import { Button, Modal, Input, Textarea, Select } from "@/components/ui";
+
 import {
   DEFAULT_TRANSFER_SETTINGS,
   type FileSystemNode,
   type TransferMode,
   type TransferSettings,
-} from '../../types/filesystem';
-import { t } from '@/languages';
-import { validateFolderName } from '@/utils/fileUtils';
+} from "../../types/filesystem";
+import { t } from "@/languages";
+import { validateFolderName } from "@/utils/fileUtils";
 
 export type { TransferMode, TransferSettings };
 
 /** 跨项目转移 6 域字段（仅这些字段应被序列化进 transfer-settings 请求体） */
 const TRANSFER_KEYS: (keyof TransferSettings)[] = [
-  'transferOutToProject',
-  'transferOutToPersonalSpace',
-  'transferOutToLibrary',
-  'transferInFromProject',
-  'transferInFromPersonalSpace',
-  'transferInFromLibrary',
+  "transferOutToProject",
+  "transferOutToPersonalSpace",
+  "transferOutToLibrary",
+  "transferInFromProject",
+  "transferInFromPersonalSpace",
+  "transferInFromLibrary",
 ];
 
 /**
@@ -32,7 +29,7 @@ const TRANSFER_KEYS: (keyof TransferSettings)[] = [
  * 触发后端 DTO 的 forbidNonWhitelisted → "请求参数验证失败"。
  */
 function pickTransferSettings(
-  value: TransferSettings | null | undefined
+  value: TransferSettings | null | undefined,
 ): TransferSettings {
   const result: TransferSettings = {};
   for (const key of TRANSFER_KEYS) {
@@ -66,20 +63,20 @@ interface ProjectModalProps {
 /** 四态模式选项 + 出向/入向 6 域标签（组件内构建：模块级 t() 会失去语言切换响应式） */
 function useTransferItems() {
   const modeOptions = [
-    { value: 'NONE', label: t('禁止') },
-    { value: 'COPY_ONLY', label: t('仅复制') },
-    { value: 'MOVE_ONLY', label: t('仅移动') },
-    { value: 'ALL', label: t('复制+移动') },
+    { value: "NONE", label: t("禁止") },
+    { value: "COPY_ONLY", label: t("仅复制") },
+    { value: "MOVE_ONLY", label: t("仅移动") },
+    { value: "ALL", label: t("复制+移动") },
   ];
   const outItems: { key: keyof TransferSettings; label: string }[] = [
-    { key: 'transferOutToProject', label: t('移出到其他项目') },
-    { key: 'transferOutToPersonalSpace', label: t('移出到个人空间') },
-    { key: 'transferOutToLibrary', label: t('移出到公共库') },
+    { key: "transferOutToProject", label: t("移出到其他项目") },
+    { key: "transferOutToPersonalSpace", label: t("移出到个人空间") },
+    { key: "transferOutToLibrary", label: t("移出到公共库") },
   ];
   const inItems: { key: keyof TransferSettings; label: string }[] = [
-    { key: 'transferInFromProject', label: t('从其他项目移入') },
-    { key: 'transferInFromPersonalSpace', label: t('从个人空间移入') },
-    { key: 'transferInFromLibrary', label: t('从公共库移入') },
+    { key: "transferInFromProject", label: t("从其他项目移入") },
+    { key: "transferInFromPersonalSpace", label: t("从个人空间移入") },
+    { key: "transferInFromLibrary", label: t("从公共库移入") },
   ];
   return { modeOptions, outItems, inItems };
 }
@@ -100,14 +97,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const [localSettings, setLocalSettings] = useState<TransferSettings>(() =>
     editingProject
       ? pickTransferSettings(transferSettings)
-      : { ...DEFAULT_TRANSFER_SETTINGS }
+      : { ...DEFAULT_TRANSFER_SETTINGS },
   );
   useEffect(() => {
     if (isOpen) {
       setLocalSettings(
         editingProject
           ? pickTransferSettings(transferSettings)
-          : { ...DEFAULT_TRANSFER_SETTINGS }
+          : { ...DEFAULT_TRANSFER_SETTINGS },
       );
     }
   }, [isOpen, transferSettings, editingProject]);
@@ -116,12 +113,11 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   // 名称合法性：空 / 长度 / 非法字符 / 控制字符 / 保留名 / 首尾点
   // （规则收敛到 @cloudcad/platform 的 checkFileName，与文件夹/图纸命名一致）
-  const nameValidation = validateFolderName(formData?.name ?? '');
+  const nameValidation = validateFolderName(formData?.name ?? "");
   const nameInvalid = !nameValidation.valid;
   // 空名时仅禁用按钮，不显示错误文案（避免未输入即报「不能为空」）
-  const nameError = nameInvalid && (formData?.name ?? '').trim()
-    ? nameValidation.error
-    : '';
+  const nameError =
+    nameInvalid && (formData?.name ?? "").trim() ? nameValidation.error : "";
 
   // 提交守卫：按钮 disabled 已拦常规点击，但表单内按 Enter 仍会触发 submit，
   // 这里同步拦截非法名称，确保前后端一致（后端 DTO 也校验，双保险）
@@ -134,7 +130,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   };
 
   const handleClose = () => {
-    onFormDataChange({ name: '', description: '' });
+    onFormDataChange({ name: "", description: "" });
     onClose();
   };
 
@@ -152,20 +148,20 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   };
 
   const renderGroup = (
-    items: { key: keyof TransferSettings; label: string }[]
+    items: { key: keyof TransferSettings; label: string }[],
   ) => (
     <div className="space-y-2">
       {items.map((item) => (
         <div key={item.key} className="flex items-center justify-between gap-3">
           <span
             className="text-xs shrink-0"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
             {item.label}
           </span>
           <Select
             size="sm"
-            value={localSettings[item.key] ?? 'ALL'}
+            value={localSettings[item.key] ?? "ALL"}
             options={modeOptions}
             onChange={(value) => handleTransferChange(item.key, value)}
             className="w-[110px]"
@@ -179,18 +175,18 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={editingProject ? t('编辑项目') : t('创建新项目')}
+      title={editingProject ? t("编辑项目") : t("创建新项目")}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={loading || nameInvalid}
             data-tour="project-create-submit"
           >
-            {loading ? t('处理中...') : editingProject ? t('保存') : t('创建')}
+            {loading ? t("处理中...") : editingProject ? t("保存") : t("创建")}
           </Button>
         </>
       }
@@ -199,9 +195,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         <div>
           <label
             className="block font-medium mb-1"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('名称 *')}
+            {t("名称 *")}
           </label>
           <Input
             required
@@ -210,17 +206,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               onFormDataChange({ ...formData, name: e.target.value })
             }
             className="overflow-hidden text-ellipsis whitespace-nowrap"
-            placeholder={t('请输入名称')}
+            placeholder={t("请输入名称")}
             autoFocus
             maxLength={100}
             data-tour="project-name-input"
           />
           {nameError ? (
-            <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
+            <p className="text-xs mt-1" style={{ color: "var(--danger)" }}>
               {nameError}
             </p>
           ) : (
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
               {formData.name.length}/100
             </p>
           )}
@@ -228,9 +224,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         <div>
           <label
             className="block font-medium mb-1"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('描述')}
+            {t("描述")}
           </label>
           <Textarea
             value={formData.description}
@@ -239,40 +235,43 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             }
             rows={3}
             resize="none"
-            placeholder={t('请输入描述（可选）')}
+            placeholder={t("请输入描述（可选）")}
             maxLength={500}
             data-tour="project-desc-input"
           />
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
             {formData.description.length}/500
           </p>
         </div>
         {showTransferSection && (
           <div
             className="border rounded-[3px] p-3 space-y-3"
-            style={{ borderColor: 'var(--border-default)' }}
+            style={{ borderColor: "var(--border-default)" }}
           >
             <div>
               <div
                 className="font-medium text-sm"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('跨项目转移')}
+                {t("跨项目转移")}
               </div>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {editingProject
                   ? t(
-                      '控制本项目文件可被跨项目复制/移动，以及可接收的来源；变更即时生效'
+                      "控制本项目文件可被跨项目复制/移动，以及可接收的来源；变更即时生效",
                     )
                   : t(
-                      '控制本项目文件可被跨项目复制/移动，以及可接收的来源；创建项目后生效'
+                      "控制本项目文件可被跨项目复制/移动，以及可接收的来源；创建项目后生效",
                     )}
               </p>
             </div>
             {renderGroup(outItems)}
             <div
               className="border-t pt-2"
-              style={{ borderColor: 'var(--border-default)' }}
+              style={{ borderColor: "var(--border-default)" }}
             >
               {renderGroup(inItems)}
             </div>

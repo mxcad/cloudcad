@@ -8,9 +8,9 @@
  * 影响说明 + 系统预置提示 + 默认值对比 + 类型感知控件 + 就地错误 + 操作按钮。
  */
 
-import React, { useMemo } from 'react';
-import { resolveBrandFallbackValue } from '@/constants/appConfig';
-import { useAppBrand } from '@/hooks/useAppBrand';
+import React, { useMemo } from "react";
+import { resolveBrandFallbackValue } from "@/constants/appConfig";
+import { useAppBrand } from "@/hooks/useAppBrand";
 import {
   Save,
   RotateCcw,
@@ -21,18 +21,18 @@ import {
   AlertCircle,
   Clock,
   GitBranch,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import styles from './RuntimeConfigPage.module.css';
-import { ConfigInput } from './ConfigInput';
-import { SOURCE_LABEL, TIER_LABEL, configItemId, formatValue } from './meta';
-import type { ConfigItem, ConfigTier, ConfigSource } from './types';
-import { toSubmitValue } from './validate';
-import type { DraftValue } from './validate';
-import type { DependencyStatus } from './types';
-import { t } from '@/languages';
+} from "lucide-react";
+import { Button, Tag } from "@/components/ui";
+
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import styles from "./RuntimeConfigPage.module.css";
+import { ConfigInput } from "./ConfigInput";
+import { getSourceLabel, getTierLabel, configItemId, formatValue } from "./meta";
+import type { ConfigItem, ConfigTier, ConfigSource } from "./types";
+import { toSubmitValue } from "./validate";
+import type { DraftValue } from "./validate";
+import type { DependencyStatus } from "./types";
+import { t } from "@/languages";
 
 interface ConfigItemRowProps {
   item: ConfigItem;
@@ -54,16 +54,16 @@ interface ConfigItemRowProps {
   highlight?: boolean;
 }
 
-const TIER_VARIANT: Record<ConfigTier, 'neutral' | 'primary' | 'warning'> = {
-  user: 'neutral',
-  admin: 'primary',
-  advanced: 'warning',
+const TIER_VARIANT: Record<ConfigTier, "neutral" | "primary" | "warning"> = {
+  user: "neutral",
+  admin: "primary",
+  advanced: "warning",
 };
 
-const SOURCE_VARIANT: Record<ConfigSource, 'warning' | 'info' | 'neutral'> = {
-  runtime: 'warning',
-  env: 'info',
-  default: 'neutral',
+const SOURCE_VARIANT: Record<ConfigSource, "warning" | "info" | "neutral"> = {
+  runtime: "warning",
+  env: "info",
+  default: "neutral",
 };
 
 export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
@@ -83,8 +83,8 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
   onShowHistory,
   highlight = false,
 }) => {
-  const source = item.source ?? 'default';
-  const tier = item.tier ?? 'admin';
+  const source = item.source ?? "default";
+  const tier = item.tier ?? "admin";
   const hasEnv = item.envValue !== null && item.envValue !== undefined;
   const outcome = toSubmitValue(item, draft);
   const invalid = dirty && !outcome.valid;
@@ -94,21 +94,21 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
   const appBrand = useAppBrand();
   const brandFallback = useMemo(
     () => resolveBrandFallbackValue(item.key),
-    [item.key, appBrand]
+    [item.key, appBrand],
   );
 
   const badges = (
     <div className={styles.configBadges}>
       {item.dangerous && (
         <Tag variant="error" icon={ShieldAlert}>
-          {t('危险')}
+          {t("危险")}
         </Tag>
       )}
-      <Tag variant={TIER_VARIANT[tier]}>{TIER_LABEL[tier]}</Tag>
-      <Tag variant={SOURCE_VARIANT[source]}>{SOURCE_LABEL[source]}</Tag>
+      <Tag variant={TIER_VARIANT[tier]}>{getTierLabel(tier)}</Tag>
+      <Tag variant={SOURCE_VARIANT[source]}>{getSourceLabel(source)}</Tag>
       {item.isPublic && (
         <Tag variant="neutral" icon={Eye}>
-          {t('公开')}
+          {t("公开")}
         </Tag>
       )}
     </div>
@@ -130,8 +130,8 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
   return (
     <div
       id={configItemId(item.key)}
-      className={`${styles.configItem} ${item.isModified ? styles.modified : ''} ${
-        highlight ? styles.focusFlash : ''
+      className={`${styles.configItem} ${item.isModified ? styles.modified : ""} ${
+        highlight ? styles.focusFlash : ""
       }`}
       data-testid="rc-item"
       data-key={item.key}
@@ -141,15 +141,15 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
       <div className={styles.itemHeader}>
         <div className={styles.itemTitle}>
           <span className={styles.configName}>
-            {item.description ?? item.key}
+            {item.description ? t(item.description) : item.key}
           </span>
           <span className={styles.configKey}>{item.key}</span>
           {badges}
         </div>
         <div className={styles.itemActions}>
-          {item.type === 'boolean' && control}
+          {item.type === "boolean" && control}
           <Button
-            variant={dirty ? 'primary' : 'secondary'}
+            variant={dirty ? "primary" : "secondary"}
             size="sm"
             icon={Save}
             onClick={() => {
@@ -158,7 +158,7 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
             disabled={!dirty || !canManageConfig}
             loading={saving}
             data-testid="rc-save"
-            tooltip={t('保存')}
+            tooltip={t("保存")}
           />
           <Button
             variant="ghost"
@@ -169,7 +169,7 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
             }}
             disabled={!canManageConfig || saving}
             data-testid="rc-reset"
-            tooltip={t('恢复默认')}
+            tooltip={t("恢复默认")}
           />
           <Button
             variant="ghost"
@@ -177,30 +177,30 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
             icon={History}
             onClick={onShowHistory}
             data-testid="rc-history"
-            tooltip={t('修改历史')}
+            tooltip={t("修改历史")}
           />
         </div>
       </div>
 
       {/* 第二行：说明与元信息 */}
       <div className={styles.itemBody}>
-        {item.type !== 'boolean' && control}
+        {item.type !== "boolean" && control}
 
         {/* 默认值 → 当前值。品牌与客服项的后端 defaultValue 是空串哨兵（真实默认值
             只在前端品牌链里），改用回落值展示；这些行即使未修改也显示，否则永远
             看不到「留空时生效的是什么」。 */}
         {(item.isModified || brandFallback !== null) && (
           <div className={styles.diffRow}>
-            <span className={styles.diffLabel}>{t('默认值')}</span>
+            <span className={styles.diffLabel}>{t("默认值")}</span>
             <code className={styles.diffValue}>
               {brandFallback !== null
-                ? brandFallback || t('（空）')
+                ? brandFallback || t("（空）")
                 : formatValue(item.defaultValue ?? null)}
             </code>
             {item.isModified && (
               <>
                 <span className={styles.diffArrow}>→</span>
-                <span className={styles.diffLabel}>{t('当前值')}</span>
+                <span className={styles.diffLabel}>{t("当前值")}</span>
                 <code className={`${styles.diffValue} ${styles.diffCurrent}`}>
                   {dirty && outcome.valid && outcome.value !== undefined
                     ? formatValue(outcome.value)
@@ -216,12 +216,12 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
           <div className={styles.envNote}>
             <TerminalSquare size={13} />
             <span>
-              {t('此项由系统预置为 {env}，你在这里保存后会覆盖它。', {
+              {t("此项由系统预置为 {env}，你在这里保存后会覆盖它。", {
                 env: formatValue(item.envValue as never),
               })}
               {item.isModified && (
                 <span className={styles.envNoteHint}>
-                  {t('恢复出厂后这一项会改由系统预置值接管。')}
+                  {t("恢复出厂后这一项会改由系统预置值接管。")}
                 </span>
               )}
             </span>
@@ -232,14 +232,11 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
         {dependencyStatus.length > 0 && (
           <div className={styles.dependencyRow} data-testid="rc-dependency">
             <GitBranch size={13} />
-            <span>{t('依赖')}</span>
+            <span>{t("依赖")}</span>
             {dependencyStatus.map((dep) => (
-              <Tag
-                key={dep.key}
-                variant={dep.satisfied ? 'success' : 'error'}
-              >
-                {dep.label}
-                {dep.satisfied ? t('（已满足）') : t('（未满足）')}
+              <Tag key={dep.key} variant={dep.satisfied ? "success" : "error"}>
+                {t(dep.label)}
+                {dep.satisfied ? t("（已满足）") : t("（未满足）")}
               </Tag>
             ))}
           </div>
@@ -249,11 +246,11 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
         {item.impact && (
           <div
             className={`${styles.impactRow} ${
-              item.dangerous ? styles.impactDanger : ''
+              item.dangerous ? styles.impactDanger : ""
             }`}
           >
             <AlertCircle size={13} />
-            <span>{item.impact}</span>
+            <span>{t(item.impact)}</span>
           </div>
         )}
 
@@ -265,7 +262,7 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
         )}
 
         {!saving && !canManageConfig && (
-          <span className={styles.readOnlyTag}>{t('只读')}</span>
+          <span className={styles.readOnlyTag}>{t("只读")}</span>
         )}
 
         {item.updatedAt && (

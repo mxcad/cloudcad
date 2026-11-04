@@ -13,6 +13,7 @@ import type {
 import type { EngineRunOutcome } from '@cloudcad/engine-exec';
 import {
   interpretEngineRun,
+  isArtifactLocked,
   runMxcadAssembly,
 } from '@cloudcad/engine-exec';
 import { MXCAD_CONFIG } from '../lib/constants';
@@ -86,6 +87,24 @@ class MxcadRunner {
   ): Promise<MxCadConversionResult> {
     const param = this._buildParam(params);
 
+    // 目标产物被占用检测（真实转换前）：引擎写「已存在的被锁文件」会报 write file error
+    // （code 2，退出码恒 2123；实例 2026-11-03 移动端无缓存打开「01海绵城市专篇设计说明_t3.dwg」，
+    // 旧产物 4b298d….dwg.mxweb 被某进程句柄占用，引擎写不进去、mtime 不变）。
+    // 打开方向（无 outpath/outname/cmd，产物 = srcpath 文件完整名 + '.mxweb'）可推导产物，
+    // 在调引擎前拦截为可重试的 file-locked，避免裸 write file error 被误判为
+    // content-error 永久失败（占用是瞬态）。其余方向产物位置不可知，交引擎自身处理。
+    if (!params.outpath && !params.outname && !params.cmd) {
+      const artifact = `${param.srcpath}.mxweb`;
+      if (isArtifactLocked(artifact)) {
+        throw new ConversionExecutionError(
+          `目标转换产物文件被占用，无法写入: ${path.basename(
+            artifact
+          )}。文件正被其他进程或工具打开，请稍后重试；若持续出现，检查是否有残留进程持有该文件。`,
+          'file-locked'
+        );
+      }
+    }
+
     const isLinux = os.platform() === 'linux';
     // 参数序列化：Linux 用单引号 JSON（mxcadassembly 约定），Windows 用原始 JSON。
     const arg = isLinux
@@ -128,6 +147,25 @@ class MxcadRunner {
     }
 
     if (outcome.category === 'content-error') {
+      // 兜底升级：引擎返回 write file error（code 2）且目标产物确实被占用 →
+      // 归为可重试的 file-locked（占用是瞬态，不应判为确定性 content-error 永久失败）。
+      // 覆盖前置检测未拦截的场景（产物可推导但检测与写之间才被占用等竞态）。
+      if (
+        outcome.result?.code === 2 &&
+        !params.outpath &&
+        !params.outname &&
+        !params.cmd
+      ) {
+        const artifact = `${param.srcpath}.mxweb`;
+        if (isArtifactLocked(artifact)) {
+          throw new ConversionExecutionError(
+            `目标转换产物文件被占用，无法写入: ${path.basename(
+              artifact
+            )}。文件正被其他进程或工具打开，请稍后重试；若持续出现，检查是否有残留进程持有该文件。`,
+            'file-locked'
+          );
+        }
+      }
       // 记录引擎原始 stdout/stderr：引擎常只回 {"code":非0,"message":"false"}（"false" 无信息量），
       // 不记录则真因被吞，重试再失败也无从排查。
       // 带上 cmd（print_to_pdf/cut_dwg 等）便于定位是哪类命令失败。

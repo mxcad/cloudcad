@@ -10,13 +10,13 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useQuery,
   useQueryClient,
   keepPreviousData,
-} from '@tanstack/react-query';
+} from "@tanstack/react-query";
 import {
   nodeControllerSearch,
   nodeControllerGetNode,
@@ -24,20 +24,20 @@ import {
   nodeControllerGetRootNode,
   FileSystemNodeDto,
   type SearchScope,
-} from '@/api-sdk';
+} from "@/api-sdk";
 import {
   FileSystemNode,
   BreadcrumbItem,
   projectToNode,
   toFileSystemNode,
-} from '@/types/filesystem';
+} from "@/types/filesystem";
 
-import { PaginationMeta } from '@/components/ui/Pagination';
-import { queryKeys } from '@/lib/queryKeys';
-import { fetchProjects } from '@/lib/projects';
-import type { ProjectFilterType } from '@/api-sdk';
-import type { SearchFilterValues } from '@/components/search/SearchFilters';
-import { t } from '@/languages';
+import { PaginationMeta } from "@/components/ui";
+import { queryKeys } from "@/lib/queryKeys";
+import { fetchProjects } from "@/lib/projects";
+import type { ProjectFilterType } from "@/api-sdk";
+import type { SearchFilterValues } from "@/components/search/SearchFilters";
+import { t } from "@/languages";
 
 /** 从 API 响应包装中提取 data 属性类型 */
 type UnwrapApiResponse<T> = T extends { data: infer D } ? D : T;
@@ -56,7 +56,7 @@ interface UseFileSystemDataProps {
   paginationRef: React.MutableRefObject<{ page: number; limit: number }>;
   showToast: (
     message: string,
-    type: 'success' | 'error' | 'info' | 'warning'
+    type: "success" | "error" | "info" | "warning",
   ) => void;
   clearSelection: () => void;
   /** 是否处于回收站视图（由 useTrashView 提供，用于禁用非 trash 查询） */
@@ -99,8 +99,8 @@ export const useFileSystemData = ({
 
   // Effective node ID for personal-space and folder modes
   const effectiveNodeId = isPersonalSpaceMode
-    ? urlNodeId || urlProjectId || ''
-    : urlNodeId || urlProjectId || '';
+    ? urlNodeId || urlProjectId || ""
+    : urlNodeId || urlProjectId || "";
 
   // ── Query 1: Current node info ─────────────────────────────────────
   const nodeQuery = useQuery({
@@ -122,7 +122,7 @@ export const useFileSystemData = ({
   const childrenQuery = useQuery({
     queryKey: isProjectRootMode
       ? [
-          ...queryKeys.fileSystem.children('__projects'),
+          ...queryKeys.fileSystem.children("__projects"),
           {
             filter: projectFilter,
             page: pagination.page,
@@ -157,7 +157,7 @@ export const useFileSystemData = ({
           page: pagination.page,
           limit: pagination.limit,
           sortBy: searchFilters.sortBy || undefined,
-          sortOrder: (searchFilters.sortOrder as 'asc' | 'desc') || undefined,
+          sortOrder: (searchFilters.sortOrder as "asc" | "desc") || undefined,
         });
         return {
           nodes: nodes.map((n) => projectToNode(n)),
@@ -177,7 +177,7 @@ export const useFileSystemData = ({
           search: searchQuery || undefined,
           extension:
             searchFilters.extensions && searchFilters.extensions.length > 0
-              ? searchFilters.extensions.join(',')
+              ? searchFilters.extensions.join(",")
               : undefined,
           modifiedAtFrom: searchFilters.modifiedAtFrom || undefined,
           modifiedAtTo: searchFilters.modifiedAtTo || undefined,
@@ -199,7 +199,7 @@ export const useFileSystemData = ({
       // 否则失败被当作"空目录"返回（历史 bug）
 
       const data = response.data;
-      if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
+      if (data && typeof data === "object" && Array.isArray(data.nodes)) {
         const childrenData = data.nodes.map(toFileSystemNode);
         return {
           nodes: childrenData,
@@ -243,20 +243,20 @@ export const useFileSystemData = ({
       ...searchFilters,
     }),
     queryFn: async ({ signal: abortSignal }) => {
-      let searchScope: SearchScope = 'project_files';
+      let searchScope: SearchScope = "project_files";
       let searchProjectId: string | undefined;
-      let searchFilter: 'all' | 'owned' | 'joined' = 'all';
+      let searchFilter: "all" | "owned" | "joined" = "all";
 
       if (isProjectRootMode) {
-        searchScope = 'global';
-        searchFilter = projectFilter || 'all';
+        searchScope = "global";
+        searchFilter = projectFilter || "all";
       } else if (isPersonalSpaceMode) {
-        searchScope = 'personal_space';
+        searchScope = "personal_space";
         // 当前位于某个项目/文件夹下时，按当前子树范围搜索，
         // 避免筛选时返回个人空间内其他项目的文件。
         searchProjectId = effectiveNodeId || undefined;
       } else if (urlProjectId) {
-        searchScope = 'project_files';
+        searchScope = "project_files";
         searchProjectId = urlProjectId;
       }
 
@@ -273,7 +273,7 @@ export const useFileSystemData = ({
             hasSearch &&
             searchFilters.extensions &&
             searchFilters.extensions.length > 0
-              ? searchFilters.extensions.join(',')
+              ? searchFilters.extensions.join(",")
               : undefined,
           modifiedAtFrom:
             (hasSearch && searchFilters.modifiedAtFrom) || undefined,
@@ -298,7 +298,7 @@ export const useFileSystemData = ({
       // 否则搜索失败被当作"无搜索结果"返回（历史 bug）
 
       const data = response.data;
-      if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
+      if (data && typeof data === "object" && Array.isArray(data.nodes)) {
         return {
           nodes: data.nodes.map(toFileSystemNode),
           total: data.total,
@@ -326,7 +326,7 @@ export const useFileSystemData = ({
     const nodeData = nodeQuery.data;
 
     if (nodeData.personalSpaceKey) {
-      navigate('/personal-space');
+      navigate("/personal-space");
       return;
     }
 
@@ -340,14 +340,14 @@ export const useFileSystemData = ({
             if (urlNodeId) {
               navigate(`/personal-space/${urlNodeId}`);
             } else {
-              navigate('/personal-space');
+              navigate("/personal-space");
             }
           }
         })
         .catch((error) => {
           console.error(
-            'Failed to fetch root node for personal space redirection:',
-            error
+            "Failed to fetch root node for personal space redirection:",
+            error,
           );
         });
     }
@@ -394,8 +394,8 @@ export const useFileSystemData = ({
       if (!rootAncestor) return [];
       // 根节点使用前端指定的名称（翻译后的），子节点直接用后端名称
       const rootName = isPersonalSpaceMode
-        ? t('个人空间')
-        : rootAncestor.name || t('公开资源库');
+        ? t("个人空间")
+        : rootAncestor.name || t("公开资源库");
       return [
         { id: rootAncestor.id, name: rootName, isRoot: true, isFolder: true },
         ...ancestors.slice(1).map((a) => ({
@@ -429,7 +429,7 @@ export const useFileSystemData = ({
     // 不受 staleTime (30s) 的影响
     queryClient.refetchQueries({
       queryKey: queryKeys.fileSystem.all,
-      type: 'all',
+      type: "all",
     });
   }, [queryClient]);
 
@@ -454,7 +454,7 @@ export const useFileSystemData = ({
     error: error
       ? error instanceof Error
         ? error.message
-        : t('加载数据失败')
+        : t("加载数据失败")
       : null,
     paginationMeta,
     loadData,

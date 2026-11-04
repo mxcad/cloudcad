@@ -1,30 +1,28 @@
-import React, { useState } from 'react';
-import { useVoerkaI18n } from '@voerkai18n/react';
-import { Languages, Check } from 'lucide-react';
-import { i18nScope, t } from '@/languages';
-import { Button } from './ui/Button';
-import { Tooltip } from './ui/Tooltip';
-import { Menu } from './ui/Menu';
+import React, { useState } from "react";
+import { useVoerkaI18n } from "@voerkai18n/react";
+import { Languages, Check } from "lucide-react";
+import { i18nScope, t } from "@/languages";
+import { Button, Tooltip, Menu } from "@/components/ui";
 
 export const LanguageSwitcher: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { activeLanguage, changeLanguage, languages } =
     useVoerkaI18n(i18nScope);
   const changeLanguageHandler = async (lang: string) => {
-    const mod = (await import('mxcad-app')) as any;
+    const mod = (await import("mxcad-app")) as any;
     mod.mxcadApp?.i18nScope?.change(lang);
     changeLanguage(lang);
   };
   const languageLabels: Record<string, string> = {
-    'zh-CN': t('简体中文'),
-    'en-US': 'English',
-    'ko-KR': '한국어',
-    'zh-TW': t('繁體中文'),
+    "zh-CN": t("简体中文"),
+    "en-US": "English",
+    "ko-KR": "한국어",
+    "zh-TW": t("繁體中文"),
   };
 
   return (
     <Menu open={open} onOpenChange={setOpen}>
-      <Tooltip content={t('切换语言')}>
+      <Tooltip content={t("切换语言")}>
         <Menu.Trigger>
           <Button
             variant="secondary"
@@ -32,7 +30,7 @@ export const LanguageSwitcher: React.FC = () => {
                        hover:scale-110 active:scale-95
                        hover:bg-[var(--bg-tertiary)]
                        group"
-            aria-label={t('切换语言')}
+            aria-label={t("切换语言")}
           >
             <Languages
               size={20}
@@ -52,7 +50,7 @@ export const LanguageSwitcher: React.FC = () => {
               try {
                 await changeLanguageHandler(lang.name);
               } catch (err) {
-                console.error('[i18n] switch failed:', err);
+                console.error("[i18n] switch failed:", err);
               }
               setOpen(false);
             }}

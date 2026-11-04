@@ -125,10 +125,22 @@ export class AuditLogService {
       userAgent,
     } = entry;
 
-    // #207 阶段 1：高频读操作成功记录直接丢弃（日志零噪音），失败保留
+    // #207 阶段 1：高频读操作成功记录不进 audit_logs（日志零噪音），失败保留
     if (success && HIGH_FREQUENCY_READ_ACTIONS.has(action)) {
+      // ADR-0086：成功的高频操作（登录/上传/下载）是「用户活跃」的核心信号，
+      // 降级写入 user_activity 供运营统计（DAU/MAU）聚合；写失败仅记日志（分析数据，
+      // 非合规数据，不告警、不阻塞业务）
+      if (userId && userId !== 'unknown') {
+        try {
+          await this.prisma.userActivity.create({ data: { userId } });
+        } catch (error) {
+          this.logger.error(
+            `用户活动记录写入失败（业务不阻塞）: ${(error as Error).message} userId=${userId}`
+          );
+        }
+      }
       this.logger.debug(
-        `高频读操作成功记录已跳过: ${action} - ${resourceType} - ${resourceId}`
+        `高频读操作成功记录已降级至 user_activity: ${action} - ${resourceType} - ${resourceId} - ${userId}`
       );
       return;
     }

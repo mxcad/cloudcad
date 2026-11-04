@@ -1,13 +1,13 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Modal } from '@/components/ui/Modal';
-import { FileItem } from '@/components/FileItem';
-import { FileSystemNode } from '@/types/filesystem';
-import { fetchProjects } from '@/lib/projects';
-import { FolderOpen, AlertCircle } from 'lucide-react';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Modal } from "@/components/ui";
+import { FileItem } from "@/components/FileItem";
+import { FileSystemNode } from "@/types/filesystem";
+import { fetchProjects } from "@/lib/projects";
+import { FolderOpen, AlertCircle } from "lucide-react";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
 
 interface ViewAllProjectsModalProps {
   isOpen: boolean;
@@ -21,12 +21,12 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
   const navigate = useNavigate();
 
   const projectsQuery = useQuery({
-    queryKey: ['viewAllProjects'],
+    queryKey: ["viewAllProjects"],
     queryFn: async () => {
       const { nodes } = await fetchProjects({
         limit: 50,
-        sortBy: 'updatedAt',
-        sortOrder: 'desc',
+        sortBy: "updatedAt",
+        sortOrder: "desc",
         excludeDeleted: true,
       });
       return nodes;
@@ -38,19 +38,19 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
   const loading = projectsQuery.isLoading;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('最近项目')} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("最近项目")} size="lg">
       {projectsQuery.error ? (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'var(--error-light)', color: 'var(--error)' }}
+          style={{ background: "var(--error-light)", color: "var(--error)" }}
         >
           <AlertCircle
             size={32}
             className="mx-auto mb-2"
-            style={{ color: 'var(--error)' }}
+            style={{ color: "var(--error)" }}
           />
           <p className="text-sm">
-            {getErrorMessage(projectsQuery.error) || t('加载失败')}
+            {getErrorMessage(projectsQuery.error) || t("加载失败")}
           </p>
         </div>
       ) : loading ? null : projects.length > 0 ? (
@@ -66,9 +66,9 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
                   isRoot: project.isRoot,
                   updatedAt: project.updatedAt,
                   parentId: undefined,
-                  createdAt: project.createdAt || '',
-                  path: '',
-                  ownerId: project.ownerId || '',
+                  createdAt: project.createdAt || "",
+                  path: "",
+                  ownerId: project.ownerId || "",
                 } as FileSystemNode
               }
               compact
@@ -82,15 +82,15 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
       ) : (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'var(--bg-tertiary)' }}
+          style={{ background: "var(--bg-tertiary)" }}
         >
           <FolderOpen
             size={32}
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
             className="mx-auto mb-2"
           />
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {t('暂无项目')}
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("暂无项目")}
           </p>
         </div>
       )}

@@ -1,13 +1,13 @@
-import { Upload, Palette, HardDrive, FileCode, Type } from 'lucide-react';
-import { Button, Tab, Tabs } from '@/components/ui';
-import { formatFileSize } from '../../../components/ui/FileSize';
-import { t } from '@/languages';
+import { Upload, Palette, HardDrive, FileCode, Type } from "lucide-react";
+import { Button, Tab, Tabs } from "@/components/ui";
+import { formatFileSize } from "@/components/ui";
+import { t } from "@/languages";
 
 interface FontPageHeaderProps {
-  activeTab: 'backend' | 'frontend';
+  activeTab: "backend" | "frontend";
   canUploadFonts: boolean;
   stats: { count: number; totalSize: number; typeCount: number };
-  setActiveTab: (tab: 'backend' | 'frontend') => void;
+  setActiveTab: (tab: "backend" | "frontend") => void;
   openUploadModal: () => void;
   clearSelection: () => void;
 }
@@ -27,23 +27,23 @@ export const FontPageHeader: React.FC<FontPageHeaderProps> = ({
   const statItems = [
     {
       icon: Palette,
-      color: 'var(--primary-600)',
-      bg: 'var(--primary-100)',
-      label: t('字体总数'),
+      color: "var(--primary-600)",
+      bg: "var(--primary-100)",
+      label: t("字体总数"),
       value: String(stats.count),
     },
     {
       icon: HardDrive,
-      color: 'var(--accent-600)',
-      bg: 'var(--accent-100)',
-      label: t('总存储'),
+      color: "var(--accent-600)",
+      bg: "var(--accent-100)",
+      label: t("总存储"),
       value: formatFileSize(stats.totalSize),
     },
     {
       icon: FileCode,
-      color: 'var(--success)',
-      bg: 'var(--success-dim)',
-      label: t('格式种类'),
+      color: "var(--success)",
+      bg: "var(--success-dim)",
+      label: t("格式种类"),
       value: String(stats.typeCount),
     },
   ];
@@ -54,15 +54,15 @@ export const FontPageHeader: React.FC<FontPageHeaderProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold text-text-primary mb-0.5">
-              {t('字体库管理')}
+              {t("字体库管理")}
             </h1>
             <p className="text-text-tertiary text-sm">
-              {t('管理和维护 CAD 字体文件')}
+              {t("管理和维护 CAD 字体文件")}
             </p>
           </div>
           {canUploadFonts && (
             <Button icon={Upload} onClick={openUploadModal}>
-              {t('上传字体')}
+              {t("上传字体")}
             </Button>
           )}
         </div>
@@ -92,24 +92,24 @@ export const FontPageHeader: React.FC<FontPageHeaderProps> = ({
 
       <Tabs className="mb-4">
         <Tab
-          active={activeTab === 'backend'}
+          active={activeTab === "backend"}
           icon={HardDrive}
           onClick={() => {
-            setActiveTab('backend');
+            setActiveTab("backend");
             clearSelection();
           }}
         >
-          {t('后端字体（转换程序）')}
+          {t("后端字体（转换程序）")}
         </Tab>
         <Tab
-          active={activeTab === 'frontend'}
+          active={activeTab === "frontend"}
           icon={Type}
           onClick={() => {
-            setActiveTab('frontend');
+            setActiveTab("frontend");
             clearSelection();
           }}
         >
-          {t('前端字体（资源目录）')}
+          {t("前端字体（资源目录）")}
         </Tab>
       </Tabs>
     </>

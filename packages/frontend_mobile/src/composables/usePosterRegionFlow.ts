@@ -10,6 +10,7 @@ import {
   pickThumbnailRegion,
   uploadThumbnailBlobForNode,
   detectRegionBorder,
+  restoreCanvasSize,
 } from '@/services/thumbnailService';
 import { composeSharePosterDataUrl } from '@/utils/sharePoster';
 
@@ -71,6 +72,12 @@ export function usePosterRegionFlow() {
         // 海报图纸图用引擎高分辨率 BMP（用户参考 Mx_ScreenToBmp：清晰度远高于 200px 缩略图）
         const posterBlob = await generatePosterImageBlob(region);
         if (!posterBlob) throw new Error(t('缩略图生成失败，请重试'));
+
+        // 显式还原画布尺寸：跨页流程随后 router.replace 收起编辑器，renderFullDrawing
+        // 回调里延迟（50ms+rAF）的 updateCanvasSize 会与路由切换抢跑，画布可能停留在
+        // 1000px 截图尺寸（移动端无 ResizeObserver/visibilitychange 在重新露出时补
+        // resize）。此刻画布仍可见，在路由切换前显式还原到视口尺寸（对齐 PC 同页流程）。
+        await restoreCanvasSize();
 
         const posterDataUrl = await composeSharePosterDataUrl({
           shareUrl: item?.url ?? '',

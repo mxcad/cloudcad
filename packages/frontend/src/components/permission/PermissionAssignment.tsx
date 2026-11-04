@@ -8,24 +8,22 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import React from 'react';
-import { Check } from 'lucide-react';
-import { Info } from 'lucide-react';
-import { AlertCircle } from 'lucide-react';
-import { RefreshCw } from 'lucide-react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Section } from '@/components/ui/Section';
-import { Input } from '@/components/ui/Input';
-import { useNotification } from '@/contexts/NotificationContext';
+import React from "react";
+import { Check } from "lucide-react";
+import { Info } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { Modal, Button, Section, Input } from "@/components/ui";
+
+import { useNotification } from "@/contexts/NotificationContext";
 import {
   PERMISSION_GROUPS,
   isPermissionEnabled,
   getMissingDependencies,
   getDependentPermissions,
   togglePermission,
-} from '../../constants/permissions';
-import { t } from '@/languages';
+} from "../../constants/permissions";
+import { t } from "@/languages";
 
 /**
  * 权限配置组件属性
@@ -36,7 +34,7 @@ export interface PermissionAssignmentProps {
   /** 权限变更回调 */
   onPermissionsChange: (perms: string[]) => void;
   /** 权限类型：system 或 project */
-  permissionType: 'system' | 'project';
+  permissionType: "system" | "project";
   /** 是否禁用权限选择 */
   disabled?: boolean;
   /** 自定义类名 */
@@ -57,7 +55,7 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
   onPermissionsChange,
   permissionType,
   disabled = false,
-  className = '',
+  className = "",
 }) => {
   const groups = PERMISSION_GROUPS[permissionType];
   const { showConfirm } = useNotification();
@@ -68,8 +66,8 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
       <div className="permission-error-state">
         <AlertCircle size={20} />
         <span>
-          {t('权限类型错误')}: {permissionType}
-          {t('。请检查配置。')}
+          {t("权限类型错误")}: {permissionType}
+          {t("。请检查配置。")}
         </span>
         <style>{`
           .permission-error-state {
@@ -89,6 +87,12 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
 
   const allPermissions = groups.flatMap((group) => group.items);
 
+  // 权限 label 存的是中文源串（PERMISSION_GROUPS 语言中立），渲染期统一走 t() 按当前语言取值
+  const labelOf = (key: string): string => {
+    const item = allPermissions.find((i) => i.key === key);
+    return item ? t(item.label) : key;
+  };
+
   /**
    * 勾选：自动补全前置权限（如勾"创建角色"自动带出"查看角色"）
    * 取消：若存在已勾选的下游权限（直接/传递依赖本权限），弹确认后级联取消，
@@ -100,28 +104,21 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
       if (dependents.length > 0) {
         // 分隔符直接用顿号字面量：t('、') 仅 zh-CN 有该键，其他语言会回退显示字面"、"（i18n 键不应承载标点）
         const dependentLabels = dependents
-          .map(
-            (dep) =>
-              allPermissions.find((item) => item.key === dep)?.label ?? dep
-          )
-          .join('、');
+          .map((dep) => labelOf(dep))
+          .join("、");
         const confirmed = await showConfirm({
-          title: t('取消权限'),
-          message: t('取消 {perm} 将同时取消：{deps}。确定继续吗？', {
-            perm:
-              allPermissions.find((item) => item.key === permKey)?.label ??
-              permKey,
+          title: t("取消权限"),
+          message: t("取消 {perm} 将同时取消：{deps}。确定继续吗？", {
+            perm: labelOf(permKey),
             deps: dependentLabels,
           }),
-          confirmText: t('确认取消'),
-          cancelText: t('返回'),
-          type: 'warning',
+          confirmText: t("确认取消"),
+          cancelText: t("返回"),
+          type: "warning",
         });
         if (!confirmed) return;
         onPermissionsChange(
-          permissions.filter(
-            (p) => p !== permKey && !dependents.includes(p)
-          )
+          permissions.filter((p) => p !== permKey && !dependents.includes(p)),
         );
       } else {
         onPermissionsChange(permissions.filter((p) => p !== permKey));
@@ -136,13 +133,13 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
       {groups.map((group, groupIndex) => (
         <Section
           key={group.label}
-          title={<span className="group-label">{group.label}</span>}
+          title={<span className="group-label">{t(group.label)}</span>}
           actions={
             <span className="group-count">
               {
                 group.items.filter((item) => permissions.includes(item.key))
                   .length
-              }{' '}
+              }{" "}
               / {group.items.length}
             </span>
           }
@@ -160,35 +157,28 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
               return (
                 <label
                   key={perm.key}
-                  className={`permission-item ${hasPermission ? 'checked' : ''} ${!isEnabled ? 'disabled' : ''}`}
+                  className={`permission-item ${hasPermission ? "checked" : ""} ${!isEnabled ? "disabled" : ""}`}
                   title={
                     !isEnabled && missingDeps.length > 0
-                      ? t('此权限需要先勾选：{deps}', {
+                      ? t("此权限需要先勾选：{deps}", {
                           deps: missingDeps
-                            .map((dep) => {
-                              const depItem = allPermissions.find(
-                                (i) => i.key === dep
-                              );
-                              return depItem ? depItem.label : dep;
-                            })
-                            .join(t('、')),
+                            .map((dep) => labelOf(dep))
+                            .join(t("、")),
                         })
-                      : perm.label
+                      : t(perm.label)
                   }
                 >
-                  <div className={`checkbox ${hasPermission ? 'checked' : ''}`}>
+                  <div className={`checkbox ${hasPermission ? "checked" : ""}`}>
                     {hasPermission && <Check size={12} />}
                   </div>
                   <input
                     type="checkbox"
                     className="hidden-checkbox"
                     checked={hasPermission}
-                    onChange={() =>
-                      isEnabled && handleToggle(perm.key)
-                    }
+                    onChange={() => isEnabled && handleToggle(perm.key)}
                     disabled={!isEnabled}
                   />
-                  <span className="permission-label">{perm.label}</span>
+                  <span className="permission-label">{t(perm.label)}</span>
                   {!isEnabled && missingDeps.length > 0 && (
                     <Info size={14} className="dependency-hint" />
                   )}
@@ -233,7 +223,7 @@ export interface PermissionConfigModalProps {
   /** 是否正在编辑系统角色 */
   isEditingSystemRole: boolean;
   /** 权限类型：system 或 project */
-  permissionType: 'system' | 'project';
+  permissionType: "system" | "project";
   /** 是否正在保存 */
   loading?: boolean;
   /**
@@ -278,16 +268,16 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
       footer={
         <div className="config-modal-footer">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button onClick={onSave} disabled={loading} data-tour="role-save-btn">
             {loading ? (
               <>
                 <RefreshCw size={16} className="animate-spin" />
-                {t('保存中...')}
+                {t("保存中...")}
               </>
             ) : (
-              t('保存配置')
+              t("保存配置")
             )}
           </Button>
         </div>
@@ -296,38 +286,40 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
       <div className="config-modal-content">
         {/* 基本信息区域 */}
         <div className="basic-info-section">
-          <h4 className="section-label">{t('基本信息')}</h4>
+          <h4 className="section-label">{t("基本信息")}</h4>
           <div className="form-grid">
             <div className="form-field">
-              <label className="field-label">{t('角色名称')}</label>
+              <label className="field-label">{t("角色名称")}</label>
               <Input
                 data-tour="role-name-input"
-                placeholder={t('请输入角色名称')}
+                placeholder={t("请输入角色名称")}
                 value={roleName}
                 onChange={(e) => onNameChange(e.target.value)}
                 disabled={isSystemRole && isEditingSystemRole}
               />
             </div>
             <div className="form-field">
-              <label className="field-label">{t('角色描述')}</label>
+              <label className="field-label">{t("角色描述")}</label>
               <Input
-                placeholder={t('请输入角色描述（可选）')}
+                placeholder={t("请输入角色描述（可选）")}
                 value={roleDesc}
                 onChange={(e) => onDescChange(e.target.value)}
-                disabled={isSystemRole && isEditingSystemRole && lockDescription}
+                disabled={
+                  isSystemRole && isEditingSystemRole && lockDescription
+                }
               />
             </div>
           </div>
           {isSystemRole && isEditingSystemRole && lockDescription && (
             <div className="system-role-hint">
               <AlertCircle size={16} />
-              <span>{t('系统角色不允许修改名称和描述，但可以修改权限')}</span>
+              <span>{t("系统角色不允许修改名称和描述，但可以修改权限")}</span>
             </div>
           )}
           {isSystemRole && isEditingSystemRole && !lockDescription && (
             <div className="system-role-hint">
               <AlertCircle size={16} />
-              <span>{t('模板名称不可修改，可编辑描述与权限')}</span>
+              <span>{t("模板名称不可修改，可编辑描述与权限")}</span>
             </div>
           )}
         </div>
@@ -335,9 +327,9 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
         {/* 权限分配区域 */}
         <div className="permissions-section" data-tour="role-permissions">
           <div className="permissions-header">
-            <h4 className="section-label">{t('权限分配')}</h4>
+            <h4 className="section-label">{t("权限分配")}</h4>
             <span className="permissions-count">
-              {t('已选择 {count} 项权限', { count: permissions.length })}
+              {t("已选择 {count} 项权限", { count: permissions.length })}
             </span>
           </div>
           <PermissionAssignment

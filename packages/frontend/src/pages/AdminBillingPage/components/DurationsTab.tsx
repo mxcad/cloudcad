@@ -1,10 +1,9 @@
-import { Plus, RefreshCw, Edit2, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Tag } from '@/components/ui/Tag';
-import { t } from '@/languages';
-import { bpsToDecimal, discountPercent } from '../constants';
-import type { DurationItem } from '../types';
+import { Plus, RefreshCw, Edit2, Trash2 } from "lucide-react";
+import { Button, Card, Tag } from "@/components/ui";
+
+import { t } from "@/languages";
+import { bpsToDecimal, discountPercent } from "../constants";
+import type { DurationItem } from "../types";
 
 interface DurationsTabProps {
   durations: DurationItem[];
@@ -37,7 +36,7 @@ export function DurationsTab({
             icon={RefreshCw}
             onClick={onRefresh}
           >
-            {t('刷新')}
+            {t("刷新")}
           </Button>
           <Button
             variant="primary"
@@ -46,7 +45,7 @@ export function DurationsTab({
             onClick={onCreate}
             disabled={!canWrite}
           >
-            {t('新增时长')}
+            {t("新增时长")}
           </Button>
         </div>
       </div>
@@ -55,8 +54,8 @@ export function DurationsTab({
           <div
             className="w-8 h-8 rounded-full animate-spin"
             style={{
-              border: '3px solid var(--border-default)',
-              borderTopColor: 'var(--primary-500)',
+              border: "3px solid var(--border-default)",
+              borderTopColor: "var(--primary-500)",
             }}
           />
         </div>
@@ -71,23 +70,24 @@ export function DurationsTab({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-text-primary">
-                        {item.label} ({t('{n}个月', { n: String(item.months) })})
+                        {item.label} ({t("{n}个月", { n: String(item.months) })}
+                        )
                       </span>
                       {item.isActive ? (
-                        <Tag variant="success">{t('上架')}</Tag>
+                        <Tag variant="success">{t("上架")}</Tag>
                       ) : (
-                        <Tag variant="neutral">{t('已下架')}</Tag>
+                        <Tag variant="neutral">{t("已下架")}</Tag>
                       )}
                     </div>
                     <p
                       className="text-sm mt-1"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      {t('倍率')}: {decimal.toFixed(2)}x
+                      {t("倍率")}: {decimal.toFixed(2)}x
                       {disc > 0 &&
-                        `（${t('省{discount}%', { discount: String(disc) })}）`}
-                      {' | '}
-                      {t('排序')}: {item.sortOrder}
+                        `（${t("省{discount}%", { discount: String(disc) })}）`}
+                      {" | "}
+                      {t("排序")}: {item.sortOrder}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export function DurationsTab({
                       onClick={() => onEdit(item)}
                       disabled={!canWrite}
                     >
-                      {t('编辑')}
+                      {t("编辑")}
                     </Button>
                     {item.isActive && (
                       <Button
@@ -108,7 +108,7 @@ export function DurationsTab({
                         onClick={() => onDeactivate(item)}
                         disabled={!canWrite}
                       >
-                        {t('下架')}
+                        {t("下架")}
                       </Button>
                     )}
                   </div>
@@ -119,9 +119,9 @@ export function DurationsTab({
           {durations.length === 0 && (
             <p
               className="text-center py-8"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('暂无数据')}
+              {t("暂无数据")}
             </p>
           )}
         </div>

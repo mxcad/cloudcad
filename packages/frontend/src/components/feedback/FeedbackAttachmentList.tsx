@@ -1,14 +1,14 @@
-import React from 'react';
-import { Download, Eye } from 'lucide-react';
-import { t } from '@/languages';
-import { Button } from '@/components/ui/Button';
-import { Tooltip } from '@/components/ui/Tooltip';
-import type { FeedbackAttachmentDto } from '@/api-sdk';
+import React from "react";
+import { Download, Eye } from "lucide-react";
+import { t } from "@/languages";
+import { Button, Tooltip } from "@/components/ui";
+
+import type { FeedbackAttachmentDto } from "@/api-sdk";
 import {
   canDownloadAttachment,
   canViewAttachment,
   useAttachmentActions,
-} from './attachmentActions';
+} from "./attachmentActions";
 
 interface FeedbackAttachmentListProps {
   attachments: FeedbackAttachmentDto[];
@@ -22,18 +22,18 @@ interface FeedbackAttachmentListProps {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  IMAGE: '图片',
-  DOCUMENT: '文档',
-  DRAWING: '图纸',
+  IMAGE: "图片",
+  DOCUMENT: "文档",
+  DRAWING: "图纸",
 };
 
 const KIND_LABEL: Record<string, string> = {
-  FILE: '副本',
-  REFERENCE: '引用',
+  FILE: "副本",
+  REFERENCE: "引用",
 };
 
 function formatSize(size: number | null): string {
-  if (!size) return '';
+  if (!size) return "";
   const mb = size / 1024 / 1024;
   if (mb >= 1) return `${mb.toFixed(1)}MB`;
   const kb = size / 1024;
@@ -60,38 +60,51 @@ export const FeedbackAttachmentList: React.FC<FeedbackAttachmentListProps> = ({
   if (!attachments?.length) {
     return (
       <span className="text-xs text-[var(--text-secondary)]">
-        {t('无附件')}
+        {t("无附件")}
       </span>
     );
   }
 
   return (
     <>
-      <div className={compact ? 'flex flex-wrap gap-1.5' : 'flex flex-wrap gap-2'}>
+      <div
+        className={compact ? "flex flex-wrap gap-1.5" : "flex flex-wrap gap-2"}
+      >
         {attachments.map((att) => {
           const label =
             att.fileName ||
-            `${t(TYPE_LABEL[att.type] ?? '附件')}${KIND_LABEL[att.kind] ? `（${t(KIND_LABEL[att.kind] ?? '')}）` : ''}`;
+            `${t(TYPE_LABEL[att.type] ?? "附件")}${KIND_LABEL[att.kind] ? `（${t(KIND_LABEL[att.kind] ?? "")}）` : ""}`;
           const isImage =
-            att.type === 'IMAGE' && (att.thumbnailUrl || att.viewUrl || att.downloadUrl);
-          const thumb = isImage ? (att.thumbnailUrl || att.viewUrl || att.downloadUrl) : null;
+            att.type === "IMAGE" &&
+            (att.thumbnailUrl || att.viewUrl || att.downloadUrl);
+          const thumb = isImage
+            ? att.thumbnailUrl || att.viewUrl || att.downloadUrl
+            : null;
           const inner = (
             <>
               {thumb ? (
                 <img
                   src={thumb}
                   alt={label}
-                  className={compact ? 'h-5 w-5 rounded object-cover' : 'h-10 w-10 rounded object-cover'}
+                  className={
+                    compact
+                      ? "h-5 w-5 rounded object-cover"
+                      : "h-10 w-10 rounded object-cover"
+                  }
                 />
               ) : (
                 <span
                   className={
                     compact
-                      ? 'flex h-5 w-5 items-center justify-center rounded bg-[var(--bg-secondary)] text-[10px]'
-                      : 'flex h-10 w-10 items-center justify-center rounded bg-[var(--bg-secondary)] text-xs'
+                      ? "flex h-5 w-5 items-center justify-center rounded bg-[var(--bg-secondary)] text-[10px]"
+                      : "flex h-10 w-10 items-center justify-center rounded bg-[var(--bg-secondary)] text-xs"
                   }
                 >
-                  {att.type === 'DRAWING' ? 'DWG' : att.type === 'DOCUMENT' ? 'DOC' : 'IMG'}
+                  {att.type === "DRAWING"
+                    ? "DWG"
+                    : att.type === "DOCUMENT"
+                      ? "DOC"
+                      : "IMG"}
                 </span>
               )}
               {!compact && (
@@ -107,8 +120,8 @@ export const FeedbackAttachmentList: React.FC<FeedbackAttachmentListProps> = ({
             </>
           );
           const cls = compact
-            ? 'inline-flex items-center gap-1 rounded border border-[var(--border-default)] px-1.5 py-0.5 text-xs text-[var(--text-primary)]'
-            : 'inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] p-2 text-sm text-[var(--text-primary)]';
+            ? "inline-flex items-center gap-1 rounded border border-[var(--border-default)] px-1.5 py-0.5 text-xs text-[var(--text-primary)]"
+            : "inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] p-2 text-sm text-[var(--text-primary)]";
           // 动作按钮：按「URL 有无 + type/kind」矩阵渲染；无 URL 时纯徽标无触发
           const canView = !compact && canViewAttachment(att);
           const canDownload = !compact && canDownloadAttachment(att);
@@ -117,24 +130,28 @@ export const FeedbackAttachmentList: React.FC<FeedbackAttachmentListProps> = ({
               <span className="flex items-center gap-1">
                 {canView && (
                   <Tooltip
-                    content={att.type === 'DRAWING' ? t('在 CAD 编辑器中打开') : t('查看')}
+                    content={
+                      att.type === "DRAWING"
+                        ? t("在 CAD 编辑器中打开")
+                        : t("查看")
+                    }
                   >
                     <Button
                       variant="icon"
                       size="xs"
                       icon={Eye}
-                      aria-label={t('查看')}
+                      aria-label={t("查看")}
                       onClick={() => void handleView(att)}
                     />
                   </Tooltip>
                 )}
                 {canDownload && (
-                  <Tooltip content={t('下载')}>
+                  <Tooltip content={t("下载")}>
                     <Button
                       variant="icon"
                       size="xs"
                       icon={Download}
-                      aria-label={t('下载')}
+                      aria-label={t("下载")}
                       onClick={() => void handleDownload(att)}
                     />
                   </Tooltip>

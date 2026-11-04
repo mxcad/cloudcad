@@ -169,6 +169,33 @@ describe('FeedbackQueryPanel 我的反馈记录列表（查询码非必填）', 
     expect(screen.getAllByText('本地反馈').length).toBeGreaterThanOrEqual(1);
   });
 
+  it('手动查询命中 NOT_FOUND + 码匹配本机记录 → 降级本地预览（不报错）', async () => {
+    seedLocalRecords([baseLocalRecord({ code: 'FB-20261102-AGDNB8PN' })]);
+    // 模拟后端 404 响应体（GlobalExceptionFilter getErrorCode(404) → code NOT_FOUND）
+    mockQuery.mockRejectedValue({ code: 'NOT_FOUND', message: '反馈不存在或查询码无效' });
+    render(<FeedbackQueryPanel />);
+    const codeInput = screen.getByPlaceholderText('请输入提交时获得的查询码') as HTMLInputElement;
+    fireEvent.change(codeInput, { target: { value: 'FB-20261102-AGDNB8PN' } });
+    fireEvent.click(screen.getByTestId('query-btn'));
+    // 降级为本地预览弹窗（标题+本地快照提示），不显示错误
+    await waitFor(() => expect(screen.getByText('反馈详情')).toBeTruthy());
+    expect(screen.getByText('本地记录仅保存在本设备，登录后可查看云端完整记录')).toBeTruthy();
+    expect(screen.queryByText('反馈不存在或查询码无效')).toBeNull();
+  });
+
+  it('手动查询命中 NOT_FOUND + 已填联系方式 → 保留报错（可能是联系方式不匹配）', async () => {
+    seedLocalRecords([baseLocalRecord({ code: 'FB-20261102-AGDNB8PN' })]);
+    mockQuery.mockRejectedValue({ code: 'NOT_FOUND', message: '反馈不存在或查询码无效' });
+    render(<FeedbackQueryPanel />);
+    const codeInput = screen.getByPlaceholderText('请输入提交时获得的查询码') as HTMLInputElement;
+    fireEvent.change(codeInput, { target: { value: 'FB-20261102-AGDNB8PN' } });
+    const contactInput = screen.getByPlaceholderText('提交时填写过联系方式则需匹配') as HTMLInputElement;
+    fireEvent.change(contactInput, { target: { value: 'wrong@x.com' } });
+    fireEvent.click(screen.getByTestId('query-btn'));
+    await waitFor(() => expect(screen.getByText('反馈不存在或查询码无效')).toBeTruthy());
+    expect(screen.queryByText('反馈详情')).toBeNull();
+  });
+
   it('点击云端记录 → 直接渲染详情，不再走 queryByCode', async () => {
     mockAuth.isAuthenticated = true;
     mockListMine.mockResolvedValue({ data: { items: [baseCloudRecord()], total: 1 } });
@@ -179,5 +206,35 @@ describe('FeedbackQueryPanel 我的反馈记录列表（查询码非必填）', 
     // 列表徽标 + 结果卡片各一处「已采纳」
     await waitFor(() => expect(screen.getAllByText('已采纳').length).toBeGreaterThanOrEqual(1));
     expect(screen.getByText('已发放')).toBeTruthy();
+  });
+
+  it('点击记录 → 详情在独立弹窗呈现（列表仍在，无需滚动面板底部）', async () => {
+    mockAuth.isAuthenticated = true;
+    mockListMine.mockResolvedValue({ data: { items: [baseCloudRecord()], total: 1 } });
+    render(<FeedbackQueryPanel />);
+    await waitFor(() => expect(screen.getByText('云端反馈')).toBeTruthy());
+    fireEvent.click(screen.getByText('云端反馈'));
+    // 详情弹窗标题出现
+    await waitFor(() => expect(screen.getByText('反馈详情')).toBeTruthy());
+    // 详情内容（奖励状态）与列表项同时可见——详情不再只渲染在面板底部
+    expect(screen.getByText('已发放')).toBeTruthy();
+    expect(screen.getAllByText('云端反馈').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('关闭详情弹窗 → 回到查询面板（列表保留）', async () => {
+    mockAuth.isAuthenticated = true;
+    mockListMine.mockResolvedValue({ data: { items: [baseCloudRecord()], total: 1 } });
+    render(<FeedbackQueryPanel />);
+    await waitFor(() => expect(screen.getByText('云端反馈')).toBeTruthy());
+    fireEvent.click(screen.getByText('云端反馈'));
+    await waitFor(() => expect(screen.getByText('反馈详情')).toBeTruthy());
+    const closeBtn = document.querySelector(
+      '[data-tour="modal-close-btn"]'
+    ) as HTMLButtonElement | null;
+    expect(closeBtn).toBeTruthy();
+    fireEvent.click(closeBtn!);
+    await waitFor(() => expect(screen.queryByText('反馈详情')).toBeNull());
+    // 关闭后列表项仍在
+    expect(screen.getByText('云端反馈')).toBeTruthy();
   });
 });

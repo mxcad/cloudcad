@@ -23,6 +23,7 @@
  *   6. 内置默认值（'CloudCAD' / '/logo.png'）
  */
 import { isCollaborationAllowed as isCollaborationDomainAllowed } from '@cloudcad/platform';
+import { i18nScope } from '@/languages';
 
 const BRAND_CONFIG_URL = '/brand/config.json';
 
@@ -145,13 +146,15 @@ let brandSnapshot: AppBrandConfig | null = null;
 /**
  * 品牌标题/标语/Logo 快照：配置未变时返回同一引用，可安全交给
  * `useSyncExternalStore`（getSnapshot 必须在订阅未变时引用稳定）。
- * 键取三层输入的 JSON——`runtimeBrandOverride` / `runtimeBrandFields` 每次
- * 渲染都是新对象，只能按值比对；对象很小，直接序列化即可。
+ * 键取三层输入的 JSON + 当前语言——`runtimeBrandOverride` /
+ * `runtimeBrandFields` 每次渲染都是新对象，只能按值比对；对象很小，直接
+ * 序列化即可。内置标题按语言切换（见 `getLocalizedDefaultAppName`），语言
+ * 变化必须重算快照，否则页签标题等订阅方切语言后停留在旧语言。
  */
 export function getAppBrandSnapshot(): AppBrandConfig {
   const key = `${cachedBrandConfig ? '1' : '0'}|${JSON.stringify(
     runtimeBrandOverride ?? null
-  )}|${JSON.stringify(runtimeBrandFields ?? null)}`;
+  )}|${JSON.stringify(runtimeBrandFields ?? null)}|${i18nScope.activeLanguage}`;
   if (brandSnapshot === null || key !== brandSnapshotKey) {
     brandSnapshot = getAppBrandConfig();
     brandSnapshotKey = key;
@@ -197,6 +200,21 @@ const DEFAULT_LEGAL_PRODUCT_NAMES: Record<string, string> = {
 };
 
 /**
+ * 内置默认标题的逐语言值：任何一层都未配置品牌标题（或配置值就是内置中文
+ * 产品名）时，显示名按当前语言取对应产品名——否则非中文模式下登录页/侧边栏
+ * 会显示写死的中文标题。值复用 `DEFAULT_LEGAL_PRODUCT_NAMES`（产品全称单一
+ * 事实源，不维护第二份清单）。
+ */
+export function getLocalizedDefaultAppName(language?: string): string {
+  const lang = language ?? i18nScope.activeLanguage;
+  return (
+    DEFAULT_LEGAL_PRODUCT_NAMES[lang] ||
+    DEFAULT_LEGAL_PRODUCT_NAMES[DEFAULT_LEGAL_LANGUAGE] ||
+    ''
+  );
+}
+
+/**
  * 从环境变量构建应用品牌配置映射
  * 环境变量格式: VITE_APP_{ID}_TITLE, VITE_APP_{ID}_TAGLINE
  */
@@ -239,8 +257,14 @@ export function getAppBrandConfig(appId?: string): AppBrandConfig {
   const remote = id ? config?.apps?.[id] : undefined;
   const envApp = id ? getEnvAppConfigs()[id] : undefined;
 
+  const title =
+    remote?.title || envApp?.title || config?.title || DEFAULT_APP_NAME;
   return {
-    title: remote?.title || envApp?.title || config?.title || DEFAULT_APP_NAME,
+    // 内置产品名（或与其相同的配置值）按当前语言切换；自定义标题原样展示
+    title:
+      title === DEFAULT_LEGAL_PRODUCT_NAMES[DEFAULT_LEGAL_LANGUAGE]
+        ? getLocalizedDefaultAppName()
+        : title,
     tagline: remote?.tagline ?? envApp?.tagline ?? config?.tagline ?? '',
     logo: remote?.logo || config?.logo || DEFAULT_APP_LOGO,
   };

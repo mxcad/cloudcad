@@ -16,13 +16,12 @@ const { openDrawing } = vi.hoisted(() => ({
   openDrawing: vi.fn(),
 }));
 
-const { generateThumbnail, generatePosterImageBlob, uploadThumbnailBlobForNode, detectRegionBorder, getContentBoundsRegion } =
+const { generateThumbnail, generatePosterImageBlob, uploadThumbnailBlobForNode, detectRegionBorder } =
   vi.hoisted(() => ({
     generateThumbnail: vi.fn(),
     generatePosterImageBlob: vi.fn(),
     uploadThumbnailBlobForNode: vi.fn(),
     detectRegionBorder: vi.fn(),
-    getContentBoundsRegion: vi.fn(),
   }));
 
 vi.mock('./drawingOpener', () => ({ openDrawing }));
@@ -31,7 +30,6 @@ vi.mock('./thumbnailService', () => ({
   generatePosterImageBlob,
   uploadThumbnailBlobForNode,
   detectRegionBorder,
-  getContentBoundsRegion,
 }));
 vi.mock('@/languages', () => ({ t: (key: string) => key }));
 
@@ -59,10 +57,6 @@ beforeEach(() => {
   generateThumbnail.mockResolvedValue(thumbBlob);
   uploadThumbnailBlobForNode.mockResolvedValue(undefined);
   detectRegionBorder.mockResolvedValue(true);
-  getContentBoundsRegion.mockResolvedValue({
-    minPt: { x: 0, y: 0 },
-    maxPt: { x: 100, y: 100 },
-  });
   openDrawing.mockResolvedValue(true);
 });
 
@@ -74,8 +68,8 @@ describe('renderSharePosterInBackground — 已打开文件不再后台开图（
 
     expect(openDrawing).not.toHaveBeenCalled();
     expect(generatePosterImageBlob).toHaveBeenCalledTimes(1);
-    // 未传 region → 用整图内容包围盒检测（与指定区域同套绘制，不再恒 false）
-    expect(getContentBoundsRegion).toHaveBeenCalled();
+    // 未传 region（默认整图框）→ 天然不描边，恒 hasBorder=true（不走算法）
+    expect(detectRegionBorder).not.toHaveBeenCalled();
     expect(result).toEqual({ posterBlob, hasBorder: true });
   });
 
@@ -105,8 +99,8 @@ describe('renderSharePosterInBackground — 已打开文件不再后台开图（
     const result = await renderSharePosterInBackground('file-1');
 
     expect(openDrawing).toHaveBeenCalledWith({ source: 'node', nodeId: 'file-1' });
-    // 未传 region → 用整图内容包围盒检测（与指定区域同套绘制，不再恒 false）
-    expect(getContentBoundsRegion).toHaveBeenCalled();
+    // 未传 region（默认整图框）→ 天然不描边，恒 hasBorder=true（不走算法）
+    expect(detectRegionBorder).not.toHaveBeenCalled();
     expect(result).toEqual({ posterBlob, hasBorder: true });
   });
 

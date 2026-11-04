@@ -5,7 +5,6 @@ import { openMxWeb } from '../plugins/mxcad/openMxWeb';
 import {
   getCachedMxwebData,
   setMxwebCache,
-  buildCacheKey,
   clearMxwebCache,
 } from '../services/mxwebCacheService';
 import { classifyApiError } from '../utils/errorHandler';
@@ -328,22 +327,17 @@ export function useFileLoader() {
 
       // 7. 历史版本或未设置缓存时间戳 → 跳过缓存
       if (cacheTimestamp !== undefined) {
-        // 尝试从 IndexedDB 缓存读取
-        const cacheKey = buildCacheKey(nodeInfo.path || '', cacheTimestamp);
-        const cachedData = await getCachedMxwebData(cacheKey);
+        // 引擎按 fetch URL 字符串读 emscripten_filesystem/FILES（IDB）键命中缓存，
+        // 键即 mxwebUrl（见 mxwebCacheService）。此处只探测是否存在以提示「从缓存
+        // 加载」；真正的打开仍在下方统一走 openMxWeb(mxwebUrl)——绝不能改走 blob
+        // URL：blob URL 会让引擎对文件内 xref/自引用的相对解析退化成
+        // blob:origin/<name>（该 blob 不存在 → ERR_FILE_NOT_FOUND，打开失败），
+        // 而 mxwebUrl 是相对服务器路径，xref 会正确解析到服务器（PC 端已放弃
+        // local/<md5>.mxweb IDBFS 模式，同因）。
+        const cachedData = await getCachedMxwebData(mxwebUrl);
         if (cachedData) {
           progress.value = t('正在从缓存加载图纸...');
           editorState.setProgressStage('loading-cache');
-          const blob = new Blob([cachedData], {
-            type: 'application/octet-stream',
-          });
-          const objectUrl = URL.createObjectURL(blob);
-          const opened = await openMxWeb(objectUrl);
-          URL.revokeObjectURL(objectUrl);
-          if (opened) {
-            commitOpen();
-            return true;
-          }
         }
       }
 
@@ -365,13 +359,10 @@ export function useFileLoader() {
                 fileName,
                 async (data: { buffer: ArrayBuffer }) => {
                   if (data?.buffer) {
-                    const cacheKey = buildCacheKey(
-                      nodeInfo.path || '',
-                      cacheTimestamp
-                    );
+                    // 键 = mxwebUrl（引擎下次按此 URL 读 IDB 即命中）
                     // 先清除旧缓存，再写入新缓存
-                    await clearMxwebCache(cacheKey).catch(() => {});
-                    await setMxwebCache(cacheKey, data.buffer).catch(() => {});
+                    await clearMxwebCache(mxwebUrl).catch(() => {});
+                    await setMxwebCache(mxwebUrl, data.buffer).catch(() => {});
                   }
                 },
                 false,

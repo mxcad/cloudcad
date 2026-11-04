@@ -1,6 +1,6 @@
-import React from 'react';
-import { Menu } from '@/components/ui/Menu';
-import { Z_LAYERS } from '@/constants/layers';
+import React from "react";
+import { Menu } from "@/components/ui";
+import { Z_LAYERS } from "@/constants/layers";
 
 interface EmptyContextMenuProps {
   pos: { x: number; y: number } | null;
@@ -18,12 +18,12 @@ export const EmptyContextMenu: React.FC<EmptyContextMenuProps> = ({
   return (
     <div
       style={{
-        position: 'fixed',
+        position: "fixed",
         left: pos.x,
         top: pos.y,
         width: 0,
         height: 0,
-        overflow: 'visible',
+        overflow: "visible",
         zIndex: Z_LAYERS.POPUP,
       }}
       onClick={(e) => e.stopPropagation()}
@@ -43,7 +43,7 @@ export const EmptyContextMenu: React.FC<EmptyContextMenuProps> = ({
         </Menu.Content>
       </Menu>
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: -1 }}
+        style={{ position: "fixed", inset: 0, zIndex: -1 }}
         onClick={onClose}
       />
     </div>

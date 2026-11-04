@@ -1,10 +1,10 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, ArrowLeft, Mail, Phone } from 'lucide-react';
-import { t } from '@/languages';
-import { Button } from '@/components/ui/Button';
-import { useSupportContact } from '@/hooks/useSupportContact';
-import styles from './register.module.css';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck, ArrowLeft, Mail, Phone } from "lucide-react";
+import { t } from "@/languages";
+import { Button } from "@/components/ui";
+import { useSupportContact } from "@/hooks/useSupportContact";
+import styles from "./register.module.css";
 
 export const RegisterClosed: React.FC = () => {
   const navigate = useNavigate();
@@ -16,11 +16,13 @@ export const RegisterClosed: React.FC = () => {
       <div className={styles.closedIcon}>
         <ShieldCheck size={32} />
       </div>
-      <h2 className={styles.closedTitle}>{t('注册已关闭')}</h2>
+      <h2 className={styles.closedTitle}>{t("注册已关闭")}</h2>
       <p className={styles.closedMessage}>
-        {t('系统管理员已关闭新用户注册功能。')}
+        {t("系统管理员已关闭新用户注册功能。")}
         <br />
-        {hasSupportContact ? t('如需开通账号，请联系客服。') : t('如需开通账号，请联系系统管理员。')}
+        {hasSupportContact
+          ? t("如需开通账号，请联系客服。")
+          : t("如需开通账号，请联系系统管理员。")}
       </p>
       {(support.email || support.phone) && (
         <div className={styles.supportContact}>
@@ -42,9 +44,9 @@ export const RegisterClosed: React.FC = () => {
         variant="secondary"
         size="lg"
         icon={ArrowLeft}
-        onClick={() => navigate('/login')}
+        onClick={() => navigate("/login")}
       >
-        {t('返回登录')}
+        {t("返回登录")}
       </Button>
     </div>
   );

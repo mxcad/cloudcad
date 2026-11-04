@@ -38,6 +38,7 @@ import {
 } from '@/composables/useNativeFilePicker';
 import { buildPublicMxwebUrl } from '@/services/publicFileService';
 import { waitPublicConversion } from '@/services/conversionStream';
+import { describeConversionError } from '@/utils/conversionError';
 
 export interface BlockInfoItem {
   name: string;
@@ -93,7 +94,7 @@ export function useInsertBlock() {
     'Mx_InsertDialog_is_get_insertion_point',
     true
   );
-  const isGetProportion = useStorage('Mx_InsertDialog_is_get_proportion', true);
+  const isGetProportion = useStorage('Mx_InsertDialog_is_get_proportion', false);
   const isUniformProportion = useStorage(
     'Mx_InsertDialog_is_uniform_proportion',
     true
@@ -151,9 +152,11 @@ export function useInsertBlock() {
             duration: 0,
           });
           try {
-            const status = await waitPublicConversion(param.hash);
+            const { status, error, errorCategory } =
+              await waitPublicConversion(param.hash);
             if (status !== 'COMPLETED') {
-              showFailToast(t('转换失败'));
+              // 按后端 errorCategory 区分「文件内容问题」vs「引擎/服务异常」
+              showFailToast(describeConversionError(errorCategory, error).message);
               resolve();
               return;
             }

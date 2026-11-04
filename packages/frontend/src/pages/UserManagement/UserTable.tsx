@@ -1,12 +1,10 @@
-import { t } from '@/languages';
-import { TruncateText } from '@/components/ui/TruncateText';
-import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { getRoleDisplayName } from '@/constants/permissions';
-import { SelectableTable } from '@/components/common/SelectableTable';
-import { Crown, User } from 'lucide-react';
-import styles from './UserManagement.module.css';
+import { t } from "@/languages";
+import { TruncateText, Button, Tag, UserAvatar } from "@/components/ui";
+
+import { getRoleDisplayName } from "@/constants/permissions";
+import { SelectableTable } from "@/components/common/SelectableTable";
+import { Crown, User } from "lucide-react";
+import styles from "./UserManagement.module.css";
 
 export interface UserTableUser {
   id: string;
@@ -48,7 +46,7 @@ interface UserTableProps {
   onPageSizeChange?: (pageSize: number) => void;
   /** 每页条数可选值 */
   pageSizeOptions?: number[];
-  onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
+  onScrollPageChange?: (page: number, direction: "prev" | "next") => void;
   /** 翻页/后台刷新失败信息（列表已有内容时显示为底部失败条） */
   loadError?: string | null;
   /** 失败条重试回调 */
@@ -59,7 +57,7 @@ interface UserTableProps {
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onManageMembership: (user: UserTableUser) => void;
-  userTab: 'active' | 'deleted';
+  userTab: "active" | "deleted";
   loading: boolean;
   /** 底部悬浮操作栏（透传给 SelectableTable，滚动容器内 sticky 吸底） */
   bottomBar?: React.ReactNode;
@@ -67,20 +65,20 @@ interface UserTableProps {
 
 function getMembershipTag(tierLevel?: number, expiresAt?: string | null) {
   if (!tierLevel) {
-    return <Tag variant="neutral">{t('免费用户')}</Tag>;
+    return <Tag variant="neutral">{t("免费用户")}</Tag>;
   }
   const tierLabel = `VIP${tierLevel}`;
   if (expiresAt) {
     const days = Math.ceil(
-      (new Date(expiresAt).getTime() - Date.now()) / 86400000
+      (new Date(expiresAt).getTime() - Date.now()) / 86400000,
     );
     if (days <= 0) {
-      return <Tag variant="warning">{t('已过期')}</Tag>;
+      return <Tag variant="warning">{t("已过期")}</Tag>;
     }
     return (
-      <span title={t('到期: {date}', { date: expiresAt })}>
+      <span title={t("到期: {date}", { date: expiresAt })}>
         <Tag variant="primary">
-          {t('{tier} ({days}天)', { tier: tierLabel, days: String(days) })}
+          {t("{tier} ({days}天)", { tier: tierLabel, days: String(days) })}
         </Tag>
       </span>
     );
@@ -122,14 +120,14 @@ export function UserTable({
       selectedIds={selectedIds}
       loading={loading}
       bottomBar={bottomBar}
-      loadingView={<div className={styles.loadingState}>{t('加载中...')}</div>}
+      loadingView={<div className={styles.loadingState}>{t("加载中...")}</div>}
       emptyView={
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>
             <User size={48} />
           </div>
           <h3 className={styles.emptyTitle}>
-            {userTab === 'deleted' ? t('暂无已注销用户') : t('暂无用户')}
+            {userTab === "deleted" ? t("暂无已注销用户") : t("暂无用户")}
           </h3>
         </div>
       }
@@ -149,13 +147,13 @@ export function UserTable({
       minLoadedPage={minLoadedPage}
       renderHeader={() => (
         <>
-          <th className={styles.cellUser}>{t('用户')}</th>
-          {mailEnabled && <th className={styles.colEmail}>{t('邮箱')}</th>}
-          {smsEnabled && <th className={styles.colPhone}>{t('手机号')}</th>}
-          <th>{t('角色')}</th>
-          <th className={styles.colVip}>{t('会员')}</th>
-          <th>{t('状态')}</th>
-          <th className={styles.colActions}>{t('操作')}</th>
+          <th className={styles.cellUser}>{t("用户")}</th>
+          {mailEnabled && <th className={styles.colEmail}>{t("邮箱")}</th>}
+          {smsEnabled && <th className={styles.colPhone}>{t("手机号")}</th>}
+          <th>{t("角色")}</th>
+          <th className={styles.colVip}>{t("会员")}</th>
+          <th>{t("状态")}</th>
+          <th className={styles.colActions}>{t("操作")}</th>
         </>
       )}
       renderRow={(user) => (
@@ -169,9 +167,7 @@ export function UserTable({
               />
               <div className={styles.userDetails}>
                 <div className={styles.userName}>
-                  <TruncateText>
-                    {user.nickname || user.username}
-                  </TruncateText>
+                  <TruncateText>{user.nickname || user.username}</TruncateText>
                 </div>
                 <div className={styles.userUsername}>
                   <TruncateText>{user.username}</TruncateText>
@@ -182,49 +178,49 @@ export function UserTable({
           {mailEnabled && (
             <td className={styles.cellEmail}>
               {user.email || (
-                <span className={styles.textMuted}>{t('未绑定')}</span>
+                <span className={styles.textMuted}>{t("未绑定")}</span>
               )}
             </td>
           )}
           {smsEnabled && (
             <td className={styles.cellPhone}>
               {user.phone || (
-                <span className={styles.textMuted}>{t('未绑定')}</span>
+                <span className={styles.textMuted}>{t("未绑定")}</span>
               )}
             </td>
           )}
           <td>
             <Tag variant="primary">
               {getRoleDisplayName(
-                user.role?.name ?? '',
-                user.role?.isSystem ?? false
-              ) || t('未知角色')}
+                user.role?.name ?? "",
+                user.role?.isSystem ?? false,
+              ) || t("未知角色")}
             </Tag>
           </td>
           <td className={styles.cellVip}>
             {getMembershipTag(
               user.membershipTierLevel,
-              user.membershipExpiresAt
+              user.membershipExpiresAt,
             )}
           </td>
           <td>
             {user.deletedAt ? (
-              <Tag variant="error">{t('已注销')}</Tag>
+              <Tag variant="error">{t("已注销")}</Tag>
             ) : (
               <Tag
                 variant={
-                  user.status === 'ACTIVE'
-                    ? 'success'
-                    : user.status === 'INACTIVE'
-                      ? 'warning'
-                      : 'error'
+                  user.status === "ACTIVE"
+                    ? "success"
+                    : user.status === "INACTIVE"
+                      ? "warning"
+                      : "error"
                 }
               >
-                {user.status === 'ACTIVE'
-                  ? t('正常')
-                  : user.status === 'INACTIVE'
-                    ? t('未激活')
-                    : t('已禁用')}
+                {user.status === "ACTIVE"
+                  ? t("正常")
+                  : user.status === "INACTIVE"
+                    ? t("未激活")
+                    : t("已禁用")}
               </Tag>
             )}
           </td>
@@ -237,12 +233,12 @@ export function UserTable({
                     onManageMembership(user);
                   }}
                   className={`${styles.actionBtn} ${styles.membership}`}
-                  title={t('管理会员')}
+                  title={t("管理会员")}
                   variant="secondary"
                   size="sm"
                 >
                   <Crown size={14} />
-                  {t('会员')}
+                  {t("会员")}
                 </Button>
               )}
               {canEdit && (
@@ -252,14 +248,14 @@ export function UserTable({
                     onEdit(user);
                   }}
                   className={`${styles.actionBtn} ${styles.edit}`}
-                  title={t('编辑用户')}
+                  title={t("编辑用户")}
                   variant="secondary"
                   size="sm"
                 >
-                  {t('编辑')}
+                  {t("编辑")}
                 </Button>
               )}
-              {userTab === 'deleted'
+              {userTab === "deleted"
                 ? canDelete && (
                     <Button
                       onClick={(e) => {
@@ -267,11 +263,11 @@ export function UserTable({
                         onRestore(user.id);
                       }}
                       className={`${styles.actionBtn} ${styles.restore}`}
-                      title={t('恢复用户')}
+                      title={t("恢复用户")}
                       variant="secondary"
                       size="sm"
                     >
-                      {t('恢复')}
+                      {t("恢复")}
                     </Button>
                   )
                 : canDelete && (
@@ -281,11 +277,11 @@ export function UserTable({
                         onDelete(user.id);
                       }}
                       className={`${styles.actionBtn} ${styles.delete}`}
-                      title={t('注销')}
+                      title={t("注销")}
                       variant="secondary"
                       size="sm"
                     >
-                      {t('注销')}
+                      {t("注销")}
                     </Button>
                   )}
             </div>

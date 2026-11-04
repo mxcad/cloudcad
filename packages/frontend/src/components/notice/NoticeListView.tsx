@@ -32,7 +32,7 @@
  * 按 [data-theme] 切换主题，Tailwind 的 dark: 变体不认主题开关。
  */
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Bell,
   BellOff,
@@ -41,19 +41,19 @@ import {
   Info,
   OctagonAlert,
   TriangleAlert,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import { Tabs } from '@/components/ui/Tabs';
-import { TabButton } from '@/components/ui/TabButton';
-import { getRelativeTime, formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import { t } from '@/languages';
+import { Tabs, TabButton } from "@/components/ui";
 
-import { NOTICE_LEVEL_COLORS } from './noticeTypes';
-import type { Notice } from './noticeTypes';
+import { getRelativeTime, formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import { t } from "@/languages";
+
+import { NOTICE_LEVEL_COLORS } from "./noticeTypes";
+import type { Notice } from "./noticeTypes";
 
 /** 面板内的两种展示密度 */
-type NoticeView = 'notice' | 'timeline';
+type NoticeView = "notice" | "timeline";
 
 export interface NoticeListViewProps {
   /** 当前生效中的全部通知（已按级别与时间排序） */
@@ -101,44 +101,44 @@ function NoticePanelHeader({
   return (
     <div
       className="px-4 pt-3.5 pb-2.5 border-b flex-shrink-0"
-      style={{ borderColor: 'var(--border-subtle)' }}
+      style={{ borderColor: "var(--border-subtle)" }}
     >
       {showHeader && (
         <div className="mb-2.5">
           <p
             className="text-sm font-semibold"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            {t('通知中心')}
+            {t("通知中心")}
           </p>
           <p
             className="text-xs mt-0.5"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
-            {t('公告与系统消息')}
+            {t("公告与系统消息")}
           </p>
         </div>
       )}
       <Tabs className="w-full">
         <TabButton
           size="sm"
-          active={view === 'notice'}
-          onClick={() => onViewChange('notice')}
+          active={view === "notice"}
+          onClick={() => onViewChange("notice")}
           className="flex-1 justify-center gap-1.5"
-          aria-pressed={view === 'notice'}
+          aria-pressed={view === "notice"}
         >
           <Bell size={14} />
-          {t('通知')}
+          {t("通知")}
         </TabButton>
         <TabButton
           size="sm"
-          active={view === 'timeline'}
-          onClick={() => onViewChange('timeline')}
+          active={view === "timeline"}
+          onClick={() => onViewChange("timeline")}
           className="flex-1 justify-center gap-1.5"
-          aria-pressed={view === 'timeline'}
+          aria-pressed={view === "timeline"}
         >
           <History size={14} />
-          {t('时间线')}
+          {t("时间线")}
         </TabButton>
       </Tabs>
     </div>
@@ -172,8 +172,8 @@ function NoticeCard({
       className="w-full text-left rounded-lg border p-3 mb-2.5 last:mb-0
                  transition-shadow hover:shadow-md"
       style={{
-        borderColor: 'var(--border-default)',
-        background: 'var(--bg-tertiary)',
+        borderColor: "var(--border-default)",
+        background: "var(--bg-tertiary)",
         borderLeft: `3px solid ${color}`,
       }}
     >
@@ -182,7 +182,7 @@ function NoticeCard({
         <span
           className="flex-1 min-w-0 truncate text-sm font-semibold"
           style={{
-            color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: unread ? "var(--text-primary)" : "var(--text-secondary)",
           }}
         >
           {notice.title}
@@ -198,7 +198,7 @@ function NoticeCard({
       {notice.body && (
         <span
           className="block mt-1.5 text-xs leading-5 line-clamp-2 whitespace-pre-wrap"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: "var(--text-tertiary)" }}
         >
           {notice.body}
         </span>
@@ -206,7 +206,7 @@ function NoticeCard({
       {publishedAt && (
         <span
           className="block mt-1.5 text-xs"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: "var(--text-tertiary)" }}
         >
           {getRelativeTime(publishedAt)}
         </span>
@@ -234,7 +234,7 @@ function TimelineItem({
       onClick={onClick}
       className="w-full flex items-start gap-2.5 px-4 py-2.5 text-left
                  transition-colors hover:bg-[var(--bg-tertiary)]"
-      style={{ color: 'var(--text-primary)' }}
+      style={{ color: "var(--text-primary)" }}
     >
       <span
         aria-hidden
@@ -244,10 +244,10 @@ function TimelineItem({
       <span className="min-w-0 flex-1">
         <span
           className={`block truncate text-sm ${
-            unread ? 'font-semibold' : 'font-medium'
+            unread ? "font-semibold" : "font-medium"
           }`}
           style={{
-            color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: unread ? "var(--text-primary)" : "var(--text-secondary)",
           }}
         >
           {notice.title}
@@ -255,9 +255,9 @@ function TimelineItem({
         {publishedAt && (
           <span
             className="block mt-0.5 text-xs"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{ color: "var(--text-tertiary)" }}
           >
-            {getRelativeTime(publishedAt)} ·{' '}
+            {getRelativeTime(publishedAt)} ·{" "}
             {formatDateTimeWithSeconds(publishedAt)}
           </span>
         )}
@@ -290,10 +290,10 @@ function NoticeDetail({
         type="button"
         onClick={onBack}
         className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--bg-tertiary)]"
-        style={{ color: 'var(--text-secondary)' }}
+        style={{ color: "var(--text-secondary)" }}
       >
         <ChevronLeft size={16} />
-        {t('返回')}
+        {t("返回")}
       </button>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
@@ -305,18 +305,18 @@ function NoticeDetail({
         </p>
         <div
           className="flex items-center gap-2 mt-1.5 mb-3 text-xs"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: "var(--text-tertiary)" }}
         >
           {publishedAt && <span>{getRelativeTime(publishedAt)}</span>}
           {notice.endAt && (
             <span>
-              {t('至')} {getRelativeTime(notice.endAt)}
+              {t("至")} {getRelativeTime(notice.endAt)}
             </span>
           )}
         </div>
         <p
           className="text-sm leading-6 whitespace-pre-wrap break-words"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: "var(--text-primary)" }}
         >
           {notice.body}
         </p>
@@ -333,7 +333,7 @@ export const NoticeListView: React.FC<NoticeListViewProps> = ({
   maxHeight = 480,
   showHeader = true,
 }) => {
-  const [view, setView] = useState<NoticeView>('notice');
+  const [view, setView] = useState<NoticeView>("notice");
   const [detailId, setDetailId] = useState<string | null>(initialDetailId);
 
   const detail =
@@ -359,12 +359,12 @@ export const NoticeListView: React.FC<NoticeListViewProps> = ({
             {notices.length === 0 ? (
               <div
                 className="flex flex-col items-center justify-center gap-2 py-10 text-sm"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               >
                 <BellOff size={28} />
-                {t('暂无通知')}
+                {t("暂无通知")}
               </div>
-            ) : view === 'notice' ? (
+            ) : view === "notice" ? (
               <div className="px-3 py-2.5">
                 {notices.map((notice) => (
                   <NoticeCard
@@ -378,7 +378,7 @@ export const NoticeListView: React.FC<NoticeListViewProps> = ({
             ) : (
               <div
                 className="divide-y"
-                style={{ borderColor: 'var(--border-default)' }}
+                style={{ borderColor: "var(--border-default)" }}
               >
                 {notices.map((notice) => (
                   <TimelineItem

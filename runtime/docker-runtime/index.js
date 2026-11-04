@@ -668,7 +668,9 @@ function hostProcessSpec(name, env) {
     };
   }
   if (name === 'conversion') {
-    const redisAuth = env.REDIS_PASSWORD ? `:${env.REDIS_PASSWORD}@` : '';
+    // 密码含 URL 特殊字符（@/#/% 等）必须 encodeURIComponent，消费端（redis-client.ts）
+    // 按同规则 decode 还原——缺编码会 ERR invalid password（2026-11-04 部署事故）。
+    const redisAuth = env.REDIS_PASSWORD ? `:${encodeURIComponent(env.REDIS_PASSWORD)}@` : '';
     const convEnv = {
       NODE_ENV: 'production',
       CONVERSION_SERVICE_PORT: String(parseInt(env.CONVERSION_SERVICE_PORT || '3100', 10)),

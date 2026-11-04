@@ -1,3 +1,5 @@
+import type { ConversionFailureCategory } from '@cloudcad/contracts';
+
 /**
  * S4-3 转换任务状态变更 SSE 事件通道（单一事实源）。
  *
@@ -23,6 +25,10 @@ export interface ConversionTaskSseEvent {
  * `GET /mxcad/conversion/file-stream?hash=<hash>` 订阅。无节点转换在后台完成
  * （成功/失败）后在 `CONVERSION_FILE_CHANNEL(hash)` 上 emit `{ hash, status }`，
  * 前端收到即打开 mxweb（latest-wins：只打开最后打开的那个文件）。
+ *
+ * FAILED 时附带 error + errorCategory（失败原因与性质分类），前端据此区分
+ * 「文件内容问题」vs「引擎/服务异常」——游客无 nodeId、查不了节点 status 端点，
+ * 失败原因只能靠本事件透传（此前在 emit 点被丢弃，前端只剩兜底文案）。
  */
 export const CONVERSION_FILE_CHANNEL = (hash: string): string =>
   `conversion-file.changed.${hash}`;
@@ -31,4 +37,8 @@ export const CONVERSION_FILE_CHANNEL = (hash: string): string =>
 export interface ConversionFileSseEvent {
   hash: string;
   status: 'COMPLETED' | 'FAILED';
+  /** 失败原因（仅 FAILED 有意义，转换引擎返回的具体错误） */
+  error?: string;
+  /** 失败性质分类（仅 FAILED 有意义，见 @cloudcad/contracts CONVERSION_FAILURE_CATEGORIES） */
+  errorCategory?: ConversionFailureCategory;
 }

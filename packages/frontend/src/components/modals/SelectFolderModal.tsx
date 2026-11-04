@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Input } from '../ui/Input';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { Button, Modal, Input, FileTree } from "@/components/ui";
+
 import {
   Folder,
   Check,
@@ -9,28 +14,28 @@ import {
   AlertCircle,
   FolderPlus,
   Plus,
-} from 'lucide-react';
-import { useFolderChildren } from './hooks/useFolderChildren';
-import { FileSystemNode } from '../../types/filesystem';
-import { handleError } from '@/utils/errorHandler';
-import { validateFolderName } from '@/utils/fileUtils';
-import { FileTree } from '../ui/FileTree';
-import { t } from '@/languages';
+} from "lucide-react";
+import { useFolderChildren } from "./hooks/useFolderChildren";
+import { FileSystemNode } from "../../types/filesystem";
+import { handleError } from "@/utils/errorHandler";
+import { validateFolderName } from "@/utils/fileUtils";
+
+import { t } from "@/languages";
 import {
   nodeControllerCreateFolder,
   projectControllerCreateProject,
-} from '@/api-sdk';
+} from "@/api-sdk";
 import {
   evaluateCrossProjectTransfer,
   fetchProjectTransferSettings,
-} from '@/lib/crossProjectPaste';
-import type { CrossProjectTransferVerdict } from '@/lib/crossProjectPaste';
+} from "@/lib/crossProjectPaste";
+import type { CrossProjectTransferVerdict } from "@/lib/crossProjectPaste";
 
 /** 跨项目目标根（根切换器数据源：项目 / 个人空间） */
 export interface TransferTargetRoot {
   id: string;
   name: string;
-  kind: 'project' | 'personal-space';
+  kind: "project" | "personal-space";
 }
 
 interface SelectFolderModalProps {
@@ -44,7 +49,7 @@ interface SelectFolderModalProps {
   /** 跨项目转移门控：源项目 id（源为个人空间时不传 → 不做策略拦截） */
   sourceProjectId?: string;
   /** 当前操作类型：move=移动 / copy=复制（按此匹配项目 transfer 策略） */
-  operation?: 'move' | 'copy';
+  operation?: "move" | "copy";
   /** 查询项目 6 域 transfer 设置（测试可注入；缺省走 SDK） */
   getProjectTransferSettings?: typeof fetchProjectTransferSettings;
   onClose: () => void;
@@ -77,7 +82,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   getProjectTransferSettings,
   onClose,
   onConfirm,
-  confirmButtonText = t('确认'),
+  confirmButtonText = t("确认"),
 }) => {
   const [folderTree, setFolderTree] = useState<FolderNode[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -89,9 +94,9 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
   // 选择界面内就地创建（新建文件夹 / 新建项目）
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderName, setNewFolderName] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectName, setNewProjectName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   /** 本弹窗内新建的项目（本地追加到根切换器，不依赖父组件刷新） */
@@ -102,7 +107,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   /** 根切换器数据源：父组件传入的根 + 本弹窗内新建的项目 */
   const localRoots = useMemo(
     () => [...(roots ?? []), ...createdRoots],
-    [roots, createdRoots]
+    [roots, createdRoots],
   );
 
   /** 项目 transfer 设置查询（缺省走 SDK；测试可注入） */
@@ -114,7 +119,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
   /** 当前根名称（roots 缺省时用 projectId 单根） */
   const activeRootName =
-    localRoots.find((r) => r.id === activeRootId)?.name ?? t('根目录');
+    localRoots.find((r) => r.id === activeRootId)?.name ?? t("根目录");
 
   // 打开时初始化活动根（当前项目优先，其次 roots 首项）
   useEffect(() => {
@@ -136,7 +141,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     const rootId = activeRootId;
 
     if (!rootId) {
-      setError(t('请先选择保存位置'));
+      setError(t("请先选择保存位置"));
       setLoading(false);
       return;
     }
@@ -151,8 +156,8 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       ]);
       setFolderTree(tree);
     } catch (err) {
-      handleError(err, 'loadFolderTree');
-      setError(t('加载文件夹列表失败'));
+      handleError(err, "loadFolderTree");
+      setError(t("加载文件夹列表失败"));
     } finally {
       setLoading(false);
     }
@@ -177,7 +182,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   /** 排除集合（源节点 id + 显式批量集合），懒加载子级时持续剔除 */
   const excludedIdsRef = useRef<Set<string>>(new Set());
   excludedIdsRef.current = new Set(
-    excludeNodeIds ?? (currentNodeId ? [currentNodeId] : [])
+    excludeNodeIds ?? (currentNodeId ? [currentNodeId] : []),
   );
 
   // 切换文件夹展开/折叠（懒加载）
@@ -199,7 +204,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
               // 一次性 await 后展开，配合 FileTree 的 grid 展开动画平滑出现
               const children = await loadChildren(
                 nodeId,
-                Array.from(excludedIdsRef.current)
+                Array.from(excludedIdsRef.current),
               );
               result[i] = {
                 ...node,
@@ -227,23 +232,20 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       const updatedTree = await updateNode(folderTreeRef.current);
       setFolderTree(updatedTree);
     },
-    [loadChildren]
+    [loadChildren],
   );
 
   // 选择文件夹（单选：点击已选中项不取消——根目录打开时已默认选中，
   // 若点击「根目录」会切掉选中态导致确认按钮禁用、复制/移动静默无操作（P1-1））
-  const selectFolder = useCallback(
-    (nodeId: string) => {
-      setSelectedFolderId(nodeId);
-    },
-    []
-  );
+  const selectFolder = useCallback((nodeId: string) => {
+    setSelectedFolderId(nodeId);
+  }, []);
 
   // 递归渲染文件夹树
 
   const findNodeById = (
     nodes: FolderNode[],
-    id: string
+    id: string,
   ): FolderNode | undefined => {
     for (const node of nodes) {
       if (node.id === id) return node;
@@ -268,12 +270,12 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       setTransferVerdict(null);
       return;
     }
-    const targetRootKind = activeRoot?.kind ?? 'project';
+    const targetRootKind = activeRoot?.kind ?? "project";
     let cancelled = false;
     (async () => {
       const [sourceSettings, targetSettings] = await Promise.all([
         fetchTransfer(sourceProjectId),
-        targetRootKind === 'project'
+        targetRootKind === "project"
           ? fetchTransfer(activeRootId)
           : Promise.resolve(null),
       ]);
@@ -286,7 +288,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
           targetRootKind,
           sourceSettings,
           targetSettings,
-        })
+        }),
       );
     })();
     return () => {
@@ -305,7 +307,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const mapTreeNode = (
     nodes: FolderNode[],
     id: string,
-    updater: (node: FolderNode) => FolderNode
+    updater: (node: FolderNode) => FolderNode,
   ): FolderNode[] =>
     nodes.map((node) => {
       if (node.id === id) return updater(node);
@@ -318,14 +320,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const startCreateFolder = () => {
     setCreatingProject(false);
     setCreatingFolder(true);
-    setNewFolderName('');
+    setNewFolderName("");
     setCreateError(null);
   };
 
   const startCreateProject = () => {
     setCreatingFolder(false);
     setCreatingProject(true);
-    setNewProjectName('');
+    setNewProjectName("");
     setCreateError(null);
   };
 
@@ -340,7 +342,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     const name = newFolderName.trim();
     const validation = validateFolderName(name);
     if (!validation.valid) {
-      setCreateError(validation.error || t('文件夹名称无效'));
+      setCreateError(validation.error || t("文件夹名称无效"));
       return;
     }
     if (!selectedFolderId) return;
@@ -357,7 +359,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       };
       const newId = created.id;
       if (!newId) {
-        setCreateError(t('文件夹创建失败'));
+        setCreateError(t("文件夹创建失败"));
         return;
       }
       const newNode: FolderNode = {
@@ -377,14 +379,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
             ...node,
             expanded: true,
             children: [...(node.children ?? []), newNode],
-          }))
+          })),
         );
       }
       setSelectedFolderId(newId);
       cancelCreate();
     } catch (err) {
-      const appError = handleError(err, 'createFolder');
-      setCreateError(appError.message || t('文件夹创建失败'));
+      const appError = handleError(err, "createFolder");
+      setCreateError(appError.message || t("文件夹创建失败"));
     } finally {
       setCreating(false);
     }
@@ -395,7 +397,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     const name = newProjectName.trim();
     const validation = validateFolderName(name);
     if (!validation.valid) {
-      setCreateError(validation.error || t('项目名称无效'));
+      setCreateError(validation.error || t("项目名称无效"));
       return;
     }
     setCreating(true);
@@ -408,21 +410,21 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       const created = res.data as unknown as { id?: string; name?: string };
       const newId = created?.id;
       if (!newId) {
-        setCreateError(t('项目创建失败'));
+        setCreateError(t("项目创建失败"));
         return;
       }
       const newRoot: TransferTargetRoot = {
         id: newId,
         name: created?.name ?? name,
-        kind: 'project',
+        kind: "project",
       };
       setCreatedRoots((prev) => [...prev, newRoot]);
       setActiveRootId(newId);
       setSelectedFolderId(newId);
       cancelCreate();
     } catch (err) {
-      const appError = handleError(err, 'createProject');
-      setCreateError(appError.message || t('项目创建失败'));
+      const appError = handleError(err, "createProject");
+      setCreateError(appError.message || t("项目创建失败"));
     } finally {
       setCreating(false);
     }
@@ -447,11 +449,11 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={t('选择目标文件夹')}
+      title={t("选择目标文件夹")}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -471,10 +473,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
             <Loader2
               size={32}
               className="animate-spin mb-3"
-              style={{ color: 'var(--primary-600)' }}
+              style={{ color: "var(--primary-600)" }}
             />
-            <p style={{ color: 'var(--text-tertiary)' }}>
-              {t('加载文件夹列表...')}
+            <p style={{ color: "var(--text-tertiary)" }}>
+              {t("加载文件夹列表...")}
             </p>
           </div>
         )}
@@ -482,7 +484,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {/* 错误状态 */}
         {error && (
           <div className="flex items-center justify-center py-8">
-            <p style={{ color: 'var(--error)' }}>{error}</p>
+            <p style={{ color: "var(--error)" }}>{error}</p>
           </div>
         )}
 
@@ -490,27 +492,27 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {!loading && !error && (
           <div
             className="border rounded-[3px]"
-            style={{ borderColor: 'var(--border-default)' }}
+            style={{ borderColor: "var(--border-default)" }}
           >
             <div
               className="flex items-center justify-between gap-2 px-2 pt-1.5 pb-0.5"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <span className="truncate">
-                {t('点击文件夹名称选择，点击箭头展开/折叠')}
+                {t("点击文件夹名称选择，点击箭头展开/折叠")}
               </span>
               <button
                 type="button"
                 className="flex items-center gap-1 px-1.5 h-[20px] text-xs rounded-[3px] cursor-pointer select-none shrink-0 transition-colors duration-150"
                 style={{
-                  color: 'var(--primary-600)',
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-default)',
+                  color: "var(--primary-600)",
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-default)",
                 }}
                 onClick={startCreateFolder}
               >
                 <FolderPlus size={12} />
-                {t('新建文件夹')}
+                {t("新建文件夹")}
               </button>
             </div>
             {/* 新建文件夹内联表单（创建在选中文件夹下，成功后自动选中） */}
@@ -521,8 +523,8 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                   wrapperClassName="flex-1"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
-                  placeholder={t('请输入文件夹名称')}
+                  onKeyPress={(e) => e.key === "Enter" && handleCreateFolder()}
+                  placeholder={t("请输入文件夹名称")}
                   autoFocus
                 />
                 <Button
@@ -530,17 +532,17 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                   onClick={handleCreateFolder}
                   disabled={creating || !newFolderName.trim()}
                 >
-                  {t('创建')}
+                  {t("创建")}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={cancelCreate}>
-                  {t('取消')}
+                  {t("取消")}
                 </Button>
               </div>
             )}
             {creatingFolder && createError && (
               <div
                 className="px-2 pb-1 text-xs"
-                style={{ color: 'var(--error)' }}
+                style={{ color: "var(--error)" }}
               >
                 {createError}
               </div>
@@ -557,18 +559,18 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                       className="px-2 h-[24px] text-xs rounded-[3px] cursor-pointer select-none transition-colors duration-150"
                       style={{
                         color: isActive
-                          ? 'var(--info)'
-                          : 'var(--text-secondary)',
+                          ? "var(--info)"
+                          : "var(--text-secondary)",
                         background: isActive
-                          ? 'rgba(0,156,255,0.1)'
-                          : 'var(--bg-secondary)',
+                          ? "rgba(0,156,255,0.1)"
+                          : "var(--bg-secondary)",
                         fontWeight: isActive ? 600 : 500,
-                        border: '1px solid var(--border-default)',
+                        border: "1px solid var(--border-default)",
                       }}
                       onClick={() => switchRoot(root.id)}
                     >
-                      {root.kind === 'personal-space'
-                        ? t('个人空间')
+                      {root.kind === "personal-space"
+                        ? t("个人空间")
                         : root.name}
                     </button>
                   );
@@ -577,14 +579,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                   type="button"
                   className="flex items-center gap-0.5 px-2 h-[24px] text-xs rounded-[3px] cursor-pointer select-none transition-colors duration-150"
                   style={{
-                    color: 'var(--text-secondary)',
-                    background: 'var(--bg-secondary)',
-                    border: '1px dashed var(--border-default)',
+                    color: "var(--text-secondary)",
+                    background: "var(--bg-secondary)",
+                    border: "1px dashed var(--border-default)",
                   }}
                   onClick={startCreateProject}
                 >
                   <Plus size={12} />
-                  {t('新建项目')}
+                  {t("新建项目")}
                 </button>
               </div>
             )}
@@ -595,8 +597,8 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                   wrapperClassName="flex-1"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
-                  placeholder={t('请输入项目名称')}
+                  onKeyPress={(e) => e.key === "Enter" && handleCreateProject()}
+                  placeholder={t("请输入项目名称")}
                   autoFocus
                 />
                 <Button
@@ -604,17 +606,17 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                   onClick={handleCreateProject}
                   disabled={creating || !newProjectName.trim()}
                 >
-                  {t('创建')}
+                  {t("创建")}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={cancelCreate}>
-                  {t('取消')}
+                  {t("取消")}
                 </Button>
               </div>
             )}
             {creatingProject && createError && (
               <div
                 className="px-2 pb-1 text-xs"
-                style={{ color: 'var(--error)' }}
+                style={{ color: "var(--error)" }}
               >
                 {createError}
               </div>
@@ -625,63 +627,63 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                 style={{
                   color:
                     selectedFolderId === activeRootId
-                      ? 'var(--info)'
-                      : 'var(--text-secondary)',
+                      ? "var(--info)"
+                      : "var(--text-secondary)",
                   background:
                     selectedFolderId === activeRootId
-                      ? 'rgba(0,156,255,0.1)'
-                      : 'var(--bg-secondary)',
+                      ? "rgba(0,156,255,0.1)"
+                      : "var(--bg-secondary)",
                   fontWeight: selectedFolderId === activeRootId ? 600 : 500,
-                  borderBottom: '1px solid var(--border-default)',
+                  borderBottom: "1px solid var(--border-default)",
                 }}
                 onClick={() => selectFolder(activeRootId)}
                 onMouseEnter={(e) => {
                   if (selectedFolderId !== activeRootId) {
-                    e.currentTarget.style.background = 'var(--menu-highlight)';
-                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.background = "var(--menu-highlight)";
+                    e.currentTarget.style.color = "var(--text-primary)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (selectedFolderId !== activeRootId) {
-                    e.currentTarget.style.background = 'var(--bg-secondary)';
-                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.background = "var(--bg-secondary)";
+                    e.currentTarget.style.color = "var(--text-secondary)";
                   }
                 }}
               >
                 <Folder
                   size={14}
                   className="shrink-0"
-                  style={{ color: 'var(--warning-500)' }}
+                  style={{ color: "var(--warning-500)" }}
                 />
                 <span className="flex-1 truncate">{activeRootName}</span>
                 <span
                   className="text-[10px] shrink-0 ml-1"
-                  style={{ color: 'var(--text-tertiary)' }}
+                  style={{ color: "var(--text-tertiary)" }}
                 >
-                  {t('保存到根目录')}
+                  {t("保存到根目录")}
                 </span>
                 {selectedFolderId === activeRootId && (
                   <Check
                     size={14}
                     className="shrink-0 ml-1"
-                    style={{ color: 'var(--info)' }}
+                    style={{ color: "var(--info)" }}
                   />
                 )}
               </div>
             )}
             <div
               className="max-h-80 overflow-y-auto"
-              style={{ background: 'var(--bg-primary)' }}
+              style={{ background: "var(--bg-primary)" }}
             >
               {folderTree.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
                   <Folder
                     size={48}
                     className="mb-3"
-                    style={{ color: 'var(--text-muted)' }}
+                    style={{ color: "var(--text-muted)" }}
                   />
-                  <p style={{ color: 'var(--text-tertiary)' }}>
-                    {t('暂无可用文件夹')}
+                  <p style={{ color: "var(--text-tertiary)" }}>
+                    {t("暂无可用文件夹")}
                   </p>
                 </div>
               ) : (
@@ -700,12 +702,12 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {transferVerdict?.allowed === false && transferVerdict.reasonKey && (
           <div
             className="flex items-center gap-1.5 text-xs px-1"
-            style={{ color: 'var(--error)' }}
+            style={{ color: "var(--error)" }}
           >
             <AlertCircle size={14} className="shrink-0" />
             <span>
               {t(transferVerdict.reasonKey, {
-                action: operation === 'move' ? t('移动') : t('复制'),
+                action: operation === "move" ? t("移动") : t("复制"),
               })}
             </span>
           </div>

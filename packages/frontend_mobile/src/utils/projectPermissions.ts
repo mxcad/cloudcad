@@ -164,17 +164,23 @@ export function decidePermissionChange(
   return { action: 'accept', selected: completePermissionDependencies(next) }
 }
 
-/** 项目默认角色名映射（项目内角色可改名，此处仅作未知/改名前角色名的兜底显示） */
-export const PROJECT_ROLE_NAMES: Record<string, string> = {
-  PROJECT_OWNER: t('项目所有者'),
-  PROJECT_ADMIN: t('项目管理员'),
-  PROJECT_EDITOR: t('项目编辑者'),
-  PROJECT_MEMBER: t('项目成员'),
-  PROJECT_VIEWER: t('项目查看者'),
-}
-
+/** 项目默认角色名（项目内角色可改名，此处仅作未知/改名前角色名的兜底显示）。
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新 */
 export function getProjectRoleDisplayName(roleName: string): string {
-  return PROJECT_ROLE_NAMES[roleName] || roleName
+  switch (roleName) {
+    case 'PROJECT_OWNER':
+      return t('项目所有者')
+    case 'PROJECT_ADMIN':
+      return t('项目管理员')
+    case 'PROJECT_EDITOR':
+      return t('项目编辑者')
+    case 'PROJECT_MEMBER':
+      return t('项目成员')
+    case 'PROJECT_VIEWER':
+      return t('项目查看者')
+    default:
+      return roleName
+  }
 }
 
 /** 文件/文件夹单条目操作菜单项（name 走 i18n，key 供 onMenuAction 分派，color 仅删除项用） */

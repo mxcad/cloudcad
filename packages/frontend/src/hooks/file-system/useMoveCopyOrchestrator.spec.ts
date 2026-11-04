@@ -14,7 +14,8 @@ vi.mock('@/api-sdk', () => ({
 }));
 
 vi.mock('@/languages', () => ({
-  t: (msg: string) => msg,
+  t: (m: string, vars?: Record<string, string>) =>
+    vars ? m.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? '') : m,
 }));
 
 vi.mock('@/utils/errorHandler', () => ({
@@ -197,7 +198,7 @@ describe('useMoveCopyOrchestrator — move 编排', () => {
     });
 
     expect(props.showToast).toHaveBeenCalledWith(
-      expect.stringContaining('{failedCount} 项失败'),
+      expect.stringMatching(/成功移动.*项失败/),
       'warning'
     );
     expect(pushSpy).toHaveBeenCalledTimes(1);
@@ -224,7 +225,7 @@ describe('useMoveCopyOrchestrator — move 编排', () => {
     });
 
     expect(props.showToast).toHaveBeenCalledWith(
-      expect.stringContaining('{failedCount} 项失败'),
+      expect.stringMatching(/成功移动.*项失败/),
       'warning'
     );
     expect(pushSpy).toHaveBeenCalledTimes(1);
@@ -373,7 +374,7 @@ describe('useMoveCopyOrchestrator — copy 编排', () => {
     });
 
     expect(props.showToast).toHaveBeenCalledWith(
-      expect.stringContaining('成功粘贴 {successCount} 项，{failedCount} 项失败'),
+      expect.stringMatching(/成功粘贴.*项失败/),
       'warning'
     );
     expect(pushSpy).toHaveBeenCalledTimes(1);

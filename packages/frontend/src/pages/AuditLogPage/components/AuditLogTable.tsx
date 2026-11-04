@@ -1,12 +1,12 @@
-import React from 'react';
-import { Tag } from '@/components/ui/Tag';
-import { DescriptionText } from '@/components/ui/TruncateText';
-import { SelectableTable } from '@/components/common/SelectableTable';
-import { t } from '@/languages';
-import styles from '../AuditLogPage.module.css';
-import { formatDate, getResourceTypeDisplayName } from '../constants';
-import { getActionDescription } from '@/utils/auditActionTemplates';
-import type { AuditLog } from '@/utils/auditActionTemplates';
+import React from "react";
+import { Tag, DescriptionText } from "@/components/ui";
+
+import { SelectableTable } from "@/components/common/SelectableTable";
+import { t } from "@/languages";
+import styles from "../AuditLogPage.module.css";
+import { formatDate, getResourceTypeDisplayName } from "../constants";
+import { getActionDescription } from "@/utils/auditActionTemplates";
+import type { AuditLog } from "@/utils/auditActionTemplates";
 
 interface AuditLogTableProps {
   logs: AuditLog[];
@@ -24,7 +24,7 @@ interface AuditLogTableProps {
   /** 每页条数变化回调（切换后应重置页码并重新加载） */
   onPageSizeChange?: (pageSize: number) => void;
   /** 滚动分页（滚动加载；提供后启用顶/底 loader 与页脚 visiblePage） */
-  onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
+  onScrollPageChange?: (page: number, direction: "prev" | "next") => void;
   /** 列表第一项所属页码（prev 触发防重复加载已存在页） */
   minLoadedPage?: number;
   /** 是否存在筛选条件（决定空态提示文案） */
@@ -41,10 +41,10 @@ function renderDetails(log: AuditLog): string {
     try {
       return JSON.stringify(log.params);
     } catch {
-      return '-';
+      return "-";
     }
   }
-  return '-';
+  return "-";
 }
 
 export const AuditLogTable: React.FC<AuditLogTableProps> = ({
@@ -68,10 +68,10 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
 }) => {
   // 空态提示：无筛选 → 暂无数据；仅时间筛选无结果 → 提示调整时间；其他 → 通用提示
   const emptyText = !hasFilters
-    ? t('暂无数据')
+    ? t("暂无数据")
     : onlyDateFilters
-      ? t('所选时间范围内暂无记录，请调整时间范围')
-      : t('没有找到符合筛选条件的记录');
+      ? t("所选时间范围内暂无记录，请调整时间范围")
+      : t("没有找到符合筛选条件的记录");
 
   return (
     <div className={styles.tableContainer}>
@@ -83,11 +83,13 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         tableClassName={styles.table}
         loadingView={
           <div className={styles.tableEmpty}>
-            <span className={styles.loadingText}>{t('加载中...')}</span>
+            <span className={styles.loadingText}>{t("加载中...")}</span>
           </div>
         }
         emptyView={<div className={styles.tableEmpty}>{emptyText}</div>}
-        paginationMeta={totalPages > 1 ? { total, page, limit, totalPages } : null}
+        paginationMeta={
+          totalPages > 1 ? { total, page, limit, totalPages } : null
+        }
         onToggleSelect={onToggleSelect}
         onToggleSelectAll={onToggleSelectAll}
         onRubberBandSelect={onRubberBandSelect}
@@ -99,13 +101,13 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         minLoadedPage={minLoadedPage}
         renderHeader={() => (
           <>
-            <th>{t('时间')}</th>
-            <th>{t('用户')}</th>
-            <th>{t('操作')}</th>
-            <th>{t('资源类型')}</th>
-            <th>{t('资源')}</th>
-            <th>{t('状态')}</th>
-            <th>{t('详情')}</th>
+            <th>{t("时间")}</th>
+            <th>{t("用户")}</th>
+            <th>{t("操作")}</th>
+            <th>{t("资源类型")}</th>
+            <th>{t("资源")}</th>
+            <th>{t("状态")}</th>
+            <th>{t("详情")}</th>
           </>
         )}
         renderRow={(log) => (
@@ -117,7 +119,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                   {log.user.nickname ||
                     log.user.username ||
                     log.user.email ||
-                    '-'}
+                    "-"}
                 </div>
                 <div className={styles.userEmail}>{log.user.email}</div>
               </div>
@@ -129,20 +131,20 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                 <div>
                   <div>{log.resourceName}</div>
                   <div className={styles.userEmail}>
-                    {log.resourceId || '-'}
+                    {log.resourceId || "-"}
                   </div>
                 </div>
               ) : (
                 <DescriptionText maxWidth={20}>
-                  {log.resourceId || '-'}
+                  {log.resourceId || "-"}
                 </DescriptionText>
               )}
             </td>
             <td>
               {log.success ? (
-                <Tag variant="success">{t('成功')}</Tag>
+                <Tag variant="success">{t("成功")}</Tag>
               ) : (
-                <Tag variant="error">{t('失败')}</Tag>
+                <Tag variant="error">{t("失败")}</Tag>
               )}
             </td>
             <td>

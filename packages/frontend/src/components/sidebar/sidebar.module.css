@@ -99,6 +99,36 @@
   transform: scale(0.95);
 }
 
+/* Tabs 包装：占据剩余宽度，用于测量是否装不下 */
+.tabBarTabsWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* 隐藏测量层：始终渲染完整标签，用于判断是否装不下（不参与布局、不可交互）
+   width:max-content 让测量层尺寸恒等于内容宽度（而非被可用宽度封顶的 shrink-to-fit），
+   这样字体加载/语言切换导致内容变宽时 ResizeObserver 也能可靠触发重估 */
+.tabBarMeasure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* 仅图标（compact）时：Tabs 撑满可用宽度，图标按钮保持自然尺寸、用 space-evenly 均布到整条，
+   而不是挤在左侧（不拉伸按钮，避免与 Button 图标态固定 w-[28px] 冲突） */
+.tabBarTabsFill {
+  flex: 1;
+  justify-content: space-evenly;
+}
+
 /* ============================================
    3. 内容区域
    ============================================ */

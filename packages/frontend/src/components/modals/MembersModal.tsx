@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import {
   RefreshCw,
   X,
@@ -6,39 +6,42 @@ import {
   AlertCircle,
   Loader2,
   ArrowUpRight,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
-import { Modal } from '@/components/ui/Modal';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { Autocomplete } from '@/components/ui/Autocomplete';
-import { TruncateText } from '@/components/ui/TruncateText';
-import { UserAvatar } from '@/components/ui/UserAvatar';
+} from "lucide-react";
+import {
+  Button,
+  Tag,
+  Modal,
+  Tooltip,
+  Autocomplete,
+  TruncateText,
+  UserAvatar,
+} from "@/components/ui";
+
 import {
   memberControllerGetProjectMembers,
   memberControllerAddProjectMember,
   memberControllerRemoveProjectMember,
   memberControllerUpdateProjectMember,
   memberControllerTransferProject,
-} from '@/api-sdk';
-import { usersControllerSearchUsers } from '@/api-sdk';
-import { rolesControllerGetProjectRolesByProject } from '@/api-sdk';
-import type { ProjectRoleDto } from '@/api-sdk';
-import { useProjectPermissions } from '@/hooks/useProjectPermissions';
-import { useAuth } from '@/contexts/AuthContext';
-import { ProjectPermission, getRoleDisplayName } from '@/constants/permissions';
-import { t, $t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
-import type { ProjectMemberDto, UserResponseDto } from '@/api-sdk';
+} from "@/api-sdk";
+import { usersControllerSearchUsers } from "@/api-sdk";
+import { rolesControllerGetProjectRolesByProject } from "@/api-sdk";
+import type { ProjectRoleDto } from "@/api-sdk";
+import { useProjectPermissions } from "@/hooks/useProjectPermissions";
+import { useAuth } from "@/contexts/AuthContext";
+import { ProjectPermission, getRoleDisplayName } from "@/constants/permissions";
+import { t, $t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
+import type { ProjectMemberDto, UserResponseDto } from "@/api-sdk";
 
 /** SDK error 的成员操作错误映射（4 个 handler 共用：FORBIDDEN/BAD_REQUEST 专属文案，其余兜底） */
 function getMemberActionError(
   error: unknown,
-  messages: { forbidden: string; badRequest?: string; fallback: string }
+  messages: { forbidden: string; badRequest?: string; fallback: string },
 ): string {
   const code = (error as { code?: string }).code;
-  if (code === 'FORBIDDEN') return messages.forbidden;
-  if (code === 'BAD_REQUEST' && messages.badRequest) return messages.badRequest;
+  if (code === "FORBIDDEN") return messages.forbidden;
+  if (code === "BAD_REQUEST" && messages.badRequest) return messages.badRequest;
   return getErrorMessage(error) || messages.fallback;
 }
 
@@ -67,18 +70,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const [projectRoles, setProjectRoles] = useState<ProjectRoleDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newRoleId, setNewRoleId] = useState('');
+  const [newEmail, setNewEmail] = useState("");
+  const [newRoleId, setNewRoleId] = useState("");
   const [adding, setAdding] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [filterRoleId, setFilterRoleId] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState("");
+  const [filterRoleId, setFilterRoleId] = useState<string>("");
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [transferTarget, setTransferTarget] = useState<Member | null>(null);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
-    null
+    null,
   );
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
@@ -104,7 +107,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const currentUserId = user?.id;
 
   const loadMembers = useCallback(async () => {
-    setErrorMessage('');
+    setErrorMessage("");
     try {
       const response = await memberControllerGetProjectMembers({
         throwOnError: true,
@@ -118,7 +121,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       }));
       setMembers(membersWithUserId as Member[]);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error) || t('加载成员列表失败'));
+      setErrorMessage(getErrorMessage(error) || t("加载成员列表失败"));
     }
   }, [projectId]);
 
@@ -138,13 +141,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
       // 设置默认角色为 PROJECT_MEMBER（项目内改名后回退到任一可用角色）
       const defaultRole =
-        addMemberRoles.find((r) => r.name === 'PROJECT_MEMBER') ||
+        addMemberRoles.find((r) => r.name === "PROJECT_MEMBER") ||
         addMemberRoles[0];
       if (defaultRole) {
         setNewRoleId((prev) => prev || defaultRole.id);
       }
     } catch (error) {
-      setErrorMessage(getErrorMessage(error) || t('加载项目角色失败'));
+      setErrorMessage(getErrorMessage(error) || t("加载项目角色失败"));
     }
   }, [projectId]);
 
@@ -173,18 +176,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         // 过滤掉已经是成员的用户
         const memberUserIds = members.map((m) => m.id);
         const availableUsers = users.filter(
-          (u) => !memberUserIds.includes(u.id)
+          (u) => !memberUserIds.includes(u.id),
         );
 
         setSearchResults(availableUsers);
       } catch (error) {
         setSearchResults([]);
-        setErrorMessage(getErrorMessage(error) || t('搜索用户失败'));
+        setErrorMessage(getErrorMessage(error) || t("搜索用户失败"));
       } finally {
         setSearching(false);
       }
     },
-    [members]
+    [members],
   );
 
   // 防抖搜索
@@ -203,10 +206,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       isInitializedRef.current = true;
 
       // 重置状态
-      setNewEmail('');
-      setNewRoleId('');
+      setNewEmail("");
+      setNewRoleId("");
       setShowAddForm(false);
-      setErrorMessage('');
+      setErrorMessage("");
       setSearchResults([]);
       setSelectedUser(null);
       // 开始加载
@@ -218,7 +221,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       // 并行加载数据
       Promise.all([loadMembers(), loadProjectRoles()])
         .catch((error) => {
-          setErrorMessage(t('加载数据失败'));
+          setErrorMessage(t("加载数据失败"));
         })
         .finally(() => {
           setLoading(false);
@@ -234,7 +237,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     if (!selectedUser || !newRoleId) return;
 
     setAdding(true);
-    setErrorMessage('');
+    setErrorMessage("");
     try {
       // 添加成员
       const result = await memberControllerAddProjectMember({
@@ -252,8 +255,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       refreshProjectPermissions();
 
       // 重置表单
-      setNewEmail('');
-      setNewRoleId('');
+      setNewEmail("");
+      setNewRoleId("");
       setShowAddForm(false);
       setSearchResults([]);
       setSelectedUser(null);
@@ -262,9 +265,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       // 403/400 判断用 code 字段（FORBIDDEN/BAD_REQUEST）
       setErrorMessage(
         getMemberActionError(error, {
-          forbidden: t('没有权限添加成员'),
-          fallback: t('添加成员失败，请重试'),
-        })
+          forbidden: t("没有权限添加成员"),
+          fallback: t("添加成员失败，请重试"),
+        }),
       );
     } finally {
       setAdding(false);
@@ -272,7 +275,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   };
 
   const handleRemoveMember = async (userId: string) => {
-    setErrorMessage('');
+    setErrorMessage("");
     try {
       const result = await memberControllerRemoveProjectMember({
         throwOnError: true,
@@ -283,15 +286,15 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     } catch (error) {
       setErrorMessage(
         getMemberActionError(error, {
-          forbidden: t('没有权限移除成员'),
-          fallback: t('移除成员失败，请重试'),
-        })
+          forbidden: t("没有权限移除成员"),
+          fallback: t("移除成员失败，请重试"),
+        }),
       );
     }
   };
 
   const handleUpdateRole = async (userId: string, projectRoleId: string) => {
-    setErrorMessage('');
+    setErrorMessage("");
     try {
       const result = await memberControllerUpdateProjectMember({
         throwOnError: true,
@@ -299,17 +302,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         body: { projectRoleId },
       });
       setMembers((prev) =>
-        prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
+        prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m)),
       );
       // 重新加载权限（可能是修改了自己的角色，权限已变更）
       await refreshProjectPermissions();
     } catch (error) {
       setErrorMessage(
         getMemberActionError(error, {
-          forbidden: t('没有权限更新成员角色'),
-          badRequest: t('不能修改项目所有者的角色'),
-          fallback: t('更新角色失败，请重试'),
-        })
+          forbidden: t("没有权限更新成员角色"),
+          badRequest: t("不能修改项目所有者的角色"),
+          fallback: t("更新角色失败，请重试"),
+        }),
       );
     }
   };
@@ -318,7 +321,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     if (!transferTarget) return;
 
     setTransferring(true);
-    setErrorMessage('');
+    setErrorMessage("");
     try {
       const result = await memberControllerTransferProject({
         throwOnError: true,
@@ -335,9 +338,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     } catch (error) {
       setErrorMessage(
         getMemberActionError(error, {
-          forbidden: t('没有权限转让项目'),
-          fallback: t('转让项目失败，请重试'),
-        })
+          forbidden: t("没有权限转让项目"),
+          fallback: t("转让项目失败，请重试"),
+        }),
       );
     } finally {
       setTransferring(false);
@@ -349,10 +352,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title={t('项目成员')}
+        title={t("项目成员")}
         footer={
           <Button variant="secondary" onClick={onClose}>
-            {t('关闭')}
+            {t("关闭")}
           </Button>
         }
       >
@@ -362,8 +365,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             <div
               className="flex items-center gap-2 p-3 rounded-lg text-sm"
               style={{
-                background: 'var(--error-light)',
-                color: 'var(--error)',
+                background: "var(--error-light)",
+                color: "var(--error)",
               }}
             >
               <AlertCircle size={16} />
@@ -377,46 +380,46 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               <div
                 className="w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2"
                 style={{
-                  borderColor: 'var(--border-default)',
+                  borderColor: "var(--border-default)",
                 }}
               >
                 <Loader2
                   size={18}
                   className="animate-spin"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{ color: "var(--text-muted)" }}
                 />
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {t('检查权限中...')}
+                <span style={{ color: "var(--text-muted)" }}>
+                  {t("检查权限中...")}
                 </span>
               </div>
             ) : (
               <Tooltip
-                content={canManageMembers ? undefined : t('需要成员管理权限')}
+                content={canManageMembers ? undefined : t("需要成员管理权限")}
               >
                 <button
                   data-tour="invite-member-btn"
                   onClick={() => canManageMembers && setShowAddForm(true)}
                   disabled={!canManageMembers}
                   className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
-                    !canManageMembers ? 'opacity-50 cursor-not-allowed' : ''
+                    !canManageMembers ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                   style={{
                     background: canManageMembers
-                      ? 'var(--primary-500)'
-                      : 'var(--bg-disabled)',
-                    color: 'var(--text-inverse)',
+                      ? "var(--primary-500)"
+                      : "var(--bg-disabled)",
+                    color: "var(--text-inverse)",
                   }}
                   onMouseEnter={(e) => {
                     if (!canManageMembers) return;
-                    e.currentTarget.style.background = 'var(--primary-600)';
+                    e.currentTarget.style.background = "var(--primary-600)";
                   }}
                   onMouseLeave={(e) => {
                     if (!canManageMembers) return;
-                    e.currentTarget.style.background = 'var(--primary-500)';
+                    e.currentTarget.style.background = "var(--primary-500)";
                   }}
                 >
                   <UserPlus size={18} />
-                  {t('添加成员')}
+                  {t("添加成员")}
                 </button>
               </Tooltip>
             )
@@ -425,34 +428,34 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               onSubmit={handleAddMember}
               className="p-4 rounded-lg relative"
               style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-default)',
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-default)",
               }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <UserPlus size={18} style={{ color: 'var(--text-tertiary)' }} />
+                <UserPlus size={18} style={{ color: "var(--text-tertiary)" }} />
                 <span
                   className="font-medium"
-                  style={{ color: 'var(--text-secondary)' }}
+                  style={{ color: "var(--text-secondary)" }}
                 >
-                  {t('添加新成员')}
+                  {t("添加新成员")}
                 </span>
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddForm(false);
-                    setNewEmail('');
-                    setErrorMessage('');
+                    setNewEmail("");
+                    setErrorMessage("");
                     setSearchResults([]);
                     setSelectedUser(null);
                   }}
                   className="ml-auto p-1 rounded"
-                  style={{ color: 'var(--text-tertiary)' }}
+                  style={{ color: "var(--text-tertiary)" }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--bg-elevated)';
+                    e.currentTarget.style.background = "var(--bg-elevated)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.background = "transparent";
                   }}
                 >
                   <X size={16} />
@@ -471,16 +474,16 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   loading={searching}
                   items={searchResults.map((u) => ({
                     key: u.id,
-                    label: u.email || u.username || '',
+                    label: u.email || u.username || "",
                     ...u,
                   }))}
                   onSelectItem={(item) => {
                     const user = item as unknown as UserSearchResult;
                     setSelectedUser(user);
-                    setNewEmail(user.email ?? '');
+                    setNewEmail(user.email ?? "");
                     setSearchResults([]);
                   }}
-                  placeholder={t('搜索用户（邮箱或用户名）')}
+                  placeholder={t("搜索用户（邮箱或用户名）")}
                   open={searchResults.length > 0 && !selectedUser}
                   renderItem={(item) => {
                     const user = item as unknown as UserSearchResult;
@@ -489,9 +492,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         <div
                           className="w-6 h-6 rounded-full flex items-center justify-center font-medium flex-shrink-0"
                           style={{
-                            background: 'var(--primary-500)',
-                            color: 'var(--text-inverse)',
-                            fontSize: '0.75rem',
+                            background: "var(--primary-500)",
+                            color: "var(--text-inverse)",
+                            fontSize: "0.75rem",
                           }}
                         >
                           {(user?.nickname ||
@@ -501,7 +504,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         <div className="flex-1 min-w-0">
                           <p
                             className="font-medium"
-                            style={{ color: 'var(--text-primary)' }}
+                            style={{ color: "var(--text-primary)" }}
                           >
                             <TruncateText>
                               {user.nickname || user.username}
@@ -509,8 +512,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           </p>
                           <p
                             style={{
-                              color: 'var(--text-tertiary)',
-                              fontSize: '0.75rem',
+                              color: "var(--text-tertiary)",
+                              fontSize: "0.75rem",
                             }}
                           >
                             <TruncateText>{user.email}</TruncateText>
@@ -526,28 +529,28 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   <div
                     className="flex items-center gap-2 p-2 rounded-lg flex-shrink-0"
                     style={{
-                      background: 'var(--primary-50)',
-                      border: '1px solid var(--primary-200)',
+                      background: "var(--primary-50)",
+                      border: "1px solid var(--primary-200)",
                     }}
                   >
                     <div
                       className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
                       style={{
-                        background: 'var(--primary-500)',
-                        color: 'var(--text-inverse)',
+                        background: "var(--primary-500)",
+                        color: "var(--text-inverse)",
                       }}
                     >
                       {(
                         (selectedUser.nickname ||
                           selectedUser.username ||
                           selectedUser.email ||
-                          '?')[0] ?? '?'
+                          "?")[0] ?? "?"
                       ).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p
                         className="font-medium"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: "var(--text-primary)" }}
                       >
                         <TruncateText>
                           {selectedUser.nickname || selectedUser.username}
@@ -555,7 +558,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       </p>
                       <p
                         className="text-xs"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: "var(--text-tertiary)" }}
                       >
                         <TruncateText>{selectedUser.email}</TruncateText>
                       </p>
@@ -564,17 +567,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       type="button"
                       onClick={() => {
                         setSelectedUser(null);
-                        setNewEmail('');
+                        setNewEmail("");
                       }}
                       className="p-1 rounded flex-shrink-0"
                       style={{
-                        color: 'var(--text-tertiary)',
+                        color: "var(--text-tertiary)",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--primary-200)';
+                        e.currentTarget.style.background = "var(--primary-200)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.background = "transparent";
                       }}
                     >
                       <X size={14} />
@@ -590,11 +593,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     onChange={(e) => setNewRoleId(e.target.value)}
                     className="flex-1 px-3 py-2 rounded-lg text-sm input-theme"
                     disabled={loading}
-                    style={{ maxWidth: '200px' }}
+                    style={{ maxWidth: "200px" }}
                   >
-                    <option value="">{t('请选择角色')}</option>
+                    <option value="">{t("请选择角色")}</option>
                     {projectRoles
-                      .filter((role) => role.name !== 'PROJECT_OWNER')
+                      .filter((role) => role.name !== "PROJECT_OWNER")
                       .map((role) => (
                         <option key={role.id} value={role.id}>
                           {getRoleDisplayName(role.name, false)}
@@ -607,7 +610,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     size="sm"
                     disabled={adding || !selectedUser || !newRoleId}
                   >
-                    {adding ? t('添加中...') : t('添加')}
+                    {adding ? t("添加中...") : t("添加")}
                   </Button>
                 </div>
               </div>
@@ -619,20 +622,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             <div className="flex items-center justify-between">
               <span
                 className="text-sm"
-                style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}
+                style={{ color: "var(--text-tertiary)", whiteSpace: "nowrap" }}
               >
-                {$t('共 {n} 人', { n: filteredMembers.length })}
+                {$t("共 {n} 人", { n: filteredMembers.length })}
               </span>
               <select
                 value={filterRoleId}
                 onChange={(e) => setFilterRoleId(e.target.value)}
                 className="px-3 py-1.5 rounded text-sm input-theme"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-secondary)",
                 }}
               >
-                <option value="">{t('所有角色')}</option>
+                <option value="">{t("所有角色")}</option>
                 {projectRoles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {getRoleDisplayName(role.name, false)}
@@ -649,21 +652,21 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 <RefreshCw
                   size={20}
                   className="animate-spin"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{ color: "var(--text-muted)" }}
                 />
                 <span
                   className="ml-2"
-                  style={{ color: 'var(--text-tertiary)' }}
+                  style={{ color: "var(--text-tertiary)" }}
                 >
-                  {t('加载中...')}
+                  {t("加载中...")}
                 </span>
               </div>
             ) : filteredMembers.length === 0 ? (
               <div
                 className="text-center py-8"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               >
-                {filterRoleId ? t('没有符合条件的成员') : t('暂无成员')}
+                {filterRoleId ? t("没有符合条件的成员") : t("暂无成员")}
               </div>
             ) : (
               filteredMembers.map((member) => {
@@ -679,13 +682,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   member.nickname ||
                   member.username ||
                   member.email ||
-                  t('未知用户');
+                  t("未知用户");
 
                 return (
                   <div
                     key={member.id}
                     className="flex items-center gap-3 p-3 rounded-lg"
-                    style={{ background: 'var(--bg-tertiary)' }}
+                    style={{ background: "var(--bg-tertiary)" }}
                   >
                     <UserAvatar
                       avatar={member.avatar}
@@ -695,18 +698,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     <div className="flex-1 min-w-0">
                       <p
                         className="font-medium"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: "var(--text-primary)" }}
                       >
                         <TruncateText>{displayName}</TruncateText>
                       </p>
                       <p
                         style={{
-                          color: 'var(--text-tertiary)',
-                          fontSize: '0.75rem',
+                          color: "var(--text-tertiary)",
+                          fontSize: "0.75rem",
                         }}
                       >
                         <TruncateText>
-                          {member.email || t('无邮箱')}
+                          {member.email || t("无邮箱")}
                         </TruncateText>
                       </p>
                     </div>
@@ -716,11 +719,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         size="sm"
                         className="flex-shrink-0"
                       >
-                        {t('项目所有者')}
+                        {t("项目所有者")}
                       </Tag>
                     ) : isSelf ? (
                       <Tooltip
-                        content={t('您的角色由项目所有者/管理员统一分配')}
+                        content={t("您的角色由项目所有者/管理员统一分配")}
                       >
                         <Tag
                           variant="neutral"
@@ -738,9 +741,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         }
                         disabled={!canAssignRoles}
                         className={`px-2 py-1 text-xs rounded flex-shrink-0 input-theme ${
-                          !canAssignRoles ? 'opacity-50 cursor-not-allowed' : ''
+                          !canAssignRoles ? "opacity-50 cursor-not-allowed" : ""
                         }`}
-                        style={{ maxWidth: '100px' }}
+                        style={{ maxWidth: "100px" }}
                       >
                         {projectRoles
                           .filter((role) => !role.isOwnerRole)
@@ -755,8 +758,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       <Tooltip
                         content={
                           canManageMembers
-                            ? t('转让项目所有权')
-                            : t('需要成员管理权限')
+                            ? t("转让项目所有权")
+                            : t("需要成员管理权限")
                         }
                       >
                         <button
@@ -768,20 +771,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           disabled={!canManageMembers}
                           className={`p-1.5 rounded flex-shrink-0 ${
                             !canManageMembers
-                              ? 'opacity-50 cursor-not-allowed'
-                              : ''
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
                           }`}
-                          style={{ color: 'var(--text-muted)' }}
+                          style={{ color: "var(--text-muted)" }}
                           onMouseEnter={(e) => {
                             if (!canManageMembers) return;
-                            e.currentTarget.style.color = 'var(--primary-600)';
+                            e.currentTarget.style.color = "var(--primary-600)";
                             e.currentTarget.style.background =
-                              'var(--primary-50)';
+                              "var(--primary-50)";
                           }}
                           onMouseLeave={(e) => {
                             if (!canManageMembers) return;
-                            e.currentTarget.style.color = 'var(--text-muted)';
-                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = "var(--text-muted)";
+                            e.currentTarget.style.background = "transparent";
                           }}
                         >
                           <ArrowUpRight size={16} />
@@ -792,10 +795,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       <Tooltip
                         content={
                           isSelf
-                            ? t('不能移除自己')
+                            ? t("不能移除自己")
                             : canManageMembers
-                              ? t('移除成员')
-                              : t('需要成员管理权限')
+                              ? t("移除成员")
+                              : t("需要成员管理权限")
                         }
                       >
                         <button
@@ -807,20 +810,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           disabled={!canManageMembers || isSelf}
                           className={`p-1.5 rounded flex-shrink-0 ${
                             !canManageMembers || isSelf
-                              ? 'opacity-50 cursor-not-allowed'
-                              : ''
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
                           }`}
-                          style={{ color: 'var(--text-muted)' }}
+                          style={{ color: "var(--text-muted)" }}
                           onMouseEnter={(e) => {
                             if (!canManageMembers || isSelf) return;
-                            e.currentTarget.style.color = 'var(--error)';
+                            e.currentTarget.style.color = "var(--error)";
                             e.currentTarget.style.background =
-                              'var(--error-light)';
+                              "var(--error-light)";
                           }}
                           onMouseLeave={(e) => {
                             if (!canManageMembers || isSelf) return;
-                            e.currentTarget.style.color = 'var(--text-muted)';
-                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = "var(--text-muted)";
+                            e.currentTarget.style.background = "transparent";
                           }}
                         >
                           <X size={16} />
@@ -843,7 +846,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             setShowTransferModal(false);
             setTransferTarget(null);
           }}
-          title={t('转让项目所有权')}
+          title={t("转让项目所有权")}
           footer={
             <>
               <Button
@@ -853,14 +856,14 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   setTransferTarget(null);
                 }}
               >
-                {t('取消')}
+                {t("取消")}
               </Button>
               <Button
                 onClick={handleTransferOwnership}
                 disabled={transferring}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                {transferring ? t('转让中...') : t('确认转让')}
+                {transferring ? t("转让中...") : t("确认转让")}
               </Button>
             </>
           }
@@ -869,20 +872,20 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             <div
               className="flex items-start gap-3 p-4 rounded-lg"
               style={{
-                background: 'var(--warning-light)',
-                border: '1px solid var(--warning-dim)',
+                background: "var(--warning-light)",
+                border: "1px solid var(--warning-dim)",
               }}
             >
               <AlertCircle
                 size={20}
                 className="flex-shrink-0 mt-0.5"
-                style={{ color: 'var(--warning)' }}
+                style={{ color: "var(--warning)" }}
               />
-              <div style={{ color: 'var(--text-primary)' }}>
-                <p className="font-semibold mb-1">{t('重要提示')}</p>
-                <p style={{ color: 'var(--text-secondary)' }}>
+              <div style={{ color: "var(--text-primary)" }}>
+                <p className="font-semibold mb-1">{t("重要提示")}</p>
+                <p style={{ color: "var(--text-secondary)" }}>
                   {t(
-                    '转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。'
+                    "转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。",
                   )}
                 </p>
               </div>
@@ -891,39 +894,39 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             <div className="space-y-2">
               <p
                 className="font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('转让给：')}
+                {t("转让给：")}
               </p>
               <div
                 className="flex items-center gap-3 p-3 rounded-lg"
-                style={{ background: 'var(--bg-tertiary)' }}
+                style={{ background: "var(--bg-tertiary)" }}
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center font-medium flex-shrink-0"
                   style={{
-                    background: 'var(--primary-500)',
-                    color: 'var(--text-inverse)',
-                    fontSize: '0.875rem',
+                    background: "var(--primary-500)",
+                    color: "var(--text-inverse)",
+                    fontSize: "0.875rem",
                   }}
                 >
                   {(
                     (transferTarget.nickname ||
                       transferTarget.username ||
-                      transferTarget.email)?.[0] ?? '?'
+                      transferTarget.email)?.[0] ?? "?"
                   ).toUpperCase()}
                 </div>
                 <div>
                   <p
                     className="font-medium"
-                    style={{ color: 'var(--text-primary)' }}
+                    style={{ color: "var(--text-primary)" }}
                   >
                     {transferTarget.nickname || transferTarget.username}
                   </p>
                   <p
                     style={{
-                      color: 'var(--text-tertiary)',
-                      fontSize: '0.75rem',
+                      color: "var(--text-tertiary)",
+                      fontSize: "0.75rem",
                     }}
                   >
                     {transferTarget.email}
@@ -932,10 +935,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               </div>
             </div>
 
-            <div style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-              <p>{t('• 新所有者将获得项目的完全控制权')}</p>
-              <p>{t('• 您将成为该项目的管理员')}</p>
-              <p>{t('• 确认转让后，新所有者可以管理项目成员和权限')}</p>
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem" }}>
+              <p>{t("• 新所有者将获得项目的完全控制权")}</p>
+              <p>{t("• 您将成为该项目的管理员")}</p>
+              <p>{t("• 确认转让后，新所有者可以管理项目成员和权限")}</p>
             </div>
           </div>
         </Modal>

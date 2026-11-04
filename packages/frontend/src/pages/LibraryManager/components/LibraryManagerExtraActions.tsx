@@ -1,12 +1,12 @@
-import React from 'react';
-import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
+import React from "react";
+import { Select, Button } from "@/components/ui";
+
+import { t } from "@/languages";
 
 interface LibraryManagerExtraActionsProps {
-  libraryType: 'drawing' | 'block';
+  libraryType: "drawing" | "block";
   canManage: boolean;
-  handleSwitchLibrary: (type: 'drawing' | 'block') => void;
+  handleSwitchLibrary: (type: "drawing" | "block") => void;
   openDirectoryImport: () => void;
 }
 
@@ -16,10 +16,10 @@ export const LibraryManagerExtraActions: React.FC<
   <>
     <Select
       value={libraryType}
-      onChange={(val) => handleSwitchLibrary(val as 'drawing' | 'block')}
+      onChange={(val) => handleSwitchLibrary(val as "drawing" | "block")}
       options={[
-        { value: 'drawing', label: t('图纸库') },
-        { value: 'block', label: t('图块库') },
+        { value: "drawing", label: t("图纸库") },
+        { value: "block", label: t("图块库") },
       ]}
       size="sm"
     />
@@ -29,7 +29,7 @@ export const LibraryManagerExtraActions: React.FC<
         variant="secondary"
         size="sm"
         className="hover:bg-[var(--bg-tertiary)]"
-        style={{ color: 'var(--text-tertiary)' }}
+        style={{ color: "var(--text-tertiary)" }}
       >
         <svg
           width="16"
@@ -43,7 +43,7 @@ export const LibraryManagerExtraActions: React.FC<
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
-        <span className="hidden sm:inline">{t('批量导入')}</span>
+        <span className="hidden sm:inline">{t("批量导入")}</span>
       </Button>
     )}
   </>

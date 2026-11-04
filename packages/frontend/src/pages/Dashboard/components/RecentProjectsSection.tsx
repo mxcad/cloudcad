@@ -1,10 +1,10 @@
-import { ArrowRight } from 'lucide-react';
-import { FolderOpen } from 'lucide-react';
-import { Section } from '@/components/ui/Section';
-import { FileItem } from '@/components/FileItem';
-import type { FileSystemNodeDto } from '@/api-sdk';
-import type { FileSystemNode } from '@/types/filesystem';
-import { t } from '@/languages';
+import { ArrowRight } from "lucide-react";
+import { FolderOpen } from "lucide-react";
+import { Section } from "@/components/ui";
+import { FileItem } from "@/components/FileItem";
+import type { FileSystemNodeDto } from "@/api-sdk";
+import type { FileSystemNode } from "@/types/filesystem";
+import { t } from "@/languages";
 
 interface RecentProjectsSectionProps {
   loading: boolean;
@@ -20,14 +20,14 @@ export const RecentProjectsSection: React.FC<RecentProjectsSectionProps> = ({
   onEnter,
 }) => (
   <Section
-    title={t('最近项目')}
+    title={t("最近项目")}
     actions={
       <button
         onClick={onViewAll}
         className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
-        style={{ color: 'var(--accent-500)' }}
+        style={{ color: "var(--accent-500)" }}
       >
-        {t('查看全部')}
+        {t("查看全部")}
         <ArrowRight size={14} />
       </button>
     }
@@ -47,9 +47,9 @@ export const RecentProjectsSection: React.FC<RecentProjectsSectionProps> = ({
                 isRoot: project.isRoot,
                 updatedAt: project.updatedAt,
                 parentId: undefined,
-                createdAt: project.createdAt || '',
-                path: '',
-                ownerId: project.ownerId || '',
+                createdAt: project.createdAt || "",
+                path: "",
+                ownerId: project.ownerId || "",
               } as FileSystemNode
             }
             compact
@@ -60,15 +60,15 @@ export const RecentProjectsSection: React.FC<RecentProjectsSectionProps> = ({
     ) : (
       <div
         className="text-center py-8 rounded-xl"
-        style={{ background: 'var(--bg-tertiary)' }}
+        style={{ background: "var(--bg-tertiary)" }}
       >
         <FolderOpen
           size={32}
           color="var(--text-muted)"
           className="mx-auto mb-2"
         />
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {t('暂无项目，创建您的第一个项目')}
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {t("暂无项目，创建您的第一个项目")}
         </p>
       </div>
     )}

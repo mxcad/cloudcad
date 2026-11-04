@@ -260,6 +260,27 @@ export async function generatePosterImageBlob(
 }
 
 /**
+ * 显式还原画布尺寸（引擎截图后画布被 createCanvasImageData 的 setSize 改到截图尺寸，
+ * 需 updateCanvasSize 还原到视口尺寸）。
+ *
+ * 供跨页流程（usePosterRegionFlow）在 router.replace 收起编辑器**之前**显式调用：
+ * renderFullDrawing 回调里那个延迟（50ms+rAF）的 updateCanvasSize 会与紧随其后的
+ * 路由切换抢跑——画布可能停留在 1000px 截图尺寸，而移动端没有 ResizeObserver /
+ * visibilitychange 在重新露出时补 resize，于是重新进编辑器画布尺寸错乱。在路由切换
+ * 前显式还原（此刻画布仍可见），确定性地恢复到视口尺寸（对齐 PC 同页流程：画布全程
+ * 可见，延迟还原本就可靠，故 PC 无此问题）。
+ */
+export async function restoreCanvasSize(): Promise<void> {
+  try {
+    const { MxCpp } = await import('mxcad');
+    const mxcad = MxCpp.getCurrentMxCAD() as unknown as ThumbnailCadApi;
+    mxcad?.mxdraw.updateCanvasSize();
+  } catch (err) {
+    console.error('[restoreCanvasSize] 还原画布尺寸失败:', err);
+  }
+}
+
+/**
  * 屏幕像素长度对应的 CAD 世界坐标长度。
  *
  * 用 mxcad 原生长度换算 `mxcad.mxdraw.viewCoordLong2Cad(px)`（视区长度→CAD 长度，
@@ -322,30 +343,6 @@ export async function detectRegionBorder(
   } catch (err) {
     console.error('[detectRegionBorder] 检测框选区域边框失败:', err);
     return false;
-  }
-}
-
-/**
- * 取整图内容包围盒（CAD 世界坐标），作「非指定区域」的检测区域。
- *
- * 与指定区域同套绘制：无 region（非指定区域）时用内容包围盒 detectRegionBorder——
- * 内容包围盒 = 图纸直角方形边框则省略海报圆角描边，不另走「恒有描边」分支（对齐 PC
- * generatePosterImage 的统一逻辑）。无引擎/取包围盒失败返回 null（调用方保守保留描边）。
- */
-export async function getContentBoundsRegion(): Promise<ThumbnailRegion | null> {
-  try {
-    const { MxCpp } = await import('mxcad');
-    const mxcad = MxCpp.getCurrentMxCAD() as unknown as ThumbnailCadApi;
-    if (!mxcad) return null;
-    const box = mxcad.getDatabase().currentSpace.getBoundingBox();
-    if (!box) return null;
-    return {
-      minPt: { x: box.minPt.x, y: box.minPt.y },
-      maxPt: { x: box.maxPt.x, y: box.maxPt.y },
-    };
-  } catch (err) {
-    console.error('[getContentBoundsRegion] 取整图包围盒失败:', err);
-    return null;
   }
 }
 

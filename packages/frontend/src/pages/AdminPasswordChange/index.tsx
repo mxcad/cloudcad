@@ -3,12 +3,12 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useTheme } from '@/contexts/ThemeContext';
-import { usePasswordChange } from '@/pages/Profile/hooks/usePasswordChange';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useTheme } from "@/contexts/ThemeContext";
+import { usePasswordChange } from "@/pages/Profile/hooks/usePasswordChange";
 import {
   Lock,
   CheckCircle,
@@ -17,24 +17,24 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { PasswordStrength } from '@/components/ui/PasswordStrength';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { InteractiveBackground } from '@/components/InteractiveBackground';
-import { LoginHeader } from '@/pages/Login/components/LoginHeader';
-import { getDefaultAppBrandConfig } from '@/constants/appConfig';
-import { t } from '@/languages';
+} from "lucide-react";
+import { Button, PasswordStrength } from "@/components/ui";
+
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { InteractiveBackground } from "@/components/InteractiveBackground";
+import { LoginHeader } from "@/pages/Login/components/LoginHeader";
+import { getDefaultAppBrandConfig } from "@/constants/appConfig";
+import { t } from "@/languages";
 import {
   passwordComplexityMessage,
   passwordPlaceholder,
   passwordTooShortMessage,
   usePasswordPolicy,
-} from '@/lib/passwordPolicy';
-import { validatePasswordPolicy } from '@cloudcad/platform';
-import { getErrorInfo } from '@/utils/errorHandler';
-import styles from '../Login/Login.module.css';
+} from "@/lib/passwordPolicy";
+import { validatePasswordPolicy } from "@cloudcad/platform";
+import { getErrorInfo } from "@/utils/errorHandler";
+import styles from "../Login/Login.module.css";
 
 /**
  * 管理员强制改密页（#416 等保 8.1.4.1 a)/b)）
@@ -49,7 +49,7 @@ import styles from '../Login/Login.module.css';
  * 独立于后台 Layout 渲染（后台 Layout 的菜单/数据请求会被锁定拦截）。
  */
 const AdminPasswordChange: React.FC = () => {
-  useDocumentTitle(t('修改管理员密码'));
+  useDocumentTitle(t("修改管理员密码"));
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const { isDark } = useTheme();
@@ -57,10 +57,12 @@ const AdminPasswordChange: React.FC = () => {
   // 口令策略生效值经 /runtime-config/public 下发，预检与提示均据此（禁写死策略数字）
   const policy = usePasswordPolicy();
 
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [focused, setFocused] = useState<'old' | 'new' | 'confirm' | null>(null);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [focused, setFocused] = useState<"old" | "new" | "confirm" | null>(
+    null,
+  );
   const [showPassword, setShowPassword] = useState({
     old: false,
     new: false,
@@ -73,40 +75,40 @@ const AdminPasswordChange: React.FC = () => {
   const appBrandConfig = getDefaultAppBrandConfig();
 
   // 首登未改密 / 超期到期 / 主动提前修改（从 Layout 提示条进入，后端未下发强制标记）
-  const reason =
-    (user as { passwordChangeRequired?: 'first_login' | 'expired' })
-      ?.passwordChangeRequired;
+  const reason = (
+    user as { passwordChangeRequired?: "first_login" | "expired" }
+  )?.passwordChangeRequired;
 
   const reasonText =
-    reason === 'first_login'
-      ? t('首次登录未修改初始密码，请设置新密码')
-      : reason === 'expired'
-        ? t('当前密码已超过有效期，请设置新密码')
-        : t('建议定期更换密码，可降低账号被盗风险');
+    reason === "first_login"
+      ? t("首次登录未修改初始密码，请设置新密码")
+      : reason === "expired"
+        ? t("当前密码已超过有效期，请设置新密码")
+        : t("建议定期更换密码，可降低账号被盗风险");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading || submitting) return;
     if (!oldPassword) {
-      setError(t('请输入当前密码'));
+      setError(t("请输入当前密码"));
       return;
     }
     // 预检与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发）
     const policyCheck = validatePasswordPolicy(newPassword, policy);
     if (!policyCheck.valid) {
       setError(
-        policyCheck.reason === 'too_short'
+        policyCheck.reason === "too_short"
           ? passwordTooShortMessage(policy.minLength)
-          : passwordComplexityMessage(policy.minCategories)
+          : passwordComplexityMessage(policy.minCategories),
       );
       return;
     }
     if (newPassword === oldPassword) {
-      setError(t('新密码不能与当前密码相同'));
+      setError(t("新密码不能与当前密码相同"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError(t('两次输入的新密码不一致'));
+      setError(t("两次输入的新密码不一致"));
       return;
     }
 
@@ -116,23 +118,22 @@ const AdminPasswordChange: React.FC = () => {
       await changePassword({ oldPassword, newPassword });
       // 刷新用户态（后端 /auth/profile 返回新的口令到期状态），提示条随之消失
       await refreshUser();
-      navigate('/admin/ip-access', { replace: true });
+      navigate("/admin/ip-access", { replace: true });
     } catch (err) {
       const { message } = getErrorInfo(err);
-      setError(message || t('修改密码失败，请重试'));
+      setError(message || t("修改密码失败，请重试"));
     } finally {
       setSubmitting(false);
     }
   };
 
-
   return (
-    <div className={styles.loginPage} data-theme={isDark ? 'dark' : 'light'}>
+    <div className={styles.loginPage} data-theme={isDark ? "dark" : "light"}>
       <InteractiveBackground />
 
       <div
         className={styles.themeToggleWrapper}
-        style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+        style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
       >
         <LanguageSwitcher />
         <ThemeToggle />
@@ -141,9 +142,9 @@ const AdminPasswordChange: React.FC = () => {
       <div className={styles.loginContainer}>
         <div className={styles.loginCard}>
           <LoginHeader
-            appLogo={appBrandConfig.logo || '/logo.png'}
-            appName={`${t('管理员')} · ${appBrandConfig.title || 'CloudCAD'}`}
-            appTagline={t('安全合规要求：管理员密码必须定期更换')}
+            appLogo={appBrandConfig.logo || "/logo.png"}
+            appName={`${t("管理员")} · ${appBrandConfig.title || "CloudCAD"}`}
+            appTagline={t("安全合规要求：管理员密码必须定期更换")}
           />
 
           {/* 锁定原因（强制）/ 主动修改提示 */}
@@ -167,24 +168,24 @@ const AdminPasswordChange: React.FC = () => {
           <form className={styles.loginForm} onSubmit={handleSubmit}>
             <div className={styles.inputGroup}>
               <label htmlFor="admin-old-password" className={styles.inputLabel}>
-                {t('当前密码')}
+                {t("当前密码")}
               </label>
               <div className={styles.inputWrapper}>
                 <Lock
                   size={18}
-                  className={`${styles.inputIcon} ${focused === 'old' ? styles.active : ''}`}
+                  className={`${styles.inputIcon} ${focused === "old" ? styles.active : ""}`}
                 />
                 <input
                   id="admin-old-password"
                   name="old-password"
-                  type={showPassword.old ? 'text' : 'password'}
+                  type={showPassword.old ? "text" : "password"}
                   autoComplete="current-password"
                   required
                   className={styles.inputField}
-                  placeholder={t('请输入当前密码')}
+                  placeholder={t("请输入当前密码")}
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  onFocus={() => setFocused('old')}
+                  onFocus={() => setFocused("old")}
                   onBlur={() => setFocused(null)}
                 />
                 <Button
@@ -197,7 +198,7 @@ const AdminPasswordChange: React.FC = () => {
                   tabIndex={-1}
                   className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showPassword.old ? EyeOff : Eye}
-                  tooltip={showPassword.old ? t('隐藏密码') : t('显示密码')}
+                  tooltip={showPassword.old ? t("隐藏密码") : t("显示密码")}
                 />
                 <div className={styles.inputGlow} />
               </div>
@@ -205,24 +206,24 @@ const AdminPasswordChange: React.FC = () => {
 
             <div className={styles.inputGroup}>
               <label htmlFor="admin-new-password" className={styles.inputLabel}>
-                {t('新密码')}
+                {t("新密码")}
               </label>
               <div className={styles.inputWrapper}>
                 <Lock
                   size={18}
-                  className={`${styles.inputIcon} ${focused === 'new' ? styles.active : ''}`}
+                  className={`${styles.inputIcon} ${focused === "new" ? styles.active : ""}`}
                 />
                 <input
                   id="admin-new-password"
                   name="new-password"
-                  type={showPassword.new ? 'text' : 'password'}
+                  type={showPassword.new ? "text" : "password"}
                   autoComplete="new-password"
                   required
                   className={styles.inputField}
                   placeholder={passwordPlaceholder(policy)}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  onFocus={() => setFocused('new')}
+                  onFocus={() => setFocused("new")}
                   onBlur={() => setFocused(null)}
                 />
                 <Button
@@ -235,32 +236,35 @@ const AdminPasswordChange: React.FC = () => {
                   tabIndex={-1}
                   className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showPassword.new ? EyeOff : Eye}
-                  tooltip={showPassword.new ? t('隐藏密码') : t('显示密码')}
+                  tooltip={showPassword.new ? t("隐藏密码") : t("显示密码")}
                 />
                 <div className={styles.inputGlow} />
               </div>
             </div>
 
             <div className={styles.inputGroup}>
-              <label htmlFor="admin-confirm-password" className={styles.inputLabel}>
-                {t('确认新密码')}
+              <label
+                htmlFor="admin-confirm-password"
+                className={styles.inputLabel}
+              >
+                {t("确认新密码")}
               </label>
               <div className={styles.inputWrapper}>
                 <CheckCircle
                   size={18}
-                  className={`${styles.inputIcon} ${focused === 'confirm' ? styles.active : ''}`}
+                  className={`${styles.inputIcon} ${focused === "confirm" ? styles.active : ""}`}
                 />
                 <input
                   id="admin-confirm-password"
                   name="confirm-password"
-                  type={showPassword.confirm ? 'text' : 'password'}
+                  type={showPassword.confirm ? "text" : "password"}
                   autoComplete="new-password"
                   required
                   className={styles.inputField}
-                  placeholder={t('请再次输入新密码')}
+                  placeholder={t("请再次输入新密码")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  onFocus={() => setFocused('confirm')}
+                  onFocus={() => setFocused("confirm")}
                   onBlur={() => setFocused(null)}
                 />
                 <Button
@@ -273,9 +277,7 @@ const AdminPasswordChange: React.FC = () => {
                   tabIndex={-1}
                   className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showPassword.confirm ? EyeOff : Eye}
-                  tooltip={
-                    showPassword.confirm ? t('隐藏密码') : t('显示密码')
-                  }
+                  tooltip={showPassword.confirm ? t("隐藏密码") : t("显示密码")}
                 />
                 <div className={styles.inputGlow} />
               </div>
@@ -293,10 +295,10 @@ const AdminPasswordChange: React.FC = () => {
               className="w-full"
             >
               {loading || submitting ? (
-                <span>{t('提交中...')}</span>
+                <span>{t("提交中...")}</span>
               ) : (
                 <>
-                  <span>{t('设置新密码')}</span>
+                  <span>{t("设置新密码")}</span>
                   <ArrowRight size={18} className={styles.buttonArrow} />
                 </>
               )}
@@ -304,8 +306,8 @@ const AdminPasswordChange: React.FC = () => {
           </form>
 
           <div className={styles.formFooter}>
-            <p className={styles.registerText} style={{ textAlign: 'center' }}>
-              {user?.username ? t('当前账号：') : ''}
+            <p className={styles.registerText} style={{ textAlign: "center" }}>
+              {user?.username ? t("当前账号：") : ""}
               {user?.username}
             </p>
           </div>

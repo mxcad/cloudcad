@@ -24,31 +24,31 @@
  * 失败（凭证过期/无效）→ 极简错误页 + 「前往登录」按钮。
  */
 
-import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
-import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { sessionTransferControllerConsume } from '@/api-sdk';
-import { useFileSystemStore } from '@/stores/fileSystemStore';
-import { clearAuthState, saveAuthState } from '@/lib/authState';
-import { cancelProactiveRefresh } from '@/config/tokenRefresh';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { AlertCircle, Loader2 } from 'lucide-react';
-import styles from '../DeviceAuthorize.module.css';
+import { getAppBrandConfig, getCopyrightLine } from "@/constants/appConfig";
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { sessionTransferControllerConsume } from "@/api-sdk";
+import { useFileSystemStore } from "@/stores/fileSystemStore";
+import { clearAuthState, saveAuthState } from "@/lib/authState";
+import { cancelProactiveRefresh } from "@/config/tokenRefresh";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { AlertCircle, Loader2 } from "lucide-react";
+import styles from "../DeviceAuthorize.module.css";
 
-const DEFAULT_REDIRECT = '/profile';
+const DEFAULT_REDIRECT = "/profile";
 
 export const SessionTransfer: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
   // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
   const appName = getAppBrandConfig().title;
   const appLogo = getAppBrandConfig().logo;
 
   // redirect 参数消毒：new URL 解析后只取同源 pathname+search+hash（防开放重定向，
   // 与 DeviceAuthorize 一致）；缺省 /profile。
-  const rawRedirect = searchParams.get('redirect') || '';
+  const rawRedirect = searchParams.get("redirect") || "";
   let redirectTarget = DEFAULT_REDIRECT;
   if (rawRedirect) {
     try {
@@ -59,11 +59,11 @@ export const SessionTransfer: React.FC = () => {
     }
   }
 
-  const [state, setState] = useState<'loading' | 'error'>(
-    token ? 'loading' : 'error'
+  const [state, setState] = useState<"loading" | "error">(
+    token ? "loading" : "error",
   );
   const [errorMessage, setErrorMessage] = useState(
-    token ? '' : t('缺少转移凭证')
+    token ? "" : t("缺少转移凭证"),
   );
   // 防重入：交接流程只执行一次（StrictMode 双调用 / 依赖抖动不得重复清凭证）
   const attempted = useRef(false);
@@ -98,8 +98,8 @@ export const SessionTransfer: React.FC = () => {
         // ④ 整页刷新，AuthContext 从干净 localStorage 重建
         window.location.replace(redirectTarget);
       } catch (err: unknown) {
-        setErrorMessage(getErrorMessage(err) || t('会话转移失败，请重试'));
-        setState('error');
+        setErrorMessage(getErrorMessage(err) || t("会话转移失败，请重试"));
+        setState("error");
       }
     })();
   }, [token, redirectTarget]);
@@ -121,8 +121,8 @@ export const SessionTransfer: React.FC = () => {
         <div className={styles.deviceIconWrap}>
           <Loader2 size={32} className={styles.spinIcon} />
         </div>
-        <h2 className={styles.deviceTitle}>{t('正在切换账号...')}</h2>
-        <p className={styles.deviceSubtitle}>{t('正在为您切换登录状态')}</p>
+        <h2 className={styles.deviceTitle}>{t("正在切换账号...")}</h2>
+        <p className={styles.deviceSubtitle}>{t("正在为您切换登录状态")}</p>
       </div>
     </div>
   );
@@ -134,17 +134,17 @@ export const SessionTransfer: React.FC = () => {
         <div className={`${styles.supportIcon} ${styles.errorIconBg}`}>
           <AlertCircle size={28} />
         </div>
-        <h2 className={styles.supportTitle}>{t('会话转移失败')}</h2>
+        <h2 className={styles.supportTitle}>{t("会话转移失败")}</h2>
         <p className={styles.supportSubtitle}>{errorMessage}</p>
         <Button
           variant="primary"
           size="lg"
           className="w-full"
           onClick={() => {
-            window.location.href = '/login';
+            window.location.href = "/login";
           }}
         >
-          {t('前往登录')}
+          {t("前往登录")}
         </Button>
       </div>
     </div>
@@ -153,7 +153,7 @@ export const SessionTransfer: React.FC = () => {
   return (
     <div className={styles.authPage}>
       <div className={styles.authContainer}>
-        {state === 'loading' ? renderLoading() : renderError()}
+        {state === "loading" ? renderLoading() : renderError()}
         <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
       </div>
     </div>

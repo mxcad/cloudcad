@@ -379,6 +379,17 @@ function onPickRegion() {
   emit('pick-region')
 }
 
+/** 重置海报：恢复默认（整图包围盒、默认版式/二维码大小/底部名称），并用默认方式重新截图。 */
+async function handleResetPoster() {
+  if (!props.fileId) return
+  // 重置全部海报选项为默认（footerName 由 generatePoster 内部默认回文件名称）
+  posterRegion.value = null
+  posterLayout.value = SHARE_POSTER_DEFAULT_LAYOUT
+  posterQrScale.value = 1
+  // 显式传 null → renderSharePosterInBackground 走整图包围盒（默认方式），边框按内容包围盒检测
+  await generatePoster(null)
+}
+
 // 指定区域结果传入（home 框选完成后重开弹窗）→ 用该区域重新出图，完成后自动重开抽屉
 watch(
   () => props.region,
@@ -567,6 +578,7 @@ function onClose() {
     :region-active="!!posterRegion"
     @download="downloadPoster"
     @pick-region="onPickRegion"
+    @reset="handleResetPoster"
   />
 </template>
 

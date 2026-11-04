@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Input } from '../ui/Input';
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Button, Modal, Input, FileTree } from "@/components/ui";
+import type { FileTreeNode } from "@/components/ui";
+
 import {
   FileText,
   Search,
@@ -9,19 +9,17 @@ import {
   Check,
   Square,
   AlertCircle,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   nodeControllerSearch,
   projectControllerGetPersonalSpace,
   nodeControllerGetChildren,
-} from '@/api-sdk';
-import { fetchProjects } from '@/lib/projects';
-import type { FileSystemNode } from '@/types/filesystem';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { useAuth } from '@/contexts/AuthContext';
-import { FileTree } from '../ui/FileTree';
-import type { FileTreeNode } from '../ui/FileTree';
+} from "@/api-sdk";
+import { fetchProjects } from "@/lib/projects";
+import type { FileSystemNode } from "@/types/filesystem";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface SelectedFile {
   fileId: string;
@@ -77,37 +75,37 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = t('选择要分享的图纸'),
+  title = t("选择要分享的图纸"),
   multiSelect = true,
   showThumbnail = false,
   currentDrawing = null,
 }) => {
   const { isAuthenticated } = useAuth();
-  const [keyword, setKeyword] = useState('');
+  const [keyword, setKeyword] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedNames, setSelectedNames] = useState<Map<string, string>>(
-    new Map()
+    new Map(),
   );
   const [searched, setSearched] = useState(false);
   const [treeNodes, setTreeNodes] = useState<FileEntry[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setKeyword('');
+    setKeyword("");
     setResults([]);
     setSelectedIds(new Set());
     setSelectedNames(new Map());
     setSearched(false);
     setTreeNodes([]);
     setTreeLoading(true);
-    setError('');
+    setError("");
 
     setTimeout(() => inputRef.current?.focus(), 100);
 
@@ -121,7 +119,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       try {
         const [psRes, projectPage] = await Promise.all([
           projectControllerGetPersonalSpace(),
-          fetchProjects({ filter: 'all', limit: 100 }),
+          fetchProjects({ filter: "all", limit: 100 }),
         ]);
         // 个人空间 SDK 默认不抛错：失败时错误在 result.error，显式抛出才能在 UI 提示
         // （项目列表由 fetchProjects 统一抛错）
@@ -133,7 +131,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
         if (psData?.id) {
           roots.push({
             id: psData.id,
-            name: t('个人空间'),
+            name: t("个人空间"),
             isFolder: true,
             expanded: false,
             loading: false,
@@ -147,7 +145,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             .filter((p) => p.id)
             .map((p) => ({
               id: p.id,
-              name: p.name || t('未命名项目'),
+              name: p.name || t("未命名项目"),
               isFolder: true,
               expanded: false,
               loading: false,
@@ -155,8 +153,8 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             }));
 
           roots.push({
-            id: '__virtual__my_projects__',
-            name: t('我的项目'),
+            id: "__virtual__my_projects__",
+            name: t("我的项目"),
             isFolder: true,
             expanded: false,
             loading: false,
@@ -167,7 +165,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
         setTreeNodes(roots);
       } catch (err) {
         setTreeNodes([]);
-        setError(getErrorMessage(err) || t('加载文件列表失败'));
+        setError(getErrorMessage(err) || t("加载文件列表失败"));
       } finally {
         setTreeLoading(false);
       }
@@ -189,25 +187,25 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       const result = await nodeControllerSearch({
         query: {
           keyword: q.trim(),
-          type: 'file',
-          scope: 'all_projects',
+          type: "file",
+          scope: "all_projects",
           limit: 20,
         },
       });
       if (result.error) {
         setResults([]);
-        setError(getErrorMessage(result.error) || t('搜索失败'));
+        setError(getErrorMessage(result.error) || t("搜索失败"));
         return;
       }
-      setError('');
+      setError("");
       const data = result.data as { nodes?: FileSystemNode[] } | undefined;
       const nodes = data?.nodes ?? [];
       setResults(
         nodes
           .filter(
-            (n): n is FileSystemNode & { id: string } => !!n.id && !n.isFolder
+            (n): n is FileSystemNode & { id: string } => !!n.id && !n.isFolder,
           )
-          .map((n) => ({ id: n.id, name: n.name || t('未命名') }))
+          .map((n) => ({ id: n.id, name: n.name || t("未命名") })),
       );
     } catch {
       setResults([]);
@@ -226,17 +224,17 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => doSearch(val), 300);
     },
-    [doSearch]
+    [doSearch],
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         doSearch(keyword);
       }
     },
-    [keyword, doSearch]
+    [keyword, doSearch],
   );
 
   // ref 模式：展开回调保持稳定引用，避免 FileTreeRow memo 因 onToggleExpand
@@ -279,7 +277,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                 .filter((c) => c.id)
                 .map((c) => ({
                   id: c.id,
-                  name: c.name || t('未命名'),
+                  name: c.name || t("未命名"),
                   isFolder: c.isFolder ?? false,
                   expanded: false,
                   loading: false,
@@ -292,7 +290,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                 children,
               };
             } catch (err) {
-              setError(getErrorMessage(err) || t('加载文件夹失败'));
+              setError(getErrorMessage(err) || t("加载文件夹失败"));
               result[i] = {
                 ...node,
                 expanded: true,
@@ -340,7 +338,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
         return next;
       });
     },
-    [multiSelect]
+    [multiSelect],
   );
 
   const handleTreeSelect = useCallback(
@@ -353,14 +351,14 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       }
       toggleSelect(node.id, node.name);
     },
-    [toggleSelect, toggleExpand]
+    [toggleSelect, toggleExpand],
   );
 
   const handleConfirm = () => {
     if (selectedIds.size > 0) {
       const files: SelectedFile[] = Array.from(selectedIds).map((id) => ({
         fileId: id,
-        fileName: selectedNames.get(id) || '',
+        fileName: selectedNames.get(id) || "",
         thumbnailUrl: showThumbnail
           ? `/api/v1/file-system/nodes/${id}/thumbnail`
           : undefined,
@@ -383,20 +381,20 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     const names = Array.from(selectedNames.values());
     const displayText =
       names.length <= 3
-        ? names.join('、')
-        : `${names.slice(0, 3).join('、')}${t('等 {count} 个文件', { count: String(names.length) })}`;
+        ? names.join("、")
+        : `${names.slice(0, 3).join("、")}${t("等 {count} 个文件", { count: String(names.length) })}`;
     return (
       <div
         style={{
-          padding: '8px 12px',
-          background: 'var(--primary-50)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--primary-200)',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--primary-700)',
+          padding: "8px 12px",
+          background: "var(--primary-50)",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--primary-200)",
+          fontSize: "var(--text-sm)",
+          color: "var(--primary-700)",
         }}
       >
-        {t('已选 {count} 个: {names}', {
+        {t("已选 {count} 个: {names}", {
           count: String(selectedCount),
           names: displayText,
         })}
@@ -412,23 +410,23 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button onClick={handleConfirm} disabled={selectedCount === 0}>
             {selectedCount > 0
-              ? t('选择 ({count})', { count: String(selectedCount) })
-              : t('选择文件')}
+              ? t("选择 ({count})", { count: String(selectedCount) })
+              : t("选择文件")}
           </Button>
         </>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <Input
           ref={inputRef}
           value={keyword}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder={t('搜索文件名或在下方浏览...')}
+          placeholder={t("搜索文件名或在下方浏览...")}
           leftIcon={Search}
           size="md"
         />
@@ -439,7 +437,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             onClick={() =>
               onConfirm([
                 {
-                  fileId: currentDrawing.nodeId || '',
+                  fileId: currentDrawing.nodeId || "",
                   fileName: currentDrawing.name,
                   fileHash: currentDrawing.fileHash,
                   thumbnailUrl: currentDrawing.nodeId
@@ -449,16 +447,16 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                 },
               ])
             }
-            title={t('点击引用当前打开图纸')}
+            title={t("点击引用当前打开图纸")}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '10px 12px',
-              cursor: 'pointer',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--primary-200)',
-              background: 'var(--primary-50)',
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "10px 12px",
+              cursor: "pointer",
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--primary-200)",
+              background: "var(--primary-50)",
             }}
           >
             {currentDrawing.nodeId ? (
@@ -468,35 +466,40 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                 style={{
                   width: 32,
                   height: 32,
-                  borderRadius: 'var(--radius-md)',
-                  objectFit: 'cover',
+                  borderRadius: "var(--radius-md)",
+                  objectFit: "cover",
                   flexShrink: 0,
                 }}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
             ) : (
               <FileText
                 size={18}
-                style={{ color: 'var(--primary-500)', flexShrink: 0 }}
+                style={{ color: "var(--primary-500)", flexShrink: 0 }}
               />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 'var(--text-sm)',
+                  fontSize: "var(--text-sm)",
                   fontWeight: 500,
-                  color: 'var(--text-primary)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  color: "var(--text-primary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {currentDrawing.name}
               </div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                {t('当前打开图纸（点击引用）')}
+              <div
+                style={{
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                {t("当前打开图纸（点击引用）")}
               </div>
             </div>
             {currentDrawing.thumbnailCapable && (
@@ -506,7 +509,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                   e.stopPropagation();
                   onConfirm([
                     {
-                      fileId: currentDrawing.nodeId || '',
+                      fileId: currentDrawing.nodeId || "",
                       fileName: currentDrawing.name,
                       fileHash: currentDrawing.fileHash,
                       thumbnailUrl: currentDrawing.nodeId
@@ -519,33 +522,36 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                 }}
                 style={{
                   flexShrink: 0,
-                  fontSize: 'var(--text-xs)',
-                  padding: '4px 8px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--primary-300)',
-                  background: 'var(--bg-primary)',
-                  color: 'var(--primary-600)',
-                  cursor: 'pointer',
+                  fontSize: "var(--text-xs)",
+                  padding: "4px 8px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--primary-300)",
+                  background: "var(--bg-primary)",
+                  color: "var(--primary-600)",
+                  cursor: "pointer",
                 }}
               >
-                {t('指定区域')}
+                {t("指定区域")}
               </button>
             )}
-            <Check size={16} style={{ color: 'var(--primary-500)', flexShrink: 0 }} />
+            <Check
+              size={16}
+              style={{ color: "var(--primary-500)", flexShrink: 0 }}
+            />
           </div>
         )}
 
         {error && (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 12px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--error-light)',
-              color: 'var(--error)',
-              fontSize: 'var(--text-sm)',
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px 12px",
+              borderRadius: "var(--radius-md)",
+              background: "var(--error-light)",
+              color: "var(--error)",
+              fontSize: "var(--text-sm)",
             }}
           >
             <AlertCircle size={14} />
@@ -558,15 +564,15 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             {searching && (
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  padding: '24px',
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "24px",
                 }}
               >
                 <Loader2
                   size={20}
                   className="animate-spin"
-                  style={{ color: 'var(--primary-500)' }}
+                  style={{ color: "var(--primary-500)" }}
                 />
               </div>
             )}
@@ -574,23 +580,23 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             {!searching && results.length === 0 && (
               <div
                 style={{
-                  textAlign: 'center',
-                  padding: '24px',
-                  color: 'var(--text-tertiary)',
-                  fontSize: 'var(--text-sm)',
+                  textAlign: "center",
+                  padding: "24px",
+                  color: "var(--text-tertiary)",
+                  fontSize: "var(--text-sm)",
                 }}
               >
-                {t('没有找到匹配的文件')}
+                {t("没有找到匹配的文件")}
               </div>
             )}
 
             {!searching && results.length > 0 && (
               <div
                 style={{
-                  maxHeight: '320px',
-                  overflowY: 'auto',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-lg)',
+                  maxHeight: "320px",
+                  overflowY: "auto",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: "var(--radius-lg)",
                 }}
               >
                 {results.map((file) => {
@@ -600,28 +606,28 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                       key={file.id}
                       onClick={() => toggleSelect(file.id, file.name)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 12px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid var(--border-default)',
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "10px 12px",
+                        cursor: "pointer",
+                        borderBottom: "1px solid var(--border-default)",
                         background: isFileSelected
-                          ? 'var(--primary-50)'
-                          : 'transparent',
+                          ? "var(--primary-50)"
+                          : "transparent",
                         color: isFileSelected
-                          ? 'var(--primary-700)'
-                          : 'var(--text-primary)',
+                          ? "var(--primary-700)"
+                          : "var(--text-primary)",
                         fontWeight: isFileSelected ? 500 : 400,
                       }}
                       onMouseEnter={(e) => {
                         if (!isFileSelected)
                           e.currentTarget.style.background =
-                            'var(--bg-tertiary)';
+                            "var(--bg-tertiary)";
                       }}
                       onMouseLeave={(e) => {
                         if (!isFileSelected)
-                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.background = "transparent";
                       }}
                     >
                       <div
@@ -629,17 +635,17 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                           width: 16,
                           height: 16,
                           flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
                         {isFileSelected ? (
-                          <Check size={14} style={{ color: 'var(--info)' }} />
+                          <Check size={14} style={{ color: "var(--info)" }} />
                         ) : (
                           <Square
                             size={14}
-                            style={{ color: 'var(--text-tertiary)' }}
+                            style={{ color: "var(--text-tertiary)" }}
                           />
                         )}
                       </div>
@@ -650,12 +656,13 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                           style={{
                             width: 24,
                             height: 24,
-                            borderRadius: 'var(--radius-sm)',
-                            objectFit: 'cover',
+                            borderRadius: "var(--radius-sm)",
+                            objectFit: "cover",
                             flexShrink: 0,
                           }}
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
                           }}
                         />
                       ) : (
@@ -664,17 +671,17 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                           style={{
                             flexShrink: 0,
                             color: isFileSelected
-                              ? 'var(--primary-500)'
-                              : 'var(--text-tertiary)',
+                              ? "var(--primary-500)"
+                              : "var(--text-tertiary)",
                           }}
                         />
                       )}
                       <span
                         style={{
-                          fontSize: 'var(--text-sm)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          fontSize: "var(--text-sm)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {file.name}
@@ -690,15 +697,15 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             {treeLoading && (
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  padding: '24px',
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "24px",
                 }}
               >
                 <Loader2
                   size={20}
                   className="animate-spin"
-                  style={{ color: 'var(--primary-500)' }}
+                  style={{ color: "var(--primary-500)" }}
                 />
               </div>
             )}
@@ -706,26 +713,26 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             {!treeLoading && treeNodes.length === 0 && (
               <div
                 style={{
-                  textAlign: 'center',
-                  padding: '24px',
-                  color: 'var(--text-tertiary)',
-                  fontSize: 'var(--text-sm)',
+                  textAlign: "center",
+                  padding: "24px",
+                  color: "var(--text-tertiary)",
+                  fontSize: "var(--text-sm)",
                 }}
               >
-                {t('暂无可用文件')}
+                {t("暂无可用文件")}
               </div>
             )}
 
             {!treeLoading && treeNodes.length > 0 && (
               <div
                 style={{
-                  maxHeight: '320px',
-                  overflowY: 'auto',
+                  maxHeight: "320px",
+                  overflowY: "auto",
                   // 预留滚动条槽位：展开/折叠后滚动条出现/消失不再引起行位移抖动
-                  scrollbarGutter: 'stable',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--bg-primary)',
+                  scrollbarGutter: "stable",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: "var(--radius-lg)",
+                  background: "var(--bg-primary)",
                 }}
               >
                 <FileTree

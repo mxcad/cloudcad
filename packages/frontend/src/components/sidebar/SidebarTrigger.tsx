@@ -13,19 +13,19 @@
  * - 图标在hover时展开显示文字提示
  */
 
-import React from 'react';
-import { FolderOpen } from 'lucide-react';
-import { FileText } from 'lucide-react';
-import { Box } from 'lucide-react';
-import { LayoutGrid } from 'lucide-react';
-import { Users } from 'lucide-react';
-import { LayoutDashboard } from 'lucide-react';
-import { ArrowRight } from 'lucide-react';
-import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
-import { Tooltip } from '../ui/Tooltip';
-import { returnToCloudMapManagement } from '@/services/mxcadManager';
-import { t } from '@/languages';
-import styles from './sidebar.module.css';
+import React from "react";
+import { FolderOpen } from "lucide-react";
+import { FileText } from "lucide-react";
+import { Box } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
+import { Users } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { SidebarTab, DrawingsSubTab } from "../../types/sidebar";
+import { Tooltip } from "@/components/ui";
+import { returnToCloudMapManagement } from "@/services/mxcadManager";
+import { t } from "@/languages";
+import styles from "./sidebar.module.css";
 
 interface SidebarTriggerProps {
   activeTab: SidebarTab | null;
@@ -50,57 +50,57 @@ interface ToolButtonConfig {
 function getToolButtons(): ToolButtonConfig[] {
   return [
     {
-      id: 'project-management',
-      tab: 'project-management',
+      id: "project-management",
+      tab: "project-management",
       icon: <LayoutDashboard size={18} />,
-      label: t('项目管理'),
-      color: '#10b981',
-      dataTour: 'trigger-project-management',
+      label: t("项目管理"),
+      color: "#10b981",
+      dataTour: "trigger-project-management",
       isAction: true,
     },
     {
-      id: 'my-project',
-      tab: 'drawings',
-      subTab: 'my-project',
+      id: "my-project",
+      tab: "drawings",
+      subTab: "my-project",
       icon: <FolderOpen size={18} />,
-      label: t('我的项目'),
-      color: '#009cff',
-      dataTour: 'trigger-my-project',
+      label: t("我的项目"),
+      color: "#009cff",
+      dataTour: "trigger-my-project",
     },
     {
-      id: 'my-drawings',
-      tab: 'drawings',
-      subTab: 'my-drawings',
+      id: "my-drawings",
+      tab: "drawings",
+      subTab: "my-drawings",
       icon: <FileText size={18} />,
-      label: t('个人空间'),
-      color: '#06b6d4',
-      dataTour: 'trigger-my-drawings',
+      label: t("个人空间"),
+      color: "#06b6d4",
+      dataTour: "trigger-my-drawings",
     },
     {
-      id: 'drawings-gallery',
-      tab: 'drawings',
-      subTab: 'drawings-gallery',
+      id: "drawings-gallery",
+      tab: "drawings",
+      subTab: "drawings-gallery",
       icon: <Box size={18} />,
-      label: t('图纸库'),
-      color: '#8b5cf6',
-      dataTour: 'trigger-drawings-gallery',
+      label: t("图纸库"),
+      color: "#8b5cf6",
+      dataTour: "trigger-drawings-gallery",
     },
     {
-      id: 'blocks-gallery',
-      tab: 'drawings',
-      subTab: 'blocks-gallery',
+      id: "blocks-gallery",
+      tab: "drawings",
+      subTab: "blocks-gallery",
       icon: <LayoutGrid size={18} />,
-      label: t('图块库'),
-      color: '#ec4899',
-      dataTour: 'trigger-blocks-gallery',
+      label: t("图块库"),
+      color: "#ec4899",
+      dataTour: "trigger-blocks-gallery",
     },
     {
-      id: 'collaborate',
-      tab: 'collaborate',
+      id: "collaborate",
+      tab: "collaborate",
       icon: <Users size={18} />,
-      label: t('实时协同'),
-      color: '#f59e0b',
-      dataTour: 'trigger-collaborate',
+      label: t("实时协同"),
+      color: "#f59e0b",
+      dataTour: "trigger-collaborate",
     },
   ];
 }
@@ -121,17 +121,17 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
 
   const isButtonActive = (button: ToolButtonConfig): boolean => {
     if (button.isAction) return false;
-    if (button.tab === 'collaborate') {
-      return activeTab === 'collaborate';
+    if (button.tab === "collaborate") {
+      return activeTab === "collaborate";
     }
-    return activeTab === 'drawings' && activeDrawingsSubTab === button.subTab;
+    return activeTab === "drawings" && activeDrawingsSubTab === button.subTab;
   };
 
   return (
     <div
       className={styles.narrowSidebar}
       role="toolbar"
-      aria-label={t('侧边栏工具条')}
+      aria-label={t("侧边栏工具条")}
       data-tour="cad-sidebar-trigger"
     >
       {/* 顶部装饰线 */}
@@ -139,12 +139,12 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
 
       {/* 展开按钮 - 固定在顶部 */}
       <div className={styles.topToolWrapper}>
-        <Tooltip content={t('展开侧边栏')} position="right" delay={100}>
+        <Tooltip content={t("展开侧边栏")} position="right" delay={100}>
           <div className={styles.toolWrapper}>
             <button
               className={styles.toolButton}
               onClick={onExpandClick}
-              aria-label={t('展开侧边栏')}
+              aria-label={t("展开侧边栏")}
             >
               <div className={styles.buttonGlass} />
               <span className={styles.buttonIcon}>
@@ -176,15 +176,15 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
               <div className={styles.toolWrapper}>
                 {/* 激活指示器 */}
                 <div
-                  className={`${styles.activeIndicator} ${isActive ? styles.visible : ''}`}
+                  className={`${styles.activeIndicator} ${isActive ? styles.visible : ""}`}
                   style={{ backgroundColor: button.color }}
                 />
 
                 {/* 按钮主体 */}
                 <button
-                  className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                  className={`${styles.toolButton} ${isActive ? styles.active : ""}`}
                   onClick={() => handleButtonClick(button)}
-                  aria-label={t('打开{name}', { name: button.label })}
+                  aria-label={t("打开{name}", { name: button.label })}
                   aria-pressed={isActive}
                   data-tour={button.dataTour}
                 >

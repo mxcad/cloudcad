@@ -4,39 +4,39 @@ import React, {
   useRef,
   useEffect,
   useMemo,
-} from 'react';
-import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
-import { useIsMobile } from '@/lib/useIsMobile';
-import { ExternalReferencePanel } from './modals/ExternalReferencePanel';
-import { ImagePreviewModal } from './modals/ImagePreviewModal';
-import { DownloadFormatModal } from './modals/DownloadFormatModal';
-import type { ExternalReferenceFile } from '../types/filesystem';
+} from "react";
+import { useExternalReferenceUpload } from "../hooks/useExternalReferenceUpload";
+import { useIsMobile } from "@/lib/useIsMobile";
+import { ExternalReferencePanel } from "./modals/ExternalReferencePanel";
+import { ImagePreviewModal } from "./modals/ImagePreviewModal";
+import { DownloadFormatModal } from "./modals/DownloadFormatModal";
+import type { ExternalReferenceFile } from "../types/filesystem";
 import type {
   DownloadFormat,
   PdfOptions,
   DwgOptions,
-} from '../types/download-format';
+} from "../types/download-format";
 
-import { handleError } from '../utils/errorHandler';
-import { infoOnce } from '../utils/message';
-import { isTourModeActive } from '../utils/tourMode';
+import { handleError } from "../utils/errorHandler";
+import { infoOnce } from "../utils/message";
+import { isTourModeActive } from "../utils/tourMode";
 import {
   formatRelativeTime,
   formatFileSize,
   CAD_EXTENSIONS,
-} from '../utils/fileUtils';
+} from "../utils/fileUtils";
 import {
   downloadExternalRefFile,
   fetchXrefViewBlobUrl,
   revokeXrefViewBlobUrl,
   type DownloadNodeQuery,
-} from '../utils/download';
+} from "../utils/download";
 import {
   Thumbnail,
   FileItemSelection,
   FileItemInfo,
   FileItemMenu,
-} from './file-item';
+} from "./file-item";
 import {
   getAvailableActions,
   getActionGroups,
@@ -44,17 +44,16 @@ import {
   toBooleanMap,
   type ActionType,
   type ActionCallbacks,
-} from './file-item/fileActionConfig';
-import { FileSystemNode } from '../types/filesystem';
-import { Card } from './ui/Card';
-import { Tooltip } from './ui/Tooltip';
+} from "./file-item/fileActionConfig";
+import { FileSystemNode } from "../types/filesystem";
+import { Card, Tooltip } from "@/components/ui";
 
-import { FolderOpen } from 'lucide-react';
-import { FileText } from 'lucide-react';
-import { t } from '@/languages';
+import { FolderOpen } from "lucide-react";
+import { FileText } from "lucide-react";
+import { t } from "@/languages";
 
 function abbreviateSearchPath(path: string): string {
-  const parts = path.split(' > ');
+  const parts = path.split(" > ");
   if (parts.length <= 2) return path;
   return `${parts[0]} > ... > ${parts[parts.length - 1]}`;
 }
@@ -72,7 +71,7 @@ interface FileItemProps {
    * 无 active 高亮条的列表（如 FileSystemContent）保持 false，外观不变。
    */
   activeGutter?: boolean;
-  viewMode?: 'grid' | 'list';
+  viewMode?: "grid" | "list";
   /** 紧凑模式：用于 Dashboard 等简化场景，隐藏菜单和选择框 */
   compact?: boolean;
   /** 图库模式：网格模式图片完全占据容器，文件名在底部，不显示大小；列表模式图片放大，去除后缀标签 */
@@ -123,7 +122,7 @@ interface FileItemProps {
   onSelect?: (
     nodeId: string,
     isMultiSelect?: boolean,
-    isRangeSelect?: boolean
+    isRangeSelect?: boolean,
   ) => void;
   onEnter: (node: FileSystemNode) => void;
   onDownload?: (node: FileSystemNode) => void;
@@ -153,7 +152,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   isSelected = false,
   isActive = false,
   activeGutter = false,
-  viewMode = 'list',
+  viewMode = "list",
   compact = false,
   galleryMode = false,
   isTrash = false,
@@ -173,7 +172,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   forceCompactActions = false,
   hideSelectionCircle = true,
   doubleClickToOpen = false,
-  doubleClickHint = t('请单击打开'),
+  doubleClickHint = t("请单击打开"),
   isRubberBanding = false,
   rubberBandJustEndedRef,
   onSelect,
@@ -225,15 +224,15 @@ export const FileItem: React.FC<FileItemProps> = ({
   const externalReferenceUpload = useExternalReferenceUpload({
     nodeId: node?.id,
     onSuccess: () => {
-      console.info('外部参照上传成功，开始刷新文件列表', 'FileItem');
+      console.info("外部参照上传成功，开始刷新文件列表", "FileItem");
       onRefresh?.();
     },
     onError: (error) => {
-      const appError = handleError(error, 'FileItem');
-      console.error(appError.message, 'FileItem', appError.details);
+      const appError = handleError(error, "FileItem");
+      console.error(appError.message, "FileItem", appError.details);
     },
     onSkip: () => {
-      console.info('用户跳过外部参照上传', 'FileItem');
+      console.info("用户跳过外部参照上传", "FileItem");
     },
   });
 
@@ -247,7 +246,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     async (file: ExternalReferenceFile) => {
       if (!node.id) return;
 
-      if (file.type === 'img') {
+      if (file.type === "img") {
         try {
           // external-ref-view 需要 Bearer token，<img> 无法携带，走 SDK 取 blob
           const url = await fetchXrefViewBlobUrl(node.id, file.name);
@@ -256,17 +255,17 @@ export const FileItem: React.FC<FileItemProps> = ({
             return { file, url };
           });
         } catch (error) {
-          handleError(error, t('打开外部参照失败'));
+          handleError(error, t("打开外部参照失败"));
         }
       } else {
         const fileUrl = `/api/v1/mxcad/external-ref-view/${encodeURIComponent(node.id)}/${encodeURIComponent(file.name)}`;
         window.open(
           `/cad-editor?fileUrl=${encodeURIComponent(fileUrl)}`,
-          '_blank'
+          "_blank",
         );
       }
     },
-    [node?.id]
+    [node?.id],
   );
 
   // 外部参照下载（图片直接下载，图纸走格式转换）
@@ -274,19 +273,19 @@ export const FileItem: React.FC<FileItemProps> = ({
     async (file: ExternalReferenceFile) => {
       if (!node.id || !file.name) return;
 
-      if (file.type === 'img') {
+      if (file.type === "img") {
         try {
           // 走 SDK（自动带 token），避免 <a> 下载 401
           await downloadExternalRefFile(node.id, file.name, {}, file.name);
         } catch (error) {
-          handleError(error, t('外部参照下载失败'));
+          handleError(error, t("外部参照下载失败"));
         }
       } else {
         setDownloadingExtRefFile(file);
         setShowExtRefFormatModal(true);
       }
     },
-    [node?.id]
+    [node?.id],
   );
 
   // 外部参照格式下载
@@ -298,30 +297,30 @@ export const FileItem: React.FC<FileItemProps> = ({
   const handleExtRefFormatDownload = async (
     format: DownloadFormat,
     pdfOptions?: PdfOptions,
-    dwgOptions?: DwgOptions
+    dwgOptions?: DwgOptions,
   ) => {
     const file = downloadingExtRefFile;
     if (!file || !node.id) return;
     setExtRefDownloading(true);
     try {
       const query: DownloadNodeQuery = { format };
-      if (format === 'pdf' && pdfOptions) {
+      if (format === "pdf" && pdfOptions) {
         if (pdfOptions.width) query.width = pdfOptions.width;
         if (pdfOptions.height) query.height = pdfOptions.height;
         if (pdfOptions.colorPolicy) query.colorPolicy = pdfOptions.colorPolicy;
       }
-      if ((format === 'dwg' || format === 'dxf') && dwgOptions) {
+      if ((format === "dwg" || format === "dxf") && dwgOptions) {
         query.dwgVersion = String(dwgOptions.dwgVersion);
       }
-      const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+      const nameWithoutExt = file.name.replace(/\.[^.]+$/, "");
       await downloadExternalRefFile(
         node.id,
         file.name,
         query,
-        `${nameWithoutExt}.${format}`
+        `${nameWithoutExt}.${format}`,
       );
     } catch (error) {
-      handleError(error, t('外部参照下载失败'));
+      handleError(error, t("外部参照下载失败"));
     } finally {
       setExtRefDownloading(false);
       setShowExtRefFormatModal(false);
@@ -342,27 +341,27 @@ export const FileItem: React.FC<FileItemProps> = ({
           await externalReferenceUpload.checkMissingReferences(
             undefined,
             false,
-            true
+            true,
           );
 
         if (!hasExternalReference) {
           console.info(`[FileItem] 文件 "${node.name}" 没有外部参照`);
         }
       } catch (error) {
-        handleError(error, '检查外部参照失败');
+        handleError(error, "检查外部参照失败");
       } finally {
         setTimeout(() => {
           blockItemClickRef.current = false;
         }, 1000);
       }
     },
-    [node?.id, node?.name, externalReferenceUpload]
+    [node?.id, node?.name, externalReferenceUpload],
   );
 
   const isCadFile = useCallback(() => {
     if (node?.isFolder || node?.isRoot) return false;
     const ext = node?.extension?.toLowerCase();
-    return CAD_EXTENSIONS.includes(ext || '');
+    return CAD_EXTENSIONS.includes(ext || "");
   }, [node?.extension, node?.isFolder, node?.isRoot]);
 
   const handleClick = useCallback(
@@ -414,7 +413,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       doubleClickToOpen,
       isRubberBanding,
       isSelected,
-    ]
+    ],
   );
 
   const handleDoubleClick = useCallback(
@@ -426,7 +425,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       clickCountRef.current = 0;
       onEnter(node);
     },
-    [node, onEnter]
+    [node, onEnter],
   );
 
   const handleToggleMenu = useCallback(() => {
@@ -493,15 +492,15 @@ export const FileItem: React.FC<FileItemProps> = ({
     (type: ActionType) => {
       getAction(type)?.run({
         node,
-        e: new MouseEvent('click') as unknown as React.MouseEvent,
+        e: new MouseEvent("click") as unknown as React.MouseEvent,
         callbacks,
       });
     },
-    [node, callbacks]
+    [node, callbacks],
   );
 
   useEffect(() => {
-    if (viewMode !== 'list') return;
+    if (viewMode !== "list") return;
 
     const element = listItemRef.current;
     if (!element) return;
@@ -529,13 +528,13 @@ export const FileItem: React.FC<FileItemProps> = ({
     if (isProjectRootLevel) {
       return node.ancestorPath;
     }
-    const parts = node.ancestorPath.split(' > ');
-    const relativePath = parts.slice(1).join(' > ');
+    const parts = node.ancestorPath.split(" > ");
+    const relativePath = parts.slice(1).join(" > ");
     if (!relativePath) return null;
 
     if (currentAncestorPath) {
       if (relativePath === currentAncestorPath) return null;
-      if (relativePath.startsWith(currentAncestorPath + ' > ')) {
+      if (relativePath.startsWith(currentAncestorPath + " > ")) {
         return relativePath.slice(currentAncestorPath.length + 3);
       }
     }
@@ -544,14 +543,14 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const searchPathBadge = useMemo(() => {
     if (!(isSearchResult || isTrash) || !displayAncestorPath) return null;
-    if (viewMode === 'grid') {
+    if (viewMode === "grid") {
       return (
-        <Tooltip content={node?.ancestorPath || ''} position="bottom">
+        <Tooltip content={node?.ancestorPath || ""} position="bottom">
           <span
             className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium leading-none max-w-full truncate"
             style={{
-              background: 'var(--primary-100)',
-              color: 'var(--primary-600)',
+              background: "var(--primary-100)",
+              color: "var(--primary-600)",
             }}
           >
             {abbreviateSearchPath(displayAncestorPath)}
@@ -560,12 +559,12 @@ export const FileItem: React.FC<FileItemProps> = ({
       );
     }
     return (
-      <Tooltip content={node?.ancestorPath || ''} position="bottom">
+      <Tooltip content={node?.ancestorPath || ""} position="bottom">
         <span
           className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium leading-none max-w-full truncate"
           style={{
-            background: 'var(--primary-100)',
-            color: 'var(--primary-600)',
+            background: "var(--primary-100)",
+            color: "var(--primary-600)",
           }}
         >
           {displayAncestorPath}
@@ -580,47 +579,46 @@ export const FileItem: React.FC<FileItemProps> = ({
     node?.ancestorPath,
   ]);
 
-
   // 外参上传/预览/下载三件套（grid 与 list 渲染分支共用，勿在分支内复制）
   const externalRefModals = (
     <>
-          <ExternalReferencePanel
-            isOpen={externalReferenceUpload.isOpen}
-            files={externalReferenceUpload.files}
-            loading={externalReferenceUpload.loading}
-            mode="active"
-            onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
-            onReplace={externalReferenceUpload.replaceFile}
-            onDownload={handleDownloadXref}
-            onView={handleViewXref}
-            onRefresh={externalReferenceUpload.refresh}
-            onComplete={externalReferenceUpload.complete}
-            onClose={externalReferenceUpload.close}
-          />
-          <ImagePreviewModal
-            isOpen={!!previewXref}
-            src={previewXref?.url || ''}
-            alt={previewXref?.file.name || ''}
-            onClose={() => {
-              revokeXrefViewBlobUrl(previewXref?.url || '');
-              setPreviewXref(null);
-            }}
-          />
-          <DownloadFormatModal
-            isOpen={showExtRefFormatModal}
-            fileName={downloadingExtRefFile?.name || ''}
-            onClose={() => {
-              setShowExtRefFormatModal(false);
-              setDownloadingExtRefFile(null);
-            }}
-            onDownload={handleExtRefFormatDownload}
-            loading={extRefDownloading}
-          />
+      <ExternalReferencePanel
+        isOpen={externalReferenceUpload.isOpen}
+        files={externalReferenceUpload.files}
+        loading={externalReferenceUpload.loading}
+        mode="active"
+        onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
+        onReplace={externalReferenceUpload.replaceFile}
+        onDownload={handleDownloadXref}
+        onView={handleViewXref}
+        onRefresh={externalReferenceUpload.refresh}
+        onComplete={externalReferenceUpload.complete}
+        onClose={externalReferenceUpload.close}
+      />
+      <ImagePreviewModal
+        isOpen={!!previewXref}
+        src={previewXref?.url || ""}
+        alt={previewXref?.file.name || ""}
+        onClose={() => {
+          revokeXrefViewBlobUrl(previewXref?.url || "");
+          setPreviewXref(null);
+        }}
+      />
+      <DownloadFormatModal
+        isOpen={showExtRefFormatModal}
+        fileName={downloadingExtRefFile?.name || ""}
+        onClose={() => {
+          setShowExtRefFormatModal(false);
+          setDownloadingExtRefFile(null);
+        }}
+        onDownload={handleExtRefFormatDownload}
+        loading={extRefDownloading}
+      />
     </>
   );
 
   if (!node) {
-    console.warn('[FileItem] node is undefined or null');
+    console.warn("[FileItem] node is undefined or null");
     return null;
   }
 
@@ -641,7 +639,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     onDrop: (e: React.DragEvent) => onDrop?.(e, node),
   };
 
-  if (viewMode === 'grid') {
+  if (viewMode === "grid") {
     const showSelectedStyle = isSelected;
     const showActiveStyle = isActive && !isSelected;
     const isDefaultAppearance =
@@ -653,28 +651,28 @@ export const FileItem: React.FC<FileItemProps> = ({
         <Card
           variant="outlined"
           padding="none"
-          radius={galleryMode ? 'sm' : undefined}
+          radius={galleryMode ? "sm" : undefined}
           data-tour="file-item"
           data-node-id={node.id}
-          title={doubleClickToOpen ? t('单击打开') : undefined}
+          title={doubleClickToOpen ? t("单击打开") : undefined}
           className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto select-none
-          ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
-          ${showSelectedStyle ? 'shadow-md' : ''}
-          ${showActiveStyle ? 'shadow-md' : ''}
-          ${isDropTarget ? 'shadow-md' : ''}
-          ${isDefaultAppearance && !galleryMode && !isMobile ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
-          ${isDefaultAppearance && galleryMode ? 'hover:shadow-lg' : ''}
+          ${galleryMode ? "w-[120px] min-h-[150px]" : ""}
+          ${showSelectedStyle ? "shadow-md" : ""}
+          ${showActiveStyle ? "shadow-md" : ""}
+          ${isDropTarget ? "shadow-md" : ""}
+          ${isDefaultAppearance && !galleryMode && !isMobile ? "hover:shadow-lg hover:-translate-y-0.5" : ""}
+          ${isDefaultAppearance && galleryMode ? "hover:shadow-lg" : ""}
         `}
           style={{
             background:
               showSelectedStyle || showActiveStyle || isDropTarget
-                ? 'var(--primary-50)'
-                : 'var(--bg-drawing-card)',
+                ? "var(--primary-50)"
+                : "var(--bg-drawing-card)",
             border:
               showSelectedStyle || isDropTarget
-                ? '2px solid var(--primary-500)'
+                ? "2px solid var(--primary-500)"
                 : showActiveStyle
-                  ? '2px solid var(--primary-400)'
+                  ? "2px solid var(--primary-400)"
                   : undefined,
           }}
           onMouseEnter={(e) => {
@@ -682,9 +680,9 @@ export const FileItem: React.FC<FileItemProps> = ({
             setIsHovered(true);
             if (isDefaultAppearance) {
               if (galleryMode) {
-                e.currentTarget.style.background = 'var(--bg-tertiary)';
+                e.currentTarget.style.background = "var(--bg-tertiary)";
               } else {
-                e.currentTarget.style.borderColor = 'var(--primary-400)';
+                e.currentTarget.style.borderColor = "var(--primary-400)";
               }
             }
           }}
@@ -695,9 +693,9 @@ export const FileItem: React.FC<FileItemProps> = ({
             onDragLeave?.();
             if (isDefaultAppearance) {
               if (galleryMode) {
-                e.currentTarget.style.background = 'var(--bg-drawing-card)';
+                e.currentTarget.style.background = "var(--bg-drawing-card)";
               } else {
-                e.currentTarget.style.borderColor = 'var(--border-default)';
+                e.currentTarget.style.borderColor = "var(--border-default)";
               }
             }
           }}
@@ -764,8 +762,8 @@ export const FileItem: React.FC<FileItemProps> = ({
           <div
             className={`absolute top-1 right-1 transition-opacity duration-200 z-20 pointer-events-auto ${
               isHovered || showMenu || isMobile || isTourModeActive()
-                ? 'opacity-100'
-                : 'opacity-0'
+                ? "opacity-100"
+                : "opacity-0"
             }`}
           >
             <FileItemMenu
@@ -794,8 +792,8 @@ export const FileItem: React.FC<FileItemProps> = ({
           className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{
             background: node.isFolder
-              ? 'var(--primary-100)'
-              : 'var(--accent-100)',
+              ? "var(--primary-100)"
+              : "var(--accent-100)",
           }}
         >
           {node.isFolder ? (
@@ -808,17 +806,17 @@ export const FileItem: React.FC<FileItemProps> = ({
         <div className="flex-1 min-w-0">
           <h4
             className="font-medium text-sm"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
             title={
-              node.isFolder ? node.name : node.name.replace(/\.[^/.]+$/, '')
+              node.isFolder ? node.name : node.name.replace(/\.[^/.]+$/, "")
             }
           >
             <span
               style={{
-                display: 'block',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                textOverflow: 'ellipsis',
+                display: "block",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
               }}
             >
               {node.name}
@@ -826,7 +824,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           </h4>
           <div
             className="flex items-center gap-2 text-xs"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
           >
             <span>{formatRelativeTime(node.updatedAt)}</span>
             {node.size && (
@@ -846,13 +844,13 @@ export const FileItem: React.FC<FileItemProps> = ({
   // 与文件名后缀标识，标签信息重复且随权限变化的按钮数量会导致列漂移不齐。
   // 按钮列恒居最右，起点只由容器宽决定，任何按钮数量下各行天然对齐。
   const listColumns = [
-    !hideSelectionCircle ? 'auto' : '',
-    'auto',
-    'minmax(0, 1fr)',
-    'auto',
+    !hideSelectionCircle ? "auto" : "",
+    "auto",
+    "minmax(0, 1fr)",
+    "auto",
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <>
@@ -860,30 +858,30 @@ export const FileItem: React.FC<FileItemProps> = ({
         ref={listItemRef}
         data-tour="file-item"
         data-node-id={node.id}
-        title={doubleClickToOpen ? t('单击打开') : undefined}
+        title={doubleClickToOpen ? t("单击打开") : undefined}
         className={`group relative grid items-center rounded-lg transition-all duration-200 cursor-pointer select-none
-          ${galleryMode ? 'gap-2' : 'gap-4'}
-          ${activeGutter ? 'pl-2' : ''}
-          ${isSelected || isActive ? '' : 'hover:border-[var(--border-default)]'}
+          ${galleryMode ? "gap-2" : "gap-4"}
+          ${activeGutter ? "pl-2" : ""}
+          ${isSelected || isActive ? "" : "hover:border-[var(--border-default)]"}
       `}
         style={{
           gridTemplateColumns: listColumns,
           background:
-            isSelected || isActive ? 'var(--primary-50)' : 'transparent',
+            isSelected || isActive ? "var(--primary-50)" : "transparent",
           border:
             isSelected || isActive
-              ? '1px solid var(--primary-200)'
-              : '1px solid transparent',
+              ? "1px solid var(--primary-200)"
+              : "1px solid transparent",
           boxShadow:
             isActive && !isSelected
-              ? 'inset 3px 0 0 var(--primary-500)'
+              ? "inset 3px 0 0 var(--primary-500)"
               : undefined,
         }}
         onMouseEnter={(e) => {
           if (isMobile) return;
           setIsHovered(true);
           if (!isSelected && !isActive) {
-            e.currentTarget.style.background = 'var(--bg-tertiary)';
+            e.currentTarget.style.background = "var(--bg-tertiary)";
           }
         }}
         onMouseLeave={(e) => {
@@ -892,7 +890,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           setShowMenu(false);
           onDragLeave?.();
           if (!isSelected && !isActive) {
-            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.background = "transparent";
           }
         }}
         {...interactiveHandlers}
@@ -908,7 +906,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         )}
 
         <div
-          className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? 'w-14 h-14' : 'w-10 h-10'}`}
+          className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? "w-14 h-14" : "w-10 h-10"}`}
         >
           <Thumbnail
             node={node}
@@ -918,7 +916,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           />
         </div>
 
-        <div className={`flex-1 min-w-0 ${galleryMode ? 'p-2' : 'p-3'}`}>
+        <div className={`flex-1 min-w-0 ${galleryMode ? "p-2" : "p-3"}`}>
           <FileItemInfo
             node={node}
             galleryMode={galleryMode}
@@ -929,14 +927,14 @@ export const FileItem: React.FC<FileItemProps> = ({
 
         <div
           data-tour="file-item-actions"
-          className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? 'p-2' : 'p-3'}`}
+          className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? "p-2" : "p-3"}`}
         >
           {forceCompactActions || useCompactActions ? (
             <div
               className={`transition-opacity duration-200 ${
                 isHovered || showMenu || isMobile || isTourModeActive()
-                  ? 'opacity-100'
-                  : 'opacity-0'
+                  ? "opacity-100"
+                  : "opacity-0"
               }`}
             >
               <FileItemMenu
@@ -970,8 +968,8 @@ export const FileItem: React.FC<FileItemProps> = ({
                             action.run({ node, e, callbacks });
                           }}
                           className={`p-2 rounded-lg transition-colors ${
-                            action.colorClass || 'text-slate-500'
-                          } ${action.hoverClass || 'hover:bg-slate-100'}`}
+                            action.colorClass || "text-slate-500"
+                          } ${action.hoverClass || "hover:bg-slate-100"}`}
                         >
                           <span className="inline-block scale-110 origin-center">
                             {React.cloneElement(
@@ -979,7 +977,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                                 width?: number;
                                 height?: number;
                               }>,
-                              { width: 18, height: 18 }
+                              { width: 18, height: 18 },
                             )}
                           </span>
                         </button>
@@ -998,8 +996,8 @@ export const FileItem: React.FC<FileItemProps> = ({
                             action.run({ node, e, callbacks });
                           }}
                           className={`p-2 rounded-lg transition-colors ${
-                            action.colorClass || 'text-slate-500'
-                          } ${action.hoverClass || 'hover:bg-slate-100'}`}
+                            action.colorClass || "text-slate-500"
+                          } ${action.hoverClass || "hover:bg-slate-100"}`}
                         >
                           <span className="inline-block scale-110 origin-center">
                             {React.cloneElement(
@@ -1007,7 +1005,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                                 width?: number;
                                 height?: number;
                               }>,
-                              { width: 18, height: 18 }
+                              { width: 18, height: 18 },
                             )}
                           </span>
                         </button>

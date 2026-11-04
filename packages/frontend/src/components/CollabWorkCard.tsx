@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { Share2, LogOut, UserPlus } from 'lucide-react';
-import { Button } from './ui/Button';
-import { UserAvatar } from './ui/UserAvatar';
+import React, { useState } from "react";
+import { Share2, LogOut, UserPlus } from "lucide-react";
+import { Button, UserAvatar } from "@/components/ui";
+
 import {
   deduplicateWorkUsers,
   parseWorkData,
   getWorkCreator,
-} from '../types/collaboration';
-import { CollabShareModal } from './CollabShareModal';
-import { t } from '@/languages';
-import styles from './CollaborateSidebar.module.css';
+} from "../types/collaboration";
+import { CollabShareModal } from "./CollabShareModal";
+import { t } from "@/languages";
+import styles from "./CollaborateSidebar.module.css";
 
 export interface WorkData {
   link_user_data: string[];
@@ -44,7 +44,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
   const data = parseWorkData(work.work_data);
   const creator = data ? getWorkCreator(data) : {};
   const libraryKey = data?.v === 3 ? data.libraryKey : undefined;
-  const isLocal = data?.v === 3 && data.sourceType === 'local';
+  const isLocal = data?.v === 3 && data.sourceType === "local";
   const onlineCount = work.link_user_ids.length;
 
   const deduped = deduplicateWorkUsers(work.link_user_ids, work.link_user_data);
@@ -52,7 +52,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
 
   return (
     <div
-      className={`${styles.workCard} ${isActive ? styles.workCardActive : ''}`}
+      className={`${styles.workCard} ${isActive ? styles.workCardActive : ""}`}
       onDoubleClick={() => {
         if (!isJoined) onJoin(work.work_id);
       }}
@@ -64,13 +64,13 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
               <span className={styles.workCardTitle}>{drawingName}</span>
             )}
             {isLocal && (
-              <span className={styles.workCardLocalTag}>{t('本地')}</span>
+              <span className={styles.workCardLocalTag}>{t("本地")}</span>
             )}
           </div>
           <div className={styles.workCardMetaRow}>
             {isLocal ? (
               <span className={styles.workCardMeta}>
-                {t('协同ID')}: {work.work_id}
+                {t("协同ID")}: {work.work_id}
               </span>
             ) : (
               <>
@@ -86,17 +86,17 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
         </div>
         <span className={styles.workCardBadge}>
           {onlineCount}
-          {t('在线')}
+          {t("在线")}
         </span>
       </div>
 
       <div className={styles.workCardFooter}>
         <div className={styles.workCardAvatars}>
           {participants.length === 0 && (
-            <span className={styles.workCardNoUsers}>{t('暂无参与者')}</span>
+            <span className={styles.workCardNoUsers}>{t("暂无参与者")}</span>
           )}
           {participants.map((ud, i) => {
-            let name = `${t('用户')}${i + 1}`;
+            let name = `${t("用户")}${i + 1}`;
             let avatar: string | undefined;
             try {
               const parsed = JSON.parse(atob(ud));
@@ -129,11 +129,11 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
             icon={Share2}
             onClick={() => setShowShare(true)}
           >
-            {t('分享')}
+            {t("分享")}
           </Button>
           {isJoined ? (
             <Button variant="danger" size="xs" icon={LogOut} onClick={onExit}>
-              {t('退出')}
+              {t("退出")}
             </Button>
           ) : (
             <Button
@@ -144,7 +144,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
               loading={isJoining}
               onClick={() => onJoin(work.work_id)}
             >
-              {t('加入')}
+              {t("加入")}
             </Button>
           )}
         </div>

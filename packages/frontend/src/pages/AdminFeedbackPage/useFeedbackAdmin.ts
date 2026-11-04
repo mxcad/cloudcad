@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   feedbackAdminControllerAdopt,
+  feedbackAdminControllerBatchRemove,
   feedbackAdminControllerIssue,
   feedbackAdminControllerList,
-  feedbackAdminControllerRevoke,
+  feedbackAdminControllerRemove,
   feedbackAdminControllerUpdateStatus,
 } from '@/api-sdk';
 import type {
   AdoptFeedbackDto,
   FeedbackResponseDto,
   IssueRewardDto,
-  RevokeRewardDto,
   UpdateFeedbackStatusDto,
 } from '@/api-sdk';
 
@@ -41,6 +41,10 @@ export function useFeedbackList(filters: FeedbackListFilters) {
       filters.rewardStatus ?? '',
       filters.search ?? '',
     ],
+    // 占位期保留上一页数据引用（React Query v5 keepPreviousData 已废弃）：
+    // 滚动分页 useAccumulatedPagination 依赖「displayNodes 引用未变占位期」语义，
+    // 翻页瞬间 items 引用不变，累积列表不塌缩
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const res = await feedbackAdminControllerList({
         throwOnError: true,
@@ -95,12 +99,27 @@ export function useIssueReward() {
   });
 }
 
-/** 撤销奖励 */
-export function useRevokeReward() {
+/** 删除单条反馈记录（级联删奖励凭据与附件；已发放会员不回收） */
+export function useDeleteFeedback() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: RevokeRewardDto }) =>
-      feedbackAdminControllerRevoke({ throwOnError: true, path: { id }, body }),
+    mutationFn: (id: string) =>
+      feedbackAdminControllerRemove({ throwOnError: true, path: { id } }),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+/** 批量删除反馈记录（不存在的 ID 不报错，返回删除数与未找到数） */
+export function useBatchDeleteFeedback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await feedbackAdminControllerBatchRemove({
+        throwOnError: true,
+        body: { ids },
+      });
+      return res.data as { deleted: number; notFoundIds: string[] } | undefined;
+    },
     onSuccess: () => invalidateAll(qc),
   });
 }

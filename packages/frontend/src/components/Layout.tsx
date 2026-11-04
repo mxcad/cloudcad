@@ -1,42 +1,46 @@
-import type React from 'react';
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { useAuth } from '../contexts/AuthContext';
-import { useIsMobile } from '../lib/useIsMobile';
-import { usePermission } from '../hooks/usePermission';
-import { SystemPermission } from '../constants/permissions';
-import { useBrandConfig } from '../contexts/BrandContext';
-import { getAppBrandConfig } from '../constants/appConfig';
-import { Modal } from './ui/Modal';
-import { Button } from './ui/Button';
-import { Tag } from './ui/Tag';
-import { TruncateText } from './ui/TruncateText';
-import { UserAvatar } from './ui/UserAvatar';
-import { formatFileSize } from '../utils/fileUtils';
-import { ThemeToggle } from './ThemeToggle';
-import { NoticeBellDropdown } from './notice';
-import { LanguageSwitcher } from './LanguageSwitcher';
-import { useTheme } from '../contexts/ThemeContext';
-import { Logo } from './Logo';
-import { InteractiveBackground } from './InteractiveBackground';
-import { useTour } from '../contexts/TourContext';
-import { useStorageQuota } from '../hooks/useStorageQuota';
+import type React from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Tooltip,
+  Modal,
+  Button,
+  Tag,
+  TruncateText,
+  UserAvatar,
+  Menu,
+} from "@/components/ui";
+import { useAuth } from "../contexts/AuthContext";
+import { useIsMobile } from "../lib/useIsMobile";
+import { usePermission } from "../hooks/usePermission";
+import { SystemPermission } from "../constants/permissions";
+import { useBrandConfig } from "../contexts/BrandContext";
+import { getAppBrandConfig } from "../constants/appConfig";
+
+import { formatFileSize } from "../utils/fileUtils";
+import { ThemeToggle } from "./ThemeToggle";
+import { NoticeBellDropdown } from "./notice";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useTheme } from "../contexts/ThemeContext";
+import { Logo } from "./Logo";
+import { InteractiveBackground } from "./InteractiveBackground";
+import { useTour } from "../contexts/TourContext";
+import { useStorageQuota } from "../hooks/useStorageQuota";
 import {
   useConversionQueueStore,
   countActiveTasks,
-} from '../stores/conversionQueueStore';
-import { toggleFileQueuePanel } from './conversion-panel/ConversionPanel';
-import MembershipBadge from './billing/MembershipBadge';
-import { t, $t, i18nScope } from '@/languages';
-import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
+} from "../stores/conversionQueueStore";
+import { toggleFileQueuePanel } from "./conversion-panel/ConversionPanel";
+import MembershipBadge from "./billing/MembershipBadge";
+import { t, $t, i18nScope } from "@/languages";
+import { QUOTA_GUIDE_EVENT } from "@/utils/quotaUpgradeGuide";
 
 // Lucide 图标导入（菜单图标已迁入 config/navigation 单一事实源，此处仅保留非菜单图标）
-import { ShieldCheck, ShieldAlert } from 'lucide-react';
-import { Settings } from 'lucide-react';
-import { Settings2 } from 'lucide-react';
-import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
-import { LogOut } from 'lucide-react';
+import { ShieldCheck, ShieldAlert } from "lucide-react";
+import { Settings } from "lucide-react";
+import { Settings2 } from "lucide-react";
+import { useRuntimeConfig } from "../contexts/RuntimeConfigContext";
+import { LogOut } from "lucide-react";
 import {
   Menu as MenuIcon,
   X,
@@ -45,9 +49,8 @@ import {
   HelpCircle,
   Home,
   ListTodo,
-} from 'lucide-react';
-import { ROUTE_DECLARATIONS } from '../config/navigation';
-import { Menu } from './ui/Menu';
+} from "lucide-react";
+import { ROUTE_DECLARATIONS } from "../config/navigation";
 
 interface NavItemProps {
   to: string;
@@ -84,16 +87,16 @@ const NavItem: React.FC<NavItemProps> = ({
         ${
           active
             ? isDark
-              ? 'text-white shadow-lg'
-              : 'text-white shadow-md shadow-primary/30'
-            : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              ? "text-white shadow-lg"
+              : "text-white shadow-md shadow-primary/30"
+            : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
         }
       `}
       style={
         active
           ? {
               background:
-                'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
+                "linear-gradient(135deg, var(--primary-600), var(--primary-500))",
             }
           : {}
       }
@@ -114,8 +117,8 @@ const NavItem: React.FC<NavItemProps> = ({
         relative z-10 p-2 rounded-lg transition-all duration-300
         ${
           active
-            ? 'bg-white/20'
-            : 'bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-secondary)]'
+            ? "bg-white/20"
+            : "bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-secondary)]"
         }
       `}
       >
@@ -123,8 +126,8 @@ const NavItem: React.FC<NavItemProps> = ({
           size={18}
           className={
             active
-              ? 'text-white'
-              : 'text-[var(--text-tertiary)] group-hover:text-[var(--primary-500)]'
+              ? "text-white"
+              : "text-[var(--text-tertiary)] group-hover:text-[var(--primary-500)]"
           }
         />
       </div>
@@ -139,12 +142,12 @@ const NavItem: React.FC<NavItemProps> = ({
           relative z-10 ml-auto text-xs font-semibold px-2 py-0.5 rounded-full
           ${
             active
-              ? 'bg-white/30 text-white'
-              : 'bg-[var(--primary-100)] text-[var(--primary-600)]'
+              ? "bg-white/30 text-white"
+              : "bg-[var(--primary-100)] text-[var(--primary-600)]"
           }
         `}
         >
-          {badge > 99 ? '99+' : badge}
+          {badge > 99 ? "99+" : badge}
         </span>
       )}
     </Link>
@@ -187,19 +190,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   // 文件队列：进行中任务数（角标）+ 面板当前是否展开（按钮高亮）。
   // 面板本体在 App 层按路由挂载，这里只读 store 做入口指示。
   const queueActiveCount = useConversionQueueStore((s) =>
-    countActiveTasks(s.tasks)
+    countActiveTasks(s.tasks),
   );
   const queuePanelOpen = useConversionQueueStore((s) => !s.collapsed);
 
   // 角色名称映射
   const getRoleDisplayName = useCallback((roleName: string): string => {
     const roleMap: Record<string, string> = {
-      ADMIN: t('系统管理员'),
-      USER_MANAGER: t('用户管理员'),
-      FONT_MANAGER: t('字体管理员'),
-      USER: t('普通用户'),
-      MANAGER: t('项目经理'),
-      GUEST: t('访客'),
+      ADMIN: t("系统管理员"),
+      USER_MANAGER: t("用户管理员"),
+      FONT_MANAGER: t("字体管理员"),
+      USER: t("普通用户"),
+      MANAGER: t("项目经理"),
+      GUEST: t("访客"),
     };
     return roleMap[roleName] || roleName;
   }, []);
@@ -243,46 +246,46 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             : hasPermission(e.permission)
           : true,
       })),
-    [hasPermission, hasAnyPermission]
+    [hasPermission, hasAnyPermission],
   );
 
   // 判断当前导航项是否活跃
   const isActiveRoute = useCallback(
     (path: string): boolean => {
-      if (path === '/dashboard') {
-        return location.pathname === '/dashboard' || location.pathname === '/';
+      if (path === "/dashboard") {
+        return location.pathname === "/dashboard" || location.pathname === "/";
       }
-      if (path === '/projects') {
+      if (path === "/projects") {
         return (
-          location.pathname === '/projects' ||
-          location.pathname.startsWith('/projects/')
+          location.pathname === "/projects" ||
+          location.pathname.startsWith("/projects/")
         );
       }
-      if (path === '/personal-space') {
+      if (path === "/personal-space") {
         return (
-          location.pathname === '/personal-space' ||
-          location.pathname.startsWith('/personal-space/')
+          location.pathname === "/personal-space" ||
+          location.pathname.startsWith("/personal-space/")
         );
       }
       return (
         location.pathname === path || location.pathname.startsWith(`${path}/`)
       );
     },
-    [location.pathname]
+    [location.pathname],
   );
 
   // 存储空间使用率颜色
   const storageColor = useMemo(() => {
-    if (!storageInfo) return 'from-emerald-500 to-emerald-600';
-    if (storageInfo.usagePercent > 90) return 'from-red-500 to-red-600';
-    if (storageInfo.usagePercent > 70) return 'from-amber-500 to-amber-600';
-    return 'from-emerald-500 to-emerald-600';
+    if (!storageInfo) return "from-emerald-500 to-emerald-600";
+    if (storageInfo.usagePercent > 90) return "from-red-500 to-red-600";
+    if (storageInfo.usagePercent > 70) return "from-amber-500 to-amber-600";
+    return "from-emerald-500 to-emerald-600";
   }, [storageInfo]);
 
   // 如果是 CAD 编辑器页面，不渲染布局（CAD 编辑器有自己的全屏布局）
   // 注意：必须在所有 Hooks 调用之后返回，以遵守 React Hooks 规则
-  if (location.pathname.startsWith('/cad-editor/')) {
-    return <div style={{ display: 'none' }} />;
+  if (location.pathname.startsWith("/cad-editor/")) {
+    return <div style={{ display: "none" }} />;
   }
 
   // 品牌名走唯一出口：运行时单项键（brandTitle）/ 整块 / config.json / 内置默认
@@ -292,11 +295,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   return (
     <div
       className="flex h-screen overflow-hidden font-[var(--font-family-base)]"
-      style={{ background: 'transparent' }}
+      style={{ background: "transparent" }}
       onMouseDown={(e) => {
         // 只有点击主内容区域时才关闭菜单，侧边栏内部点击不关闭
         const target = e.target as HTMLElement;
-        if (target.closest('aside')) return;
+        if (target.closest("aside")) return;
         if (showUserMenu) setShowUserMenu(false);
       }}
     >
@@ -307,8 +310,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         <div
           className="fixed inset-0 z-40 lg:hidden animate-fade-in"
           style={{
-            background: 'var(--bg-overlay)',
-            backdropFilter: 'blur(4px)',
+            background: "var(--bg-overlay)",
+            backdropFilter: "blur(4px)",
           }}
           onClick={() => setSidebarOpen(false)}
         />
@@ -318,12 +321,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] lg:w-72 transform transition-all duration-300 ease-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
         style={{
-          background: 'var(--bg-secondary)',
-          borderRight: '1px solid var(--border-default)',
-          boxShadow: sidebarOpen ? 'var(--shadow-2xl)' : 'none',
+          background: "var(--bg-secondary)",
+          borderRight: "1px solid var(--border-default)",
+          boxShadow: sidebarOpen ? "var(--shadow-2xl)" : "none",
         }}
       >
         <div className="flex flex-col h-full">
@@ -334,7 +337,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 group p-2 -m-2 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)]"
-              title={appName}
+              title={t(appName)}
               onClick={() => setSidebarOpen(false)}
             >
               {/* Logo 组件 - 仅图标模式（文字由下方品牌块渲染） */}
@@ -345,16 +348,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 {/* 主标题 */}
                 <span
                   className="text-[15px] font-bold tracking-tight leading-none"
-                  style={{ color: 'var(--text-primary)' }}
+                  style={{ color: "var(--text-primary)" }}
                 >
-                  {appName}
+                  {t(appName)}
                 </span>
                 {/* 副标题（品牌配置 subtitle） */}
                 <span
                   className="text-[11px] font-medium tracking-wide mt-0.5"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{ color: "var(--text-muted)" }}
                 >
-                  {brandProfile.subtitle}
+                  {t(brandProfile.subtitle)}
                 </span>
               </div>
             </a>
@@ -363,9 +366,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <button
               className="lg:hidden w-[28px] h-[28px] flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
               onClick={() => setSidebarOpen(false)}
-              aria-label={t('关闭菜单')}
+              aria-label={t("关闭菜单")}
             >
-              <X size={20} style={{ color: 'var(--text-secondary)' }} />
+              <X size={20} style={{ color: "var(--text-secondary)" }} />
             </button>
           </div>
 
@@ -374,12 +377,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <div className="pb-4">
               <p
                 className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: "var(--text-muted)" }}
               >
-                {t('主菜单')}
+                {t("主菜单")}
               </p>
               {menuItems
-                .filter((item) => item.section === 'main' && item.visible)
+                .filter((item) => item.section === "main" && item.visible)
                 .map((item) => (
                   <NavItem
                     key={item.to}
@@ -392,20 +395,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
             {/* 管理菜单 */}
             {menuItems.some(
-              (item) => item.section === 'admin' && item.visible
+              (item) => item.section === "admin" && item.visible,
             ) && (
               <div
                 className="pt-2 border-t"
-                style={{ borderColor: 'var(--border-default)' }}
+                style={{ borderColor: "var(--border-default)" }}
               >
                 <p
                   className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{ color: "var(--text-muted)" }}
                 >
-                  {t('系统管理')}
+                  {t("系统管理")}
                 </p>
                 {menuItems
-                  .filter((item) => item.section === 'admin' && item.visible)
+                  .filter((item) => item.section === "admin" && item.visible)
                   .map((item) => (
                     <NavItem
                       key={item.to}
@@ -422,17 +425,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           <div
             className="p-4 mx-4 mb-4 rounded-xl"
             style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-default)',
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-default)",
             }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <HardDrive size={16} style={{ color: 'var(--text-tertiary)' }} />
+              <HardDrive size={16} style={{ color: "var(--text-tertiary)" }} />
               <span
                 className="text-sm font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('个人空间存储')}
+                {t("个人空间存储")}
               </span>
             </div>
 
@@ -441,7 +444,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 {/* 进度条 */}
                 <div
                   className="h-2 rounded-full overflow-hidden mb-2"
-                  style={{ background: 'var(--bg-secondary)' }}
+                  style={{ background: "var(--bg-secondary)" }}
                 >
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${storageColor} transition-all duration-500`}
@@ -453,13 +456,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
                 {/* 存储信息 */}
                 <div className="flex justify-between items-center text-xs">
-                  <span style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ color: "var(--text-muted)" }}>
                     {formatFileSize(storageInfo.used)}
                   </span>
-                  <span style={{ color: 'var(--text-tertiary)' }}>
+                  <span style={{ color: "var(--text-tertiary)" }}>
                     {(storageInfo.usagePercent ?? 0).toFixed(1)}%
                   </span>
-                  <span style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ color: "var(--text-muted)" }}>
                     {formatFileSize(storageInfo.total)}
                   </span>
                 </div>
@@ -468,10 +471,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 {storageInfo.usagePercent > 100 && (
                   <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
                     <p className="text-xs text-red-500 font-medium">
-                      {t('⚠️ 存储空间已超额')}
+                      {t("⚠️ 存储空间已超额")}
                     </p>
                     <p className="text-xs text-red-400 mt-1">
-                      {t('升级会员可扩展存储空间')}
+                      {t("升级会员可扩展存储空间")}
                     </p>
                     <Button
                       variant="outline"
@@ -481,14 +484,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                         window.dispatchEvent(new CustomEvent(QUOTA_GUIDE_EVENT))
                       }
                     >
-                      {t('去购买')}
+                      {t("去购买")}
                     </Button>
                   </div>
                 )}
               </>
             ) : (
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {t('无法加载存储信息')}
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("无法加载存储信息")}
               </p>
             )}
           </div>
@@ -500,26 +503,26 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 variant="outline"
                 className="w-full justify-start gap-3"
                 onClick={openTourCenter}
-                title={t('查看引导中心')}
+                title={t("查看引导中心")}
               >
                 <span className="relative">
                   <HelpCircle size={18} />
                   {isTourActive && (
                     <span
                       className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse"
-                      style={{ background: 'var(--primary-500)' }}
+                      style={{ background: "var(--primary-500)" }}
                     />
                   )}
                 </span>
                 <span
                   className="font-medium"
-                  style={{ color: 'var(--text-secondary)' }}
+                  style={{ color: "var(--text-secondary)" }}
                 >
-                  {t('帮助引导')}
+                  {t("帮助引导")}
                 </span>
                 {isTourActive && (
                   <Tag variant="primary" className="ml-auto">
-                    {t('进行中')}
+                    {t("进行中")}
                   </Tag>
                 )}
               </Button>
@@ -530,9 +533,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           <div
             className="p-4 border-t"
             style={{
-              borderColor: 'var(--border-default)',
+              borderColor: "var(--border-default)",
               paddingBottom:
-                'calc(var(--space-4) + env(safe-area-inset-bottom, 0px))',
+                "calc(var(--space-4) + env(safe-area-inset-bottom, 0px))",
             }}
           >
             <div className="relative" ref={userMenuRef}>
@@ -555,35 +558,35 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     <div className="flex-1 min-w-0 text-left">
                       <p
                         className="text-sm font-semibold truncate"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: "var(--text-primary)" }}
                       >
                         <TruncateText>
                           {String(
                             user?.nickname ||
                               user?.username ||
                               user?.email ||
-                              t('用户')
+                              t("用户"),
                           )}
                         </TruncateText>
                         <MembershipBadge />
                       </p>
                       <p
                         className="text-xs truncate"
-                        style={{ color: 'var(--text-muted)' }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {loading
-                          ? t('加载中...')
+                          ? t("加载中...")
                           : user?.role?.name
                             ? getRoleDisplayName(user.role.name)
-                            : t('未知角色')}
+                            : t("未知角色")}
                       </p>
                     </div>
 
                     {/* 下拉箭头 */}
                     <ChevronDown
                       size={16}
-                      className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
-                      style={{ color: 'var(--text-muted)' }}
+                      className={`transition-transform duration-300 ${showUserMenu ? "rotate-180" : ""}`}
+                      style={{ color: "var(--text-muted)" }}
                     />
                   </button>
                 </Menu.Trigger>
@@ -599,10 +602,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     onClick={() => {
                       setShowUserMenu(false);
                       setSidebarOpen(false);
-                      navigate('/profile');
+                      navigate("/profile");
                     }}
                   >
-                    {t('个人设置')}
+                    {t("个人设置")}
                   </Menu.Item>
                   <Menu.Separator />
                   <Menu.Item
@@ -613,7 +616,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                       setShowLogoutConfirm(true);
                     }}
                   >
-                    {t('退出登录')}
+                    {t("退出登录")}
                   </Menu.Item>
                 </Menu.Content>
               </Menu>
@@ -628,10 +631,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         <header
           className="h-14 lg:h-16 flex items-center justify-between px-4 lg:px-8 relative z-30"
           style={{
-            background: 'var(--glass-bg)',
-            backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid var(--border-default)',
-            paddingTop: 'env(safe-area-inset-top, 0px)',
+            background: "var(--glass-bg)",
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid var(--border-default)",
+            paddingTop: "env(safe-area-inset-top, 0px)",
           }}
         >
           {/* 左侧：菜单按钮 */}
@@ -649,9 +652,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               variant="secondary"
               size="md"
               icon={Home}
-              aria-label={t('回到CAD编辑器')}
+              aria-label={t("回到CAD编辑器")}
               className="lg:hidden !w-[28px] !h-[28px] !p-0"
-              onClick={() => navigate('/cad-editor')}
+              onClick={() => navigate("/cad-editor")}
             />
           </div>
 
@@ -662,13 +665,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
             {/* 文件队列入口（#497：悬浮药丸已取消，面板显隐只剩此按钮 + CAD 命令 Mx_ToggleFileQueue） */}
             <div className="p-0.5">
-              <Tooltip content={t('文件队列')}>
+              <Tooltip content={t("文件队列")}>
                 <Button
                   variant="secondary"
                   className={`relative rounded-xl transition-all duration-300 ease-out
                              hover:scale-110 active:scale-95
                              hover:bg-[var(--bg-tertiary)] group`}
-                  aria-label={t('文件队列')}
+                  aria-label={t("文件队列")}
                   aria-pressed={queuePanelOpen}
                   onClick={() => toggleFileQueuePanel()}
                 >
@@ -676,8 +679,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     size={20}
                     className={`group-hover:text-[var(--accent-500)] ${
                       queuePanelOpen
-                        ? 'text-[var(--accent-500)]'
-                        : 'text-[var(--text-tertiary)]'
+                        ? "text-[var(--accent-500)]"
+                        : "text-[var(--text-tertiary)]"
                     }`}
                   />
                   {queueActiveCount > 0 && (
@@ -709,15 +712,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             {/* 系统设置 */}
             {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
               <div className="p-0.5">
-                <Tooltip content={t('系统设置')}>
+                <Tooltip content={t("系统设置")}>
                   <Button
                     variant="secondary"
                     className="relative rounded-xl transition-all duration-300 ease-out
                                hover:scale-110 active:scale-95
                                hover:bg-[var(--bg-tertiary)]
                                group"
-                    aria-label={t('系统设置')}
-                    onClick={() => navigate('/runtime-config')}
+                    aria-label={t("系统设置")}
+                    onClick={() => navigate("/runtime-config")}
                   >
                     <Settings2
                       size={20}
@@ -733,32 +736,32 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         {/* 管理员口令即将到期提示条（#416 等保 8.1.4.1 b)）：距到期 ≤14 天软提示，不拦截。
             后端 /auth/profile 与登录响应均下发 passwordExpiringSoon（仅 ADMIN 角色有值），
             refreshUser 后保持同步；到期即由后端 JwtStrategy 强制锁定至 /admin/change-password。 */}
-        {user?.role?.name === 'ADMIN' &&
+        {user?.role?.name === "ADMIN" &&
           (user as { passwordExpiringSoon?: boolean }).passwordExpiringSoon && (
             <div
               className="px-4 py-2 animate-slide-up"
               style={{
                 background: isDark
-                  ? 'var(--warning-dim)'
-                  : 'var(--warning-light)',
-                borderBottom: `1px solid ${isDark ? 'var(--warning)' : 'var(--warning-dim)'}`,
+                  ? "var(--warning-dim)"
+                  : "var(--warning-light)",
+                borderBottom: `1px solid ${isDark ? "var(--warning)" : "var(--warning-dim)"}`,
               }}
             >
               <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
                 <ShieldCheck
                   size={18}
                   className="flex-shrink-0"
-                  style={{ color: 'var(--warning)' }}
+                  style={{ color: "var(--warning)" }}
                 />
-                <span className="text-sm" style={{ color: 'var(--warning)' }}>
-                  {t('您的管理员密码即将到期，请提前修改')}
+                <span className="text-sm" style={{ color: "var(--warning)" }}>
+                  {t("您的管理员密码即将到期，请提前修改")}
                 </span>
                 <Button
                   variant="secondary"
                   size="xs"
-                  onClick={() => navigate('/admin/change-password')}
+                  onClick={() => navigate("/admin/change-password")}
                 >
-                  {t('修改密码')}
+                  {t("修改密码")}
                 </Button>
               </div>
             </div>
@@ -771,34 +774,34 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             直达修改密码子页（Profile 页按 section 参数初始化子视图）。
             文案按安全模式分档：secure 模式初始口令不合规、需立即改；normal 模式初始口令
             是正当默认（DEFAULT_ADMIN_PASSWORD），改成建议式而非合规式，避免误导。 */}
-        {user?.role?.name === 'ADMIN' &&
+        {user?.role?.name === "ADMIN" &&
           (user as { passwordUnchanged?: boolean }).passwordUnchanged && (
             <div
               className="px-4 py-2 animate-slide-up"
               style={{
                 background: isDark
-                  ? 'var(--warning-dim)'
-                  : 'var(--warning-light)',
-                borderBottom: `1px solid ${isDark ? 'var(--warning)' : 'var(--warning-dim)'}`,
+                  ? "var(--warning-dim)"
+                  : "var(--warning-light)",
+                borderBottom: `1px solid ${isDark ? "var(--warning)" : "var(--warning-dim)"}`,
               }}
             >
               <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
                 <ShieldAlert
                   size={18}
                   className="flex-shrink-0"
-                  style={{ color: 'var(--warning)' }}
+                  style={{ color: "var(--warning)" }}
                 />
-                <span className="text-sm" style={{ color: 'var(--warning)' }}>
-                  {publicConfig.securityMode === 'secure'
-                    ? t('您当前仍在使用首次部署设置的初始密码，请立即修改')
-                    : t('本地测试模式，建议在生产部署前改为强口令')}
+                <span className="text-sm" style={{ color: "var(--warning)" }}>
+                  {publicConfig.securityMode === "secure"
+                    ? t("您当前仍在使用首次部署设置的初始密码，请立即修改")
+                    : t("本地测试模式，建议在生产部署前改为强口令")}
                 </span>
                 <Button
                   variant="secondary"
                   size="xs"
-                  onClick={() => navigate('/profile?section=password')}
+                  onClick={() => navigate("/profile?section=password")}
                 >
-                  {t('去修改')}
+                  {t("去修改")}
                 </Button>
               </div>
             </div>
@@ -809,32 +812,32 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             已收紧到安全模式后不再展示——此时横幅只剩「安全模式：安全模式」式重复告知；
             需要确认当前模式可去运行时配置页，那里有完整横幅与切换按钮。 */}
         {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) &&
-          publicConfig.securityMode !== 'secure' && (
+          publicConfig.securityMode !== "secure" && (
             <div
               className="px-4 py-2 animate-slide-up"
               style={{
                 background: isDark
-                  ? 'var(--warning-dim)'
-                  : 'var(--warning-light)',
-                borderBottom: `1px solid ${isDark ? 'var(--warning)' : 'var(--warning-dim)'}`,
+                  ? "var(--warning-dim)"
+                  : "var(--warning-light)",
+                borderBottom: `1px solid ${isDark ? "var(--warning)" : "var(--warning-dim)"}`,
               }}
             >
               <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
                 <ShieldAlert
                   size={18}
                   className="flex-shrink-0"
-                  style={{ color: 'var(--warning)' }}
+                  style={{ color: "var(--warning)" }}
                 />
-                <span className="text-sm" style={{ color: 'var(--warning)' }}>
-                  {t('安全模式：{mode}', { mode: t('普通模式') })}
-                  {t('· 限制宽松，适合本地与测试环境')}
+                <span className="text-sm" style={{ color: "var(--warning)" }}>
+                  {t("安全模式：{mode}", { mode: t("普通模式") })}
+                  {t("· 限制宽松，适合本地与测试环境")}
                 </span>
                 <Link
                   to="/runtime-config"
                   className="text-sm font-medium hover:underline"
-                  style={{ color: 'var(--primary-500)' }}
+                  style={{ color: "var(--primary-500)" }}
                 >
-                  {t('前往配置')}
+                  {t("前往配置")}
                 </Link>
               </div>
             </div>
@@ -844,8 +847,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         <main
           className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden"
           style={{
-            background: 'transparent',
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            background: "transparent",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
           <div className="flex-1 min-h-0 animate-fade-in">{children}</div>
@@ -856,7 +859,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       <Modal
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
-        title={t('确认退出登录')}
+        title={t("确认退出登录")}
         footer={
           <>
             <Button
@@ -864,7 +867,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               onClick={() => setShowLogoutConfirm(false)}
               disabled={isLoggingOut}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               variant="danger"
@@ -874,10 +877,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               {isLoggingOut ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {t('退出中...')}
+                  {t("退出中...")}
                 </span>
               ) : (
-                t('确认退出')
+                t("确认退出")
               )}
             </Button>
           </>
@@ -886,20 +889,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         <div className="text-center py-4">
           <div
             className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: 'var(--error-light)' }}
+            style={{ background: "var(--error-light)" }}
           >
-            <LogOut size={28} style={{ color: 'var(--error)' }} />
+            <LogOut size={28} style={{ color: "var(--error)" }} />
           </div>
           <h3
             className="text-xl font-bold mb-2"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            {t('确认退出登录')}
+            {t("确认退出登录")}
           </h3>
-          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             {$t(
-              '您确定要退出 {appName} 吗？退出后需要重新登录才能访问系统功能。',
-              { appName }
+              "您确定要退出 {appName} 吗？退出后需要重新登录才能访问系统功能。",
+              { appName },
             )}
           </p>
         </div>
@@ -920,27 +923,27 @@ function SidebarClock() {
   // locale 取运行时激活语言（同 DatePicker）：硬编码 'zh-CN' 会让 en-US/ko-KR 界面显示中文星期与月份
   const locale = i18nScope.activeLanguage;
   const formattedTime = now.toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
   });
   const formattedDate = now.toLocaleDateString(locale, {
-    month: 'short',
-    day: 'numeric',
-    weekday: 'short',
+    month: "short",
+    day: "numeric",
+    weekday: "short",
   });
   return (
     <div
       className="hidden md:flex flex-col items-end mr-4 px-3 py-1.5 rounded-lg"
-      style={{ background: 'var(--bg-tertiary)' }}
+      style={{ background: "var(--bg-tertiary)" }}
     >
       <span
         className="text-sm font-semibold"
-        style={{ color: 'var(--text-primary)' }}
+        style={{ color: "var(--text-primary)" }}
       >
         {formattedTime}
       </span>
-      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+      <span className="text-xs" style={{ color: "var(--text-muted)" }}>
         {formattedDate}
       </span>
     </div>

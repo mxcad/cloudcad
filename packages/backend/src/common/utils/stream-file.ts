@@ -79,6 +79,33 @@ export function streamFileToResponse(
     }
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
+
+    // 客户端中断/连接关闭 → 主动销毁底层读流句柄。
+    // 否则 pipe 停止后 fs.ReadStream 句柄持有到 GC，Windows 上文件被一直占用
+    // （实例 2026-11-03：公开 mxweb 访问流客户端中断后句柄未释放，旧产物
+    // 4b298d….dwg.mxweb 被锁，引擎后续覆盖写报 write file error）。
+    const onAbort = () => {
+      if (!stream.destroyed) stream.destroy();
+    };
+    res.once('close', onAbort);
+    res.once('aborted', onAbort);
+
+    // 单次 settle：正常读完 / 客户端中断 / 读错误三条路径都经此收尾，
+    // 保证 Promise 必 resolve（此前 error 路径不 resolve、onDone 抛错也挂起）。
+    let settled = false;
+    const finish = (runOnDone: boolean) => {
+      if (settled) return;
+      settled = true;
+      if (runOnDone) {
+        try {
+          onDone?.();
+        } catch {
+          /* onDone 异常不阻塞 resolve（调用方自行吞） */
+        }
+      }
+      resolve();
+    };
+
     stream.on('error', () => {
       if (!res.headersSent) {
         res
@@ -89,10 +116,10 @@ export function streamFileToResponse(
               : { code: errorCode, message: errorMessage }
           );
       }
+      // 错误后销毁流释放句柄；错误场景不触发 onDone（调用方可能保留产物重试）
+      if (!stream.destroyed) stream.destroy();
+      finish(false);
     });
-    stream.on('close', () => {
-      onDone?.();
-      resolve();
-    });
+    stream.on('close', () => finish(true));
   });
 }

@@ -50,18 +50,20 @@ const MIN_PANEL_W = 260;
 const MIN_PANEL_H = 180;
 /** 面板距视口边缘的最小留白（#476）：clamp 不超屏 */
 const PANEL_EDGE_MARGIN = 8;
+/** 默认（未拖动）时面板距右/下边缘的留白：与 CSS 兜底定位一致 */
+const DEFAULT_PANEL_OFFSET = 20;
 
 /**
  * 把 store 里的 position + size 按面板尺寸 clamp 回视口内（窗口 resize / 展开面板共用）。
  *
  * 上次持久化的位置是按更小/更大的尺寸记录的，同一 position 换尺寸后必然可能越界，
  * 故展开前必须按面板尺寸重算一次——否则首帧渲染在屏外，要手动拖一下 header 才弹回。
- * position 为 null 时面板走 CSS 右下角默认定位，天然在屏内，无需处理。
+ * position 为 null（默认 / 刚复位）时物化「右下角合理位置」：距右/下边缘
+ * DEFAULT_PANEL_OFFSET，面板大于视口时退到最小留白（保证 header 可见）——
+ * 默认尺寸翻倍后（800×1080）CSS bottom/right 锚定会把顶部顶出视口，不能只靠 CSS。
  */
 function clampPanelToViewport(): void {
   const state = useConversionQueueStore.getState();
-  const pos = state.position;
-  if (!pos) return;
   const sz = state.size;
   const w = Math.min(
     Math.max(MIN_PANEL_W, sz.width),
@@ -71,6 +73,22 @@ function clampPanelToViewport(): void {
     Math.max(MIN_PANEL_H, sz.height),
     Math.max(MIN_PANEL_H, window.innerHeight - PANEL_EDGE_MARGIN * 2)
   );
+  if (w !== sz.width || h !== sz.height) state.setSize({ width: w, height: h });
+  const pos = state.position;
+  if (!pos) {
+    // 默认右下角：距右/下边缘 DEFAULT_PANEL_OFFSET；面板大于视口时退到最小留白
+    state.setPosition({
+      x: Math.max(
+        PANEL_EDGE_MARGIN,
+        window.innerWidth - w - DEFAULT_PANEL_OFFSET
+      ),
+      y: Math.max(
+        PANEL_EDGE_MARGIN,
+        window.innerHeight - h - DEFAULT_PANEL_OFFSET
+      ),
+    });
+    return;
+  }
   const x = Math.min(
     Math.max(PANEL_EDGE_MARGIN, pos.x),
     Math.max(PANEL_EDGE_MARGIN, window.innerWidth - w - PANEL_EDGE_MARGIN)
@@ -79,7 +97,6 @@ function clampPanelToViewport(): void {
     Math.max(PANEL_EDGE_MARGIN, pos.y),
     Math.max(PANEL_EDGE_MARGIN, window.innerHeight - h - PANEL_EDGE_MARGIN)
   );
-  if (w !== sz.width || h !== sz.height) state.setSize({ width: w, height: h });
   if (x !== pos.x || y !== pos.y) state.setPosition({ x, y });
 }
 
@@ -348,6 +365,12 @@ export function ConversionPanel() {
     expandByTask();
   }, [expandByTask]);
 
+  /** 双击标题栏复位：回默认（position null + 默认尺寸）后立刻物化右下角合理位置 */
+  const handleResetPanel = useCallback(() => {
+    resetPanelUi();
+    clampPanelToViewport();
+  }, [resetPanelUi]);
+
   const { activeDownloadCount } = usePanelAutoCollapse({
     hasActive,
     activeCount,
@@ -611,7 +634,7 @@ export function ConversionPanel() {
         <div
           className="conversion-header"
           onPointerDown={(e) => beginDrag(e)}
-          onDoubleClick={resetPanelUi}
+          onDoubleClick={handleResetPanel}
           title={t('拖动调整位置，双击复位')}
         >
           <span className="conversion-title">

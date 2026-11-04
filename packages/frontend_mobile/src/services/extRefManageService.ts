@@ -65,6 +65,29 @@ function toItem(name: string, type: ExtRefType, exists: boolean): ExtRefItem {
 }
 
 /**
+ * 后端 preloading 的 images/externalReference 是 PreloadingFileInfoDto[] 对象数组
+ * （{ name, size, type }，对齐 PC useExternalReferenceUpload 的读取方式——
+ * images/externalReference 均按对象处理），此处把 name 提取为文件名列表。
+ * 兼容历史字符串数组形态（防御，不依赖）。此前按字符串处理导致对象上调用
+ * startsWith/replace 抛 TypeError，整个 fetchExtRefList 被调用方 catch 静默吞掉，
+ * 外部参照弹框不出现（实例：移动端未登录打开带外部参照的图纸不弹框）。
+ */
+function toRefName(item: unknown): string {
+  if (typeof item === 'string') return item;
+  return (item as { name?: string } | null)?.name ?? '';
+}
+
+function collectRefNames(
+  images: unknown[] = [],
+  externalReference: unknown[] = []
+): { name: string; type: 'img' | 'ref' }[] {
+  return parseExtRefFileNames([
+    ...images.map(toRefName).filter((n) => !/^https?:\/\//i.test(n)),
+    ...externalReference.map(toRefName),
+  ]);
+}
+
+/**
  * 取全部外部参照（含已存在与缺失），逐项标注 exists。
  *
  * @param options.retry 公开场景下 preloading 数据可能尚未生成（转换中），
@@ -84,12 +107,7 @@ export async function fetchExtRefList(
       }
     }
     if (!data) return [];
-    const refs = parseExtRefFileNames([
-      ...(data.images || []).filter(
-        (img: string) => !img.startsWith('http://') && !img.startsWith('https://')
-      ),
-      ...(data.externalReference || []),
-    ]);
+    const refs = collectRefNames(data.images, data.externalReference);
     const items: ExtRefItem[] = [];
     for (const ref of refs) {
       const exists = await checkPublicExtReference(ctx.identifier, ref.name);
@@ -100,12 +118,7 @@ export async function fetchExtRefList(
 
   const data = await getPreloadingData(ctx.identifier);
   if (!data) return [];
-  const refs = parseExtRefFileNames([
-    ...(data.images || []).filter(
-      (img: string) => !img.startsWith('http://') && !img.startsWith('https://')
-    ),
-    ...(data.externalReference || []),
-  ]);
+  const refs = collectRefNames(data.images, data.externalReference);
   const missing = await checkExternalReferences(ctx.identifier);
   const missingSet = new Set(missing.map((m) => m.name));
   return refs.map((ref) => toItem(ref.name, ref.type, !missingSet.has(ref.name)));

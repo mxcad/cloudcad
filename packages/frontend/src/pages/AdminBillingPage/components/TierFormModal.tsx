@@ -1,11 +1,9 @@
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { MbFileSizeInput } from '@/components/ui/FileSize';
-import { t } from '@/languages';
-import { isStorageConfigKey } from '@/utils/tierConfigUtils';
-import type { ConfigRegistryEntry } from '@/utils/tierConfigUtils';
-import type { TierFormState } from '../hooks/useTierManagement';
+import { Button, Input, Modal, MbFileSizeInput } from "@/components/ui";
+
+import { t } from "@/languages";
+import { isStorageConfigKey } from "@/utils/tierConfigUtils";
+import type { ConfigRegistryEntry } from "@/utils/tierConfigUtils";
+import type { TierFormState } from "../hooks/useTierManagement";
 
 function ConfigField({
   entry,
@@ -19,7 +17,7 @@ function ConfigField({
   const label = entry.label;
   const desc = entry.description;
 
-  if (entry.type === 'bool') {
+  if (entry.type === "bool") {
     return (
       <label className="flex items-center gap-2 cursor-pointer">
         <input
@@ -27,11 +25,11 @@ function ConfigField({
           checked={!!value}
           onChange={(e) => onChange(e.target.checked)}
           className="w-4 h-4 rounded"
-          style={{ accentColor: 'var(--primary-500)' }}
+          style={{ accentColor: "var(--primary-500)" }}
         />
         <span
           className="text-sm font-medium"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: "var(--text-primary)" }}
         >
           {label}
         </span>
@@ -44,7 +42,7 @@ function ConfigField({
       <div>
         <label
           className="block text-sm font-medium mb-1"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: "var(--text-primary)" }}
         >
           {label}
         </label>
@@ -54,7 +52,7 @@ function ConfigField({
           min={0}
         />
         {desc && (
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+          <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
             {desc}
           </p>
         )}
@@ -66,7 +64,7 @@ function ConfigField({
     <div>
       <label
         className="block text-sm font-medium mb-1"
-        style={{ color: 'var(--text-primary)' }}
+        style={{ color: "var(--text-primary)" }}
       >
         {label}
       </label>
@@ -75,10 +73,10 @@ function ConfigField({
         value={String(Number(value) || 0)}
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full px-3 py-2 rounded-xl text-sm"
-        style={{ background: 'var(--bg-secondary)' }}
+        style={{ background: "var(--bg-secondary)" }}
       />
       {desc && (
-        <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
           {desc}
         </p>
       )}
@@ -119,7 +117,7 @@ export function TierFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingId ? t('编辑 VIP 等级') : t('新增 VIP 等级')}
+      title={editingId ? t("编辑 VIP 等级") : t("新增 VIP 等级")}
       size="lg"
     >
       <div className="space-y-4">
@@ -127,9 +125,9 @@ export function TierFormModal({
           <div>
             <label
               className="block text-sm font-medium mb-1"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
-              {t('等级(数字)')}
+              {t("等级(数字)")}
             </label>
             <input
               type="number"
@@ -139,9 +137,9 @@ export function TierFormModal({
               max={99}
               className="w-full px-3 py-2 rounded-xl text-sm"
               style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-default)",
+                color: "var(--text-primary)",
               }}
             />
           </div>
@@ -149,9 +147,9 @@ export function TierFormModal({
         <div>
           <label
             className="block text-sm font-medium mb-1"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            {t('名称')}
+            {t("名称")}
           </label>
           <input
             value={form.name}
@@ -159,9 +157,9 @@ export function TierFormModal({
             disabled={freeTier}
             className="w-full px-3 py-2 rounded-xl text-sm"
             style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-default)",
+              color: "var(--text-primary)",
               opacity: freeTier ? 0.6 : 1,
             }}
           />
@@ -169,9 +167,9 @@ export function TierFormModal({
         <div>
           <label
             className="block text-sm font-medium mb-1"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
-            {t('月基础价（元）')}
+            {t("月基础价（元）")}
           </label>
           <input
             type="number"
@@ -182,27 +180,27 @@ export function TierFormModal({
               updateForm({
                 baseMonthlyPriceYuan: Math.max(
                   0,
-                  parseFloat(e.target.value) || 0
+                  parseFloat(e.target.value) || 0,
                 ),
               })
             }
             disabled={freeTier}
             className="w-full px-3 py-2 rounded-xl text-sm"
             style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-default)",
+              color: "var(--text-primary)",
               opacity: freeTier ? 0.6 : 1,
             }}
           />
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {t('内部将以 {cents} 分存储', {
+          <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
+            {t("内部将以 {cents} 分存储", {
               cents: String(Math.round(form.baseMonthlyPriceYuan * 100)),
             })}
           </p>
           {freeTier && (
-            <p className="text-xs mt-2" style={{ color: 'var(--warning)' }}>
-              {t('系统默认等级，名称与价格不可修改')}
+            <p className="text-xs mt-2" style={{ color: "var(--warning)" }}>
+              {t("系统默认等级，名称与价格不可修改")}
             </p>
           )}
         </div>
@@ -211,13 +209,13 @@ export function TierFormModal({
           <div>
             <p
               className="text-sm font-semibold mb-2"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
-              {t('权益配置')}
+              {t("权益配置")}
             </p>
             <div
               className="space-y-3 p-3 rounded-xl"
-              style={{ background: 'var(--bg-tertiary)' }}
+              style={{ background: "var(--bg-tertiary)" }}
             >
               {registryEntries.map((entry) => (
                 <ConfigField
@@ -236,17 +234,17 @@ export function TierFormModal({
         )}
 
         {registryLoading && (
-          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            {t('加载配置项中...')}
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+            {t("加载配置项中...")}
           </p>
         )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button variant="primary" onClick={onSave} loading={saving}>
-            {editingId ? t('保存') : t('创建')}
+            {editingId ? t("保存") : t("创建")}
           </Button>
         </div>
       </div>

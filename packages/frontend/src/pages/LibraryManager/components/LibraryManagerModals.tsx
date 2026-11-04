@@ -1,20 +1,19 @@
-import React from 'react';
-import { Modal } from '../../../components/ui/Modal';
-import { Input } from '../../../components/ui/Input';
-import { Button } from '../../../components/ui/Button';
-import { RenameModal } from '../../../components/modals/RenameModal';
-import { LibrarySelectFolderModal } from '../../../components/modals/LibrarySelectFolderModal';
-import { DownloadFormatModal } from '../../../components/modals/DownloadFormatModal';
-import { BatchDownloadDialog } from '../../../components/modals/BatchDownloadDialog';
-import { DirectoryImportDialog } from '../../../components/DirectoryImportDialog';
-import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
-import type { UseLibraryModalsReturn } from '../../../hooks/library/useLibraryModals';
-import { t } from '@/languages';
-import type { FileSystemNode } from '../../../types/filesystem';
+import React from "react";
+import { Modal, Input, Button } from "@/components/ui";
+
+import { RenameModal } from "../../../components/modals/RenameModal";
+import { LibrarySelectFolderModal } from "../../../components/modals/LibrarySelectFolderModal";
+import { DownloadFormatModal } from "../../../components/modals/DownloadFormatModal";
+import { BatchDownloadDialog } from "../../../components/modals/BatchDownloadDialog";
+import { DirectoryImportDialog } from "../../../components/DirectoryImportDialog";
+import { useBatchDownloadStore } from "@/stores/useBatchDownloadStore";
+import type { UseLibraryModalsReturn } from "../../../hooks/library/useLibraryModals";
+import { t } from "@/languages";
+import type { FileSystemNode } from "../../../types/filesystem";
 
 type ShowToast = (
   message: string,
-  type: 'success' | 'error' | 'warning' | 'info'
+  type: "success" | "error" | "warning" | "info",
 ) => void;
 
 export interface LibraryManagerModalsProps {
@@ -23,14 +22,14 @@ export interface LibraryManagerModalsProps {
   handleRenameSubmit: (name: string) => Promise<void>;
   handleSelectFolderConfirm: (targetParentId: string) => Promise<void>;
   handleDownloadWithFormat: (
-    format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
+    format: "dwg" | "dxf" | "mxweb" | "pdf",
     pdfOptions?: {
       width?: string;
       height?: string;
-      colorPolicy?: 'mono' | 'color';
-    }
+      colorPolicy?: "mono" | "color";
+    },
   ) => Promise<void>;
-  libraryType: 'drawing' | 'block';
+  libraryType: "drawing" | "block";
   showToast: ShowToast;
   showDirectoryImport: boolean;
   setShowDirectoryImport: (open: boolean) => void;
@@ -73,13 +72,13 @@ export const LibraryManagerModals: React.FC<LibraryManagerModalsProps> = ({
       <Modal
         isOpen={isCreateFolderModalOpen}
         onClose={closeCreateFolderModal}
-        title={t('新建文件夹')}
+        title={t("新建文件夹")}
       >
         <form
           onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
-            const name = formData.get('name') as string;
+            const name = formData.get("name") as string;
             if (name.trim()) {
               handleCreateFolder(name.trim());
             }
@@ -90,16 +89,16 @@ export const LibraryManagerModals: React.FC<LibraryManagerModalsProps> = ({
               <label
                 htmlFor="folderName"
                 className="block text-sm font-medium mb-1"
-                style={{ color: 'var(--text-primary)' }}
+                style={{ color: "var(--text-primary)" }}
               >
-                {t('文件夹名称')}
+                {t("文件夹名称")}
               </label>
               <Input
                 type="text"
                 id="folderName"
                 name="name"
                 required
-                placeholder={t('请输入文件夹名称')}
+                placeholder={t("请输入文件夹名称")}
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -108,10 +107,10 @@ export const LibraryManagerModals: React.FC<LibraryManagerModalsProps> = ({
                 variant="outline"
                 onClick={closeCreateFolderModal}
               >
-                {t('取消')}
+                {t("取消")}
               </Button>
               <Button type="submit" variant="primary">
-                {t('创建')}
+                {t("创建")}
               </Button>
             </div>
           </div>
@@ -131,14 +130,14 @@ export const LibraryManagerModals: React.FC<LibraryManagerModalsProps> = ({
       <LibrarySelectFolderModal
         isOpen={showSelectFolderModal}
         libraryType={libraryType}
-        currentNodeId={moveSourceNode?.id || copySourceNode?.id || ''}
+        currentNodeId={moveSourceNode?.id || copySourceNode?.id || ""}
         onConfirm={handleSelectFolderConfirm}
         onClose={closeSelectFolderModal}
       />
 
       <DownloadFormatModal
         isOpen={showDownloadFormatModal}
-        fileName={downloadingFileName || ''}
+        fileName={downloadingFileName || ""}
         onClose={closeDownloadFormatModal}
         onDownload={handleDownloadWithFormat}
       />

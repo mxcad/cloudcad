@@ -1,17 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Select } from '@/components/ui/Select';
-import { Input } from '@/components/ui/Input';
-import { FileNameInput } from '@/components/ui/FileNameInput';
-import { Folder, ChevronRight } from 'lucide-react';
-import { SelectFolderModal } from './SelectFolderModal';
-import { LibrarySelectFolderModal } from './LibrarySelectFolderModal';
-import { useSaveAs } from './hooks/useSaveAs';
-import { useLibraryFolders } from './hooks/useLibraryFolders';
-import { usePermission } from '../../hooks/usePermission';
-import { SystemPermission } from '../../constants/permissions';
-import { t } from '@/languages';
+import React, { useEffect, useState } from "react";
+import { Button, Modal, Select, Input, FileNameInput } from "@/components/ui";
+
+import { Folder, ChevronRight } from "lucide-react";
+import { SelectFolderModal } from "./SelectFolderModal";
+import { LibrarySelectFolderModal } from "./LibrarySelectFolderModal";
+import { useSaveAs } from "./hooks/useSaveAs";
+import { useLibraryFolders } from "./hooks/useLibraryFolders";
+import { usePermission } from "../../hooks/usePermission";
+import { SystemPermission } from "../../constants/permissions";
+import { t } from "@/languages";
 
 interface SaveAsModalProps {
   isOpen: boolean;
@@ -25,8 +22,8 @@ interface SaveAsModalProps {
     path: string;
     projectId?: string;
     parentId: string;
-    targetType?: 'personal' | 'project' | 'library';
-    libraryType?: 'drawing' | 'block';
+    targetType?: "personal" | "project" | "library";
+    libraryType?: "drawing" | "block";
   }) => void;
   sourceNodeId?: string | null;
   sourceFileHash?: string | null;
@@ -79,9 +76,9 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
   // 「选择项目」下拉的「新建项目」入口
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectName, setNewProjectName] = useState("");
   const [createProjectError, setCreateProjectError] = useState<string | null>(
-    null
+    null,
   );
   const [creatingProject, setCreatingProject] = useState(false);
 
@@ -93,10 +90,10 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     try {
       await createProject(name);
       setShowCreateProjectDialog(false);
-      setNewProjectName('');
+      setNewProjectName("");
     } catch (err) {
       setCreateProjectError(
-        err instanceof Error ? err.message : t('项目创建失败')
+        err instanceof Error ? err.message : t("项目创建失败"),
       );
     } finally {
       setCreatingProject(false);
@@ -106,7 +103,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
   const closeCreateProjectDialog = () => {
     if (creatingProject) return;
     setShowCreateProjectDialog(false);
-    setNewProjectName('');
+    setNewProjectName("");
     setCreateProjectError(null);
   };
 
@@ -119,7 +116,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
   // 切换 library/更换资源库类型时自动获取库根目录
   useEffect(() => {
-    if (targetType !== 'library') return;
+    if (targetType !== "library") return;
     getLibrary()
       .then((lib) => setSelectedParentId(lib.id))
       .catch(() => {});
@@ -127,8 +124,8 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
   const handleConfirm = async () => {
     // Validate file name
-    if (!(fileName || '').trim()) {
-      setError(t('请输入文件名'));
+    if (!(fileName || "").trim()) {
+      setError(t("请输入文件名"));
       return;
     }
 
@@ -146,24 +143,24 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     const effectiveProjectId = selectedProjectId;
 
     if (!effectiveParentId) {
-      if (targetType === 'personal') {
-        effectiveParentId = getFolderPickerProjectId() || '';
+      if (targetType === "personal") {
+        effectiveParentId = getFolderPickerProjectId() || "";
         setSelectedParentId(effectiveParentId);
-      } else if (targetType === 'project') {
+      } else if (targetType === "project") {
         if (!effectiveProjectId) {
-          setError(t('请先选择项目'));
+          setError(t("请先选择项目"));
           return;
         }
         effectiveParentId = effectiveProjectId;
         setSelectedParentId(effectiveProjectId);
-      } else if (targetType === 'library') {
-        setError(t('请选择公开资源库中的保存位置'));
+      } else if (targetType === "library") {
+        setError(t("请选择公开资源库中的保存位置"));
         return;
       }
     }
 
     if (!effectiveParentId) {
-      setError(t('请选择保存位置'));
+      setError(t("请选择保存位置"));
       return;
     }
 
@@ -182,19 +179,19 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
       if (result?.success) {
         onSuccess({
-          nodeId: result.nodeId || '',
-          fileName: result.fileName || '',
-          path: result.path || '',
+          nodeId: result.nodeId || "",
+          fileName: result.fileName || "",
+          path: result.path || "",
           projectId: result.projectId,
-          parentId: result.parentId || '',
+          parentId: result.parentId || "",
           targetType: result.targetType,
           libraryType: result.libraryType,
         });
       } else {
-        setError(result?.message || t('保存失败'));
+        setError(result?.message || t("保存失败"));
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('保存失败，请稍后重试'));
+      setError(err instanceof Error ? err.message : t("保存失败，请稍后重试"));
     }
   };
 
@@ -210,15 +207,15 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       <Modal
         isOpen={isOpen && !showFolderPicker}
         onClose={handleClose}
-        title={t('另存为')}
+        title={t("另存为")}
         className="max-w-md"
         footer={
           <>
             <Button variant="secondary" onClick={handleClose} disabled={saving}>
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button onClick={handleConfirm} disabled={saving}>
-              {saving ? t('保存中...') : t('保存')}
+              {saving ? t("保存中...") : t("保存")}
             </Button>
           </>
         }
@@ -232,12 +229,12 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              {t('文件名')}
+              {t("文件名")}
             </label>
             <FileNameInput
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              placeholder={t('请输入文件名')}
+              placeholder={t("请输入文件名")}
               disabled={saving}
               suffix={`.${format}`}
               suffixVariant="text"
@@ -246,74 +243,74 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              {t('保存到')}
+              {t("保存到")}
             </label>
             <Select
               value={targetType}
               onChange={(val) => {
-                const newType = val as 'personal' | 'project' | 'library';
+                const newType = val as "personal" | "project" | "library";
                 setTargetType(newType);
-                setSelectedFolderName('');
-                if (newType === 'personal') {
-                  setSelectedParentId(personalSpaceId || '');
-                } else if (newType === 'project') {
-                  setSelectedParentId(selectedProjectId || '');
+                setSelectedFolderName("");
+                if (newType === "personal") {
+                  setSelectedParentId(personalSpaceId || "");
+                } else if (newType === "project") {
+                  setSelectedParentId(selectedProjectId || "");
                 } else {
-                  setSelectedParentId('');
+                  setSelectedParentId("");
                 }
               }}
               options={[
-                { value: 'personal', label: t('个人空间') },
-                { value: 'project', label: t('项目文件夹') },
+                { value: "personal", label: t("个人空间") },
+                { value: "project", label: t("项目文件夹") },
                 ...(hasLibraryPermission
-                  ? [{ value: 'library' as const, label: t('公开资源库') }]
+                  ? [{ value: "library" as const, label: t("公开资源库") }]
                   : []),
               ]}
             />
           </div>
 
-          {targetType === 'project' && (
+          {targetType === "project" && (
             <div>
               <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-                {t('选择项目')}
+                {t("选择项目")}
               </label>
               <Select
                 value={selectedProjectId}
                 onChange={(val) => {
                   // 「新建项目」是动作项：只开弹窗，不改选中值
-                  if (val === '__create_project__') {
+                  if (val === "__create_project__") {
                     setShowCreateProjectDialog(true);
                     return;
                   }
                   setSelectedProjectId(val);
                   setSelectedParentId(val);
-                  setSelectedFolderName('');
+                  setSelectedFolderName("");
                 }}
-                placeholder={t('请选择项目')}
+                placeholder={t("请选择项目")}
                 options={[
                   ...projects.map((p) => ({ value: p.id, label: p.name })),
-                  { value: '__create_project__', label: t('新建项目') },
+                  { value: "__create_project__", label: t("新建项目") },
                 ]}
                 disabled={saving}
               />
             </div>
           )}
 
-          {targetType === 'library' && (
+          {targetType === "library" && (
             <div>
               <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-                {t('选择资源库')}
+                {t("选择资源库")}
               </label>
               <Select
                 value={libraryType}
                 onChange={(val) => {
-                  setLibraryType(val as 'drawing' | 'block');
-                  setSelectedFolderName('');
-                  setSelectedParentId('');
+                  setLibraryType(val as "drawing" | "block");
+                  setSelectedFolderName("");
+                  setSelectedParentId("");
                 }}
                 options={[
-                  { value: 'drawing', label: t('图纸库') },
-                  { value: 'block', label: t('图块库') },
+                  { value: "drawing", label: t("图纸库") },
+                  { value: "block", label: t("图块库") },
                 ]}
                 disabled={saving}
               />
@@ -322,20 +319,20 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              {t('保存位置')}
+              {t("保存位置")}
             </label>
             <div
               className="flex items-center w-full h-[24px] px-2 py-1 text-xs gap-1.5 rounded-[3px] cursor-pointer transition-all duration-200 hover:border-[var(--border-strong)]"
               style={{
-                background: 'var(--bg-primary)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-default)",
+                color: "var(--text-primary)",
               }}
               onClick={() => setShowFolderPicker(true)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   setShowFolderPicker(true);
                 }
@@ -344,39 +341,39 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
               <Folder
                 size={14}
                 className="shrink-0"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: "var(--text-muted)" }}
               />
               <span className="flex-1 text-left truncate">
                 {selectedFolderName
                   ? selectedFolderName
                   : selectedParentId
-                    ? targetType === 'personal'
-                      ? t('个人空间')
-                      : targetType === 'library'
-                        ? t('公开资源库')
+                    ? targetType === "personal"
+                      ? t("个人空间")
+                      : targetType === "library"
+                        ? t("公开资源库")
                         : projects.find((p) => p.id === selectedProjectId)
-                            ?.name || t('选择文件夹')
-                    : t('点击选择文件夹')}
+                            ?.name || t("选择文件夹")
+                    : t("点击选择文件夹")}
               </span>
               <ChevronRight
                 size={14}
                 className="shrink-0"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: "var(--text-muted)" }}
               />
             </div>
           </div>
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              {t('保存格式')}
+              {t("保存格式")}
             </label>
             <Select
               value={format}
-              onChange={(val) => setFormat(val as 'dwg' | 'dxf' | 'mxweb')}
+              onChange={(val) => setFormat(val as "dwg" | "dxf" | "mxweb")}
               options={[
-                { value: 'dwg', label: 'DWG' },
-                { value: 'dxf', label: 'DXF' },
-                { value: 'mxweb', label: 'MXWEB' },
+                { value: "dwg", label: "DWG" },
+                { value: "dxf", label: "DXF" },
+                { value: "mxweb", label: "MXWEB" },
               ]}
               disabled={saving}
             />
@@ -387,7 +384,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       <Modal
         isOpen={showCreateProjectDialog}
         onClose={closeCreateProjectDialog}
-        title={t('新建项目')}
+        title={t("新建项目")}
         className="max-w-sm"
         footer={
           <>
@@ -396,13 +393,13 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
               onClick={closeCreateProjectDialog}
               disabled={creatingProject}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               onClick={handleCreateProjectConfirm}
               disabled={creatingProject || !newProjectName.trim()}
             >
-              {creatingProject ? t('创建中...') : t('创建')}
+              {creatingProject ? t("创建中...") : t("创建")}
             </Button>
           </>
         }
@@ -416,22 +413,24 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           <div>
             <label
               className="block font-medium mb-1"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: "var(--text-secondary)" }}
             >
-              {t('名称 *')}
+              {t("名称 *")}
             </label>
             <Input
               value={newProjectName}
               onChange={(e) => setNewProjectName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleCreateProjectConfirm()}
-              placeholder={t('请输入项目名称')}
+              onKeyPress={(e) =>
+                e.key === "Enter" && handleCreateProjectConfirm()
+              }
+              placeholder={t("请输入项目名称")}
               autoFocus
             />
           </div>
         </div>
       </Modal>
 
-      {targetType === 'library' ? (
+      {targetType === "library" ? (
         <LibrarySelectFolderModal
           isOpen={showFolderPicker}
           libraryType={libraryType}

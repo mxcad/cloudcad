@@ -150,7 +150,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
             showToast(t('请先打开一张图纸，然后再插入图块'), 'warning');
             return;
           }
-          showToast(t(`正在插入图块：${blockNode.name}`), 'success');
+          showToast(t('正在插入图块：{name}', { name: blockNode.name }), 'success');
         } catch (error: unknown) {
           handleError(error, 'useFileItemRenderer: ' + t('插入图块失败'));
           showToast(

@@ -92,11 +92,11 @@ describe('waitPublicConversion', () => {
     expect(settled).toBe(false);
     es.push(JSON.stringify({ hash: 'x', status: 'COMPLETED' }));
 
-    expect(await result).toBe('COMPLETED');
+    expect((await result).status).toBe('COMPLETED');
     expect(es.closed).toBe(true);
     expect(settled).toBe(true);
     // 超时回调已取消：推进到超时点也不会触发第二次 settle
-    expect(await result).toBe('COMPLETED');
+    expect((await result).status).toBe('COMPLETED');
   });
 
   it('收到 FAILED 即失败并关闭连接', async () => {
@@ -104,8 +104,27 @@ describe('waitPublicConversion', () => {
     const es = latest();
     es.push(JSON.stringify({ hash: 'x', status: 'FAILED' }));
 
-    expect(await promise).toBe('FAILED');
+    const result = await promise;
+    expect(result.status).toBe('FAILED');
     expect(es.closed).toBe(true);
+  });
+
+  it('FAILED 帧透传后端的 error + errorCategory（供前端区分文件内容问题 vs 服务异常）', async () => {
+    const promise = waitPublicConversion('i'.repeat(32));
+    const es = latest();
+    es.push(
+      JSON.stringify({
+        hash: 'x',
+        status: 'FAILED',
+        error: 'read file error',
+        errorCategory: 'content-error',
+      })
+    );
+
+    const result = await promise;
+    expect(result.status).toBe('FAILED');
+    expect(result.error).toBe('read file error');
+    expect(result.errorCategory).toBe('content-error');
   });
 
   it('建连推的 PROCESSING 只是当前状态，不 settle，继续等终态', async () => {
@@ -121,7 +140,7 @@ describe('waitPublicConversion', () => {
     expect(es.closed).toBe(false);
 
     es.push(JSON.stringify({ hash: 'x', status: 'COMPLETED' }));
-    expect(await promise).toBe('COMPLETED');
+    expect((await promise).status).toBe('COMPLETED');
     expect(es.closed).toBe(true);
   });
 
@@ -131,7 +150,7 @@ describe('waitPublicConversion', () => {
     expect(es.closed).toBe(false);
 
     vi.advanceTimersByTime(CONVERSION_WAIT_TIMEOUT_MS + 1);
-    expect(await promise).toBe('FAILED');
+    expect((await promise).status).toBe('FAILED');
     expect(es.closed).toBe(true);
   });
 
@@ -139,7 +158,7 @@ describe('waitPublicConversion', () => {
     vi.unstubAllGlobals();
     expect(typeof globalThis.EventSource).toBe('undefined');
 
-    expect(await waitPublicConversion('f'.repeat(32))).toBe('FAILED');
+    expect((await waitPublicConversion('f'.repeat(32))).status).toBe('FAILED');
     expect(instances).toHaveLength(0);
   });
 
@@ -151,7 +170,7 @@ describe('waitPublicConversion', () => {
 
     expect(es.closed).toBe(false);
     es.push(JSON.stringify({ hash: 'x', status: 'COMPLETED' }));
-    expect(await promise).toBe('COMPLETED');
+    expect((await promise).status).toBe('COMPLETED');
   });
 
   it('同一 hash 的第二个终态事件不覆盖已解析的结果', async () => {
@@ -160,7 +179,7 @@ describe('waitPublicConversion', () => {
     es.push(JSON.stringify({ hash: 'x', status: 'COMPLETED' }));
     es.push(JSON.stringify({ hash: 'x', status: 'FAILED' }));
 
-    expect(await promise).toBe('COMPLETED');
+    expect((await promise).status).toBe('COMPLETED');
   });
 
   it('特殊字符的 hash 走 encodeURIComponent', async () => {

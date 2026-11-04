@@ -458,7 +458,7 @@ feedback:
   content_too_long: 反馈内容过长，请精简后再提交
   code_not_found: 反馈不存在或查询码无效
   not_found: 反馈不存在
-  status_locked_adopted: 已采纳的反馈不可改状态，如需撤销请处理奖励
+  status_locked_adopted: 已采纳的反馈不可改状态
   reject_reason_required: 驳回必须填写原因
   already_adopted: 该反馈已采纳
   reward_exists: 该反馈已存在奖励记录

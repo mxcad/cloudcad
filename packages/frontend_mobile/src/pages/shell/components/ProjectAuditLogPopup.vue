@@ -60,7 +60,7 @@ function onSearchInput(val: string) {
   searchTimer = setTimeout(() => void audit.loadLogs(true), 300)
 }
 
-// 操作类型选项（与 useProjectAuditLog 的 ACTION_LABELS 同源）
+// 操作类型选项（与 useProjectAuditLog 的 actionLabel 同源）
 const ACTION_OPTIONS = [
   'FILE_CREATE', 'FILE_UPDATE', 'FILE_DELETE', 'FILE_SHARE', 'FOLDER_CREATE',
   'NODE_RENAME', 'NODE_MOVE', 'NODE_COPY', 'NODE_RESTORE',

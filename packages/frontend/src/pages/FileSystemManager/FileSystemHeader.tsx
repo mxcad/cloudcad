@@ -1,22 +1,21 @@
-import React, { useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FilePlus, FolderPlus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
-import { FileSystemToolbar } from '@/components/FileSystemToolbar';
-import { ProjectFilterTabs } from '@/components/ProjectFilterTabs';
-import { RefreshIcon } from '@/components/FileIcons';
-import type { ProjectFilterType } from '@/api-sdk';
-import type { SearchFilterValues } from '@/components/search/SearchFilters';
-import { t } from '@/languages';
-import type { ProjectQuotaDto } from '@/api-sdk';
-import { formatFileSize } from '@/utils/fileUtils';
-import type { BreadcrumbItem } from '@/lib/ancestorPath';
+import React, { useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { FilePlus, FolderPlus } from "lucide-react";
+import { Button, Card, Tooltip } from "@/components/ui";
+
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { FileSystemToolbar } from "@/components/FileSystemToolbar";
+import { ProjectFilterTabs } from "@/components/ProjectFilterTabs";
+import { RefreshIcon } from "@/components/FileIcons";
+import type { ProjectFilterType } from "@/api-sdk";
+import type { SearchFilterValues } from "@/components/search/SearchFilters";
+import { t } from "@/languages";
+import type { ProjectQuotaDto } from "@/api-sdk";
+import { formatFileSize } from "@/utils/fileUtils";
+import type { BreadcrumbItem } from "@/lib/ancestorPath";
 
 export interface FileSystemHeaderProps {
-  mode: 'project' | 'personal-space';
+  mode: "project" | "personal-space";
   isAtRoot: boolean;
   isTrashView: boolean;
   isPersonalSpaceMode: boolean;
@@ -24,7 +23,7 @@ export interface FileSystemHeaderProps {
   loading: boolean;
   isFetching: boolean;
   searchTerm: string;
-  viewMode: 'grid' | 'list';
+  viewMode: "grid" | "list";
   selectedNodes: Set<string>;
   nodesCount: number;
   projectFilter: ProjectFilterType;
@@ -32,7 +31,7 @@ export interface FileSystemHeaderProps {
   canCreateProject: boolean;
   uploadButton?: React.ReactNode;
   onSetSearchTerm: (term: string) => void;
-  onSetViewMode: (mode: 'grid' | 'list') => void;
+  onSetViewMode: (mode: "grid" | "list") => void;
   onSearchSubmit: () => void;
   onSelectAll: () => void;
   onToggleTrashView: () => void;
@@ -48,7 +47,7 @@ export interface FileSystemHeaderProps {
   onBreadcrumbPathSubmit?: (path: string) => void;
   showToast: (
     message: string,
-    type: 'success' | 'error' | 'warning' | 'info'
+    type: "success" | "error" | "warning" | "info",
   ) => void;
   clipboardCount?: number;
   clipboardMode?: string | null;
@@ -151,15 +150,15 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
       }
     };
 
-    document.addEventListener('wheel', handleWheel, { passive: false });
-    return () => document.removeEventListener('wheel', handleWheel);
+    document.addEventListener("wheel", handleWheel, { passive: false });
+    return () => document.removeEventListener("wheel", handleWheel);
   }, []);
 
   useEffect(() => {
     if (breadcrumbRef.current && breadcrumbs.length > 0) {
       breadcrumbRef.current.scrollTo({
         left: breadcrumbRef.current.scrollWidth,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
     }
   }, [breadcrumbs]);
@@ -172,26 +171,26 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
 
     if (isPersonalSpaceMode) {
       if (isAtRoot) {
-        onSetSearchTerm('');
-        navigate('/personal-space');
+        onSetSearchTerm("");
+        navigate("/personal-space");
         return;
       }
-      onSetSearchTerm('');
+      onSetSearchTerm("");
       onGoBack();
       return;
     }
 
     if (isAtRoot) {
-      onSetSearchTerm('');
-      navigate('/projects');
+      onSetSearchTerm("");
+      navigate("/projects");
       return;
     }
-    onSetSearchTerm('');
+    onSetSearchTerm("");
     onGoBack();
   };
 
   const handleBreadcrumbNav = (crumb: BreadcrumbItem) => {
-    onSetSearchTerm('');
+    onSetSearchTerm("");
     onBreadcrumbNavigate(crumb);
   };
 
@@ -208,24 +207,24 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               content={
                 isPersonalSpaceMode
                   ? isAtRoot
-                    ? t('返回个人空间')
-                    : t('返回上一级')
+                    ? t("返回个人空间")
+                    : t("返回上一级")
                   : isAtRoot
-                    ? t('返回项目列表')
-                    : t('返回上一级')
+                    ? t("返回项目列表")
+                    : t("返回上一级")
               }
             >
               <button
                 onClick={handleBackButton}
                 className="p-2 rounded-xl transition-all flex-shrink-0"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                  e.currentTarget.style.background = "var(--bg-tertiary)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-tertiary)';
-                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = "var(--text-tertiary)";
+                  e.currentTarget.style.background = "transparent";
                 }}
               >
                 <svg
@@ -248,9 +247,16 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           >
             <BreadcrumbNavigation
               breadcrumbs={
-                breadcrumbs as unknown as Parameters<
-                  typeof BreadcrumbNavigation
-                >[0]['breadcrumbs']
+                (
+                  breadcrumbs as unknown as Parameters<
+                    typeof BreadcrumbNavigation
+                  >[0]["breadcrumbs"]
+                ).map((crumb, i) =>
+                  // 个人空间根名后端存固定中文「个人空间」（数据），显示层按当前语言翻译
+                  isPersonalSpaceMode && i === 0
+                    ? { ...crumb, name: t("个人空间") }
+                    : crumb,
+                )
               }
               onNavigate={handleBreadcrumbNav}
               editable={!isTrashView && !isAtRoot}
@@ -266,14 +272,14 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               <div
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs flex-shrink-0"
                 style={{
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-secondary)',
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-secondary)",
                 }}
               >
-                <span className="whitespace-nowrap">{t('上传上限')}</span>
+                <span className="whitespace-nowrap">{t("上传上限")}</span>
                 <div
                   className="h-1.5 w-16 rounded-full overflow-hidden"
-                  style={{ background: 'var(--bg-secondary)' }}
+                  style={{ background: "var(--bg-secondary)" }}
                 >
                   <div
                     className="h-full rounded-full transition-all duration-500"
@@ -281,18 +287,18 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                       width: `${Math.min((projectQuota.used / projectQuota.limit) * 100, 100)}%`,
                       background:
                         projectQuota.used > projectQuota.limit
-                          ? 'var(--error)'
+                          ? "var(--error)"
                           : projectQuota.used > projectQuota.limit * 0.9
-                            ? 'var(--warning)'
-                            : 'var(--primary-500)',
+                            ? "var(--warning)"
+                            : "var(--primary-500)",
                     }}
                   />
                 </div>
                 <span
                   className="whitespace-nowrap"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{ color: "var(--text-muted)" }}
                 >
-                  {formatFileSize(projectQuota.used)} /{' '}
+                  {formatFileSize(projectQuota.used)} /{" "}
                   {formatFileSize(projectQuota.limit)}
                 </span>
               </div>
@@ -300,18 +306,18 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Tooltip content={t('刷新')}>
+          <Tooltip content={t("刷新")}>
             <Button
               variant="secondary"
               size="sm"
               onClick={onRefresh}
               disabled={isFetching}
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
               className="hover:bg-[var(--bg-tertiary)]"
             >
               <RefreshIcon
                 size={16}
-                className={isFetching ? 'animate-spin' : ''}
+                className={isFetching ? "animate-spin" : ""}
               />
             </Button>
           </Tooltip>
@@ -321,14 +327,14 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               {canCreateProject &&
                 !isPersonalSpaceMode &&
                 !isTrashView &&
-                projectFilter !== 'joined' && (
-                  <Tooltip content={t('新建项目')}>
+                projectFilter !== "joined" && (
+                  <Tooltip content={t("新建项目")}>
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={onCreateProject}
                       className="hover:bg-[var(--bg-tertiary)]"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      style={{ color: "var(--text-tertiary)" }}
                       data-tour="create-project-btn"
                     >
                       <FolderPlus size={16} />
@@ -341,28 +347,28 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               {!isTrashView && canCreate && (
                 <>
                   {onCreateDrawing && (
-                    <Tooltip content={t('新建图纸')}>
+                    <Tooltip content={t("新建图纸")}>
                       <Button
                         variant="secondary"
                         size="sm"
                         onClick={onCreateDrawing}
                         disabled={loading}
                         className="hover:bg-[var(--bg-tertiary)]"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: "var(--text-tertiary)" }}
                       >
                         <FilePlus size={16} />
                       </Button>
                     </Tooltip>
                   )}
                   {onCreateFolder && (
-                    <Tooltip content={t('新建文件夹')}>
+                    <Tooltip content={t("新建文件夹")}>
                       <Button
                         variant="secondary"
                         size="sm"
                         onClick={onCreateFolder}
                         disabled={loading}
                         className="hover:bg-[var(--bg-tertiary)]"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: "var(--text-tertiary)" }}
                         data-tour="create-folder-btn"
                       >
                         <svg
@@ -390,13 +396,13 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
 
           {!hideTrashButton && (
             <Button
-              variant={isTrashView ? 'primary' : 'ghost'}
+              variant={isTrashView ? "primary" : "ghost"}
               size="sm"
               onClick={onToggleTrashView}
               disabled={loading}
-              className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
-              style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
-              title={isTrashView ? t('返回文件列表') : t('回收站')}
+              className={isTrashView ? "" : "hover:bg-[var(--bg-tertiary)]"}
+              style={isTrashView ? {} : { color: "var(--text-tertiary)" }}
+              title={isTrashView ? t("返回文件列表") : t("回收站")}
             >
               <svg
                 width="16"
@@ -409,7 +415,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               >
                 <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
               </svg>
-              {t('回收站')}
+              {t("回收站")}
             </Button>
           )}
         </div>

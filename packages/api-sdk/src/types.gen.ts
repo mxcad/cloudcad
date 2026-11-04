@@ -2172,7 +2172,7 @@ export type AuditExportDto = {
     /**
      * 操作类型过滤
      */
-    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_ROLE_CHANGE' | 'USER_STATUS_CHANGE' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE' | 'CHANNEL_TEST' | 'FEEDBACK_ADOPT' | 'FEEDBACK_REWARD_ISSUE' | 'FEEDBACK_REWARD_REVOKE' | 'FEEDBACK_ATTACHMENT_UPLOAD' | 'FEEDBACK_ATTACHMENT_DELETE';
+    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_ROLE_CHANGE' | 'USER_STATUS_CHANGE' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE' | 'CHANNEL_TEST' | 'FEEDBACK_ADOPT' | 'FEEDBACK_REWARD_ISSUE' | 'FEEDBACK_REWARD_REVOKE' | 'FEEDBACK_ATTACHMENT_UPLOAD' | 'FEEDBACK_ATTACHMENT_DELETE' | 'FEEDBACK_DELETE';
     /**
      * 项目 ID（项目维度过滤）
      */
@@ -3857,6 +3857,10 @@ export type ConversionStatusResponseDto = {
      * 错误信息
      */
     error?: string;
+    /**
+     * 失败性质分类（仅 FAILED 有意义）：content-error=内容性永久失败（重试无意义）；其余为环境性可重试（timeout/killed/not-started/output-unparseable/unknown）。前端据此区分「文件内容问题」vs「引擎/服务异常」
+     */
+    errorCategory?: 'timeout' | 'killed' | 'not-started' | 'output-unparseable' | 'file-locked' | 'content-error' | 'unknown';
 };
 
 export type ConversionTargetDto = {
@@ -3936,7 +3940,7 @@ export type ConversionTaskItemDto = {
     /**
      * 失败性质分类（仅 FAILED 有意义）：content-error=内容性永久失败（重试无意义，面板据此门控重试）；其余为环境性可重试（timeout/killed/not-started/output-unparseable/unknown）
      */
-    errorCategory?: 'timeout' | 'killed' | 'not-started' | 'output-unparseable' | 'content-error' | 'unknown';
+    errorCategory?: 'timeout' | 'killed' | 'not-started' | 'output-unparseable' | 'file-locked' | 'content-error' | 'unknown';
     /**
      * 排队位置（S6-5）：任务在优先级池 acquire 队列中的 1-based 序号；仅排队中（PENDING）任务有意义，面板展示「第 N 位」
      */
@@ -5944,11 +5948,22 @@ export type IssueRewardDto = {
     durationDays?: number;
 };
 
-export type RevokeRewardDto = {
+export type BatchDeleteFeedbackDto = {
     /**
-     * 撤销原因（必填，审计留痕）
+     * 反馈 ID 列表
      */
-    reason: string;
+    ids: Array<string>;
+};
+
+export type BatchDeleteFeedbackResultDto = {
+    /**
+     * 实际删除的反馈数
+     */
+    deleted: number;
+    /**
+     * 未找到（可能已被删除）的反馈 ID
+     */
+    notFoundIds: Array<string>;
 };
 
 export type RegisterDrawingAttachmentDto = {
@@ -14434,6 +14449,22 @@ export type FeedbackAdminControllerListRewardsResponses = {
 
 export type FeedbackAdminControllerListRewardsResponse = FeedbackAdminControllerListRewardsResponses[keyof FeedbackAdminControllerListRewardsResponses];
 
+export type FeedbackAdminControllerRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/{id}';
+};
+
+export type FeedbackAdminControllerRemoveResponses = {
+    /**
+     * 删除成功
+     */
+    200: unknown;
+};
+
 export type FeedbackAdminControllerDetailData = {
     body?: never;
     path: {
@@ -14506,23 +14537,21 @@ export type FeedbackAdminControllerIssueResponses = {
 
 export type FeedbackAdminControllerIssueResponse = FeedbackAdminControllerIssueResponses[keyof FeedbackAdminControllerIssueResponses];
 
-export type FeedbackAdminControllerRevokeData = {
-    body: RevokeRewardDto;
-    path: {
-        id: string;
-    };
+export type FeedbackAdminControllerBatchRemoveData = {
+    body: BatchDeleteFeedbackDto;
+    path?: never;
     query?: never;
-    url: '/api/v1/admin/feedback/rewards/{id}/revoke';
+    url: '/api/v1/admin/feedback/batch-delete';
 };
 
-export type FeedbackAdminControllerRevokeResponses = {
+export type FeedbackAdminControllerBatchRemoveResponses = {
     /**
-     * 撤销后奖励
+     * 批量删除结果
      */
-    200: FeedbackRewardResponseDto;
+    200: BatchDeleteFeedbackResultDto;
 };
 
-export type FeedbackAdminControllerRevokeResponse = FeedbackAdminControllerRevokeResponses[keyof FeedbackAdminControllerRevokeResponses];
+export type FeedbackAdminControllerBatchRemoveResponse = FeedbackAdminControllerBatchRemoveResponses[keyof FeedbackAdminControllerBatchRemoveResponses];
 
 export type FeedbackAttachmentControllerUploadData = {
     body: {

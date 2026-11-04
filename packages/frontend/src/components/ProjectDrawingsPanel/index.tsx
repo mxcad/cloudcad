@@ -211,9 +211,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   const emptyText = searchQuery
     ? t('未找到匹配的内容')
-    : t(
-        `当前没有${libraryType === 'drawing' ? t('图纸') : libraryType === 'block' ? t('图块') : t('内容')}`
-      );
+    : libraryType === 'drawing'
+      ? t('当前没有图纸')
+      : libraryType === 'block'
+        ? t('当前没有图块')
+        : t('当前没有内容');
 
   return (
     <div ref={panelRef} className={styles.projectDrawingsPanel}>

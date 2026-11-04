@@ -1,13 +1,13 @@
-import { getCopyrightLine } from '@/constants/appConfig';
-import { Mail } from 'lucide-react';
-import { Phone } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { InteractiveBackground } from '@/components/InteractiveBackground';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import styles from '../ForgotPassword.module.css';
+import { getCopyrightLine } from "@/constants/appConfig";
+import { Mail } from "lucide-react";
+import { Phone } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { InteractiveBackground } from "@/components/InteractiveBackground";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "../ForgotPassword.module.css";
 
 interface NoChannelViewProps {
   appName: string;
@@ -26,11 +26,11 @@ export const NoChannelView: React.FC<NoChannelViewProps> = ({
   supportPhone,
   onBack,
 }) => (
-  <div className={styles.authPage} data-theme={isDark ? 'dark' : 'light'}>
+  <div className={styles.authPage} data-theme={isDark ? "dark" : "light"}>
     <InteractiveBackground />
     <div
       className={styles.themeToggleWrapper}
-      style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+      style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
     >
       <LanguageSwitcher />
       <ThemeToggle />
@@ -48,12 +48,12 @@ export const NoChannelView: React.FC<NoChannelViewProps> = ({
           <div className={styles.supportIcon}>
             <Phone size={28} />
           </div>
-          <h2 className={styles.supportTitle}>{t('找回密码')}</h2>
+          <h2 className={styles.supportTitle}>{t("找回密码")}</h2>
           <p className={styles.supportSubtitle}>
-            {t('邮件和短信服务均未启用，请联系客服重置密码')}
+            {t("邮件和短信服务均未启用，请联系客服重置密码")}
           </p>
           <div className={styles.supportCard}>
-            <h3 className={styles.supportCardTitle}>{t('客服联系方式')}</h3>
+            <h3 className={styles.supportCardTitle}>{t("客服联系方式")}</h3>
             <div className={styles.supportList}>
               {supportEmail && (
                 <a
@@ -72,7 +72,7 @@ export const NoChannelView: React.FC<NoChannelViewProps> = ({
               )}
               {!supportEmail && !supportPhone && (
                 <p className={styles.supportEmpty}>
-                  {t('暂无客服联系方式，请联系系统管理员')}
+                  {t("暂无客服联系方式，请联系系统管理员")}
                 </p>
               )}
             </div>
@@ -84,7 +84,7 @@ export const NoChannelView: React.FC<NoChannelViewProps> = ({
             onClick={onBack}
           >
             <ArrowLeft size={18} />
-            <span>{t('返回登录')}</span>
+            <span>{t("返回登录")}</span>
           </Button>
         </div>
       </div>

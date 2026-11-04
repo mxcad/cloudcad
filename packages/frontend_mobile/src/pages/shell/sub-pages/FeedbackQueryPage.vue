@@ -185,6 +185,38 @@ function onCodeInput() {
     />
 
     <div class="fb-query-body">
+      <!-- 查询表单置顶：凭查询码查询进度优先，我的反馈记录置于其下 -->
+      <div class="fb-query-form">
+        <div class="fb-field">
+          <label class="fb-label">{{ t('查询码') }}</label>
+          <input
+            v-model="code"
+            class="fb-input"
+            :placeholder="t('请输入提交时获得的查询码')"
+            :disabled="querying"
+            @input="onCodeInput"
+          />
+        </div>
+
+        <div class="fb-field">
+          <label class="fb-label">{{ t('联系方式（选填）') }}</label>
+          <input
+            v-model="contact"
+            class="fb-input"
+            :placeholder="t('提交时填写过联系方式则需匹配')"
+            maxlength="100"
+            :disabled="querying"
+          />
+        </div>
+
+        <p v-if="error" class="fb-query-error">{{ error }}</p>
+
+        <button class="fb-query-btn" :disabled="querying" @click="onQuery">
+          <van-loading v-if="querying" size="16" color="#fff" />
+          <span v-else>{{ t('查询') }}</span>
+        </button>
+      </div>
+
       <!-- 我的反馈记录（打开即展示，查询码非必填） -->
       <section v-if="hasRecords" class="fb-records">
         <div class="fb-records-title">{{ t('我的反馈') }}</div>
@@ -233,37 +265,6 @@ function onCodeInput() {
         </div>
       </section>
 
-      <div class="fb-query-form">
-        <div class="fb-field">
-          <label class="fb-label">{{ t('查询码') }}</label>
-          <input
-            v-model="code"
-            class="fb-input"
-            :placeholder="t('请输入提交时获得的查询码')"
-            :disabled="querying"
-            @input="onCodeInput"
-          />
-        </div>
-
-        <div class="fb-field">
-          <label class="fb-label">{{ t('联系方式（选填）') }}</label>
-          <input
-            v-model="contact"
-            class="fb-input"
-            :placeholder="t('提交时填写过联系方式则需匹配')"
-            maxlength="100"
-            :disabled="querying"
-          />
-        </div>
-
-        <p v-if="error" class="fb-query-error">{{ error }}</p>
-
-        <button class="fb-query-btn" :disabled="querying" @click="onQuery">
-          <van-loading v-if="querying" size="16" color="#fff" />
-          <span v-else>{{ t('查询') }}</span>
-        </button>
-      </div>
-
       <!-- 详情抽屉：记录点击/查询成功弹出，替代「详情渲染页面底部需滚动」的旧交互 -->
       <FeedbackDetailSheet v-model:show="detailShow" :detail="detail" />
     </div>
@@ -290,14 +291,14 @@ function onCodeInput() {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  margin-bottom: 18px;
 }
 
-/* ═══ 我的反馈记录（打开即展示） ═══ */
+/* ═══ 我的反馈记录（打开即展示，置于查询表单之下） ═══ */
 .fb-records {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 18px;
 }
 
 .fb-records-title {

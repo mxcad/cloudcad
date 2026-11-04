@@ -1,4 +1,5 @@
 import { t } from '@/languages';
+import { fillTemplate } from '@/utils/i18nFill';
 
 // 审计日志接口
 // 响应类型：后端未定义响应 DTO（Swagger 200: unknown），本地按后端
@@ -74,133 +75,133 @@ function resourceName(log: AuditLog): string {
 const ACTION_TEMPLATES: Record<string, (log: AuditLog) => string> = {
   // —— 权限/角色变更 ——
   PERMISSION_GRANT: (log) =>
-    t('{user} 授予 {target} 权限 {permission}', {
+    fillTemplate('{user} 授予 {target} 权限 {permission}', {
       user: actorName(log),
       target: readParam(log, ['targetUserName']) || '-',
       permission: readParam(log, ['permissionName', 'permission']) || '-',
     }),
   PERMISSION_REVOKE: (log) =>
-    t('{user} 撤销 {target} 的权限 {permission}', {
+    fillTemplate('{user} 撤销 {target} 的权限 {permission}', {
       user: actorName(log),
       target: readParam(log, ['targetUserName']) || '-',
       permission: readParam(log, ['permissionName', 'permission']) || '-',
     }),
   ROLE_CREATE: (log) =>
-    t('{user} 创建角色 {role}', {
+    fillTemplate('{user} 创建角色 {role}', {
       user: actorName(log),
       role: resourceName(log),
     }),
   ROLE_UPDATE: (log) =>
-    t('{user} 更新角色 {role}', {
+    fillTemplate('{user} 更新角色 {role}', {
       user: actorName(log),
       role: resourceName(log),
     }),
   ROLE_DELETE: (log) =>
-    t('{user} 删除角色 {role}', {
+    fillTemplate('{user} 删除角色 {role}', {
       user: actorName(log),
       role: resourceName(log),
     }),
   // —— 项目生命周期 ——
   PROJECT_CREATE: (log) =>
-    t('{user} 创建项目 {project}', {
+    fillTemplate('{user} 创建项目 {project}', {
       user: actorName(log),
       project: readParam(log, ['projectName', 'name']) || resourceName(log),
     }),
   PROJECT_DELETE: (log) =>
-    t('{user} 删除项目 {project}', {
+    fillTemplate('{user} 删除项目 {project}', {
       user: actorName(log),
       project: readParam(log, ['projectName', 'name']) || resourceName(log),
     }),
   PROJECT_UPDATE: (log) =>
-    t('{user} 更新项目设置 {project}', {
+    fillTemplate('{user} 更新项目设置 {project}', {
       user: actorName(log),
       project: readParam(log, ['projectName', 'name']) || resourceName(log),
     }),
   PROJECT_TRANSFER: (log) =>
-    t('{user} 将项目 {project} 转让给 {target}', {
+    fillTemplate('{user} 将项目 {project} 转让给 {target}', {
       user: actorName(log),
       project: readParam(log, ['projectName', 'name']) || resourceName(log),
       target: readParam(log, ['targetUserName']) || '-',
     }),
   // —— 成员变更 ——
   ADD_MEMBER: (log) =>
-    t('{user} 添加 {target} 为成员（角色 {role}）', {
+    fillTemplate('{user} 添加 {target} 为成员（角色 {role}）', {
       user: actorName(log),
       target: readParam(log, ['targetUserName']) || '-',
       role: readParam(log, ['roleName']) || '-',
     }),
   UPDATE_MEMBER: (log) =>
-    t('{user} 将 {target} 的角色从 {oldRole} 改为 {newRole}', {
+    fillTemplate('{user} 将 {target} 的角色从 {oldRole} 改为 {newRole}', {
       user: actorName(log),
       target: readParam(log, ['targetUserName']) || '-',
       oldRole: readParam(log, ['oldRoleName', 'fromRole']) || '-',
       newRole: readParam(log, ['newRoleName', 'toRole']) || '-',
     }),
   REMOVE_MEMBER: (log) =>
-    t('{user} 移除成员 {target}', {
+    fillTemplate('{user} 移除成员 {target}', {
       user: actorName(log),
       target: readParam(log, ['targetUserName']) || '-',
     }),
   TRANSFER_OWNERSHIP: (log) =>
-    t('{user} 将项目 {project} 的所有权转让给 {target}', {
+    fillTemplate('{user} 将项目 {project} 的所有权转让给 {target}', {
       user: actorName(log),
       project: readParam(log, ['projectName', 'name']) || resourceName(log),
       target: readParam(log, ['targetUserName']) || '-',
     }),
   // —— 文件危险操作 ——
   FILE_DELETE: (log) =>
-    t('{user} 删除文件 {file}', {
+    fillTemplate('{user} 删除文件 {file}', {
       user: actorName(log),
       file: readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
     }),
   FILE_SHARE: (log) =>
     // params.shareAction === 'revoke' 时为撤销分享（share.service revokeShare 埋点）
     log.params?.shareAction === 'revoke'
-      ? t('{user} 取消分享文件 {file}', {
+      ? fillTemplate('{user} 取消分享文件 {file}', {
           user: actorName(log),
           file:
             readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
         })
-      : t('{user} 分享文件 {file}', {
+      : fillTemplate('{user} 分享文件 {file}', {
           user: actorName(log),
           file:
             readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
         }),
   // —— 文件变更（项目操作历史核心）——
   FILE_CREATE: (log) =>
-    t('{user} 新增图纸 {file}', {
+    fillTemplate('{user} 新增图纸 {file}', {
       user: actorName(log),
       file: readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
     }),
   FILE_UPDATE: (log) =>
-    t('{user} 修改图纸 {file}', {
+    fillTemplate('{user} 修改图纸 {file}', {
       user: actorName(log),
       file: readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
     }),
   // —— 节点操作（文件夹创建/重命名/移动/复制/恢复）——
   FOLDER_CREATE: (log) =>
-    t('{user} 新建文件夹 {folder}', {
+    fillTemplate('{user} 新建文件夹 {folder}', {
       user: actorName(log),
       folder: readParam(log, ['fileName', 'name']) || resourceName(log),
     }),
   NODE_RENAME: (log) =>
-    t('{user} 将 {oldName} 重命名为 {newName}', {
+    fillTemplate('{user} 将 {oldName} 重命名为 {newName}', {
       user: actorName(log),
       oldName: readParam(log, ['oldName']) || '-',
       newName: readParam(log, ['newName', 'fileName', 'name']) || resourceName(log),
     }),
   NODE_MOVE: (log) =>
-    t('{user} 移动 {name}', {
+    fillTemplate('{user} 移动 {name}', {
       user: actorName(log),
       name: readParam(log, ['newName', 'fileName', 'name']) || resourceName(log),
     }),
   NODE_COPY: (log) =>
-    t('{user} 复制 {name}', {
+    fillTemplate('{user} 复制 {name}', {
       user: actorName(log),
       name: readParam(log, ['fileName', 'name']) || resourceName(log),
     }),
   NODE_RESTORE: (log) =>
-    t('{user} 从回收站恢复 {name}', {
+    fillTemplate('{user} 从回收站恢复 {name}', {
       user: actorName(log),
       name: readParam(log, ['restoredName', 'fileName', 'name']) || resourceName(log),
     }),
@@ -208,7 +209,7 @@ const ACTION_TEMPLATES: Record<string, (log: AuditLog) => string> = {
   USER_CHANGE_PASSWORD: (log) =>
     t('{user} 修改了密码', { user: actorName(log) }),
   USER_DEACTIVATE: (log) =>
-    t('{user} 停用账号 {target}', {
+    fillTemplate('{user} 停用账号 {target}', {
       user: actorName(log),
       target: readParam(log, ['targetUserName']) || '-',
     }),
@@ -219,24 +220,24 @@ const ACTION_TEMPLATES: Record<string, (log: AuditLog) => string> = {
     t('{user} 解绑了微信', { user: actorName(log) }),
   // —— 安全类：IP 黑名单 ——
   IP_BLACKLIST_ADD: (log) =>
-    t('{user} 将 {ip} 加入 IP 黑名单', {
+    fillTemplate('{user} 将 {ip} 加入 IP 黑名单', {
       user: actorName(log),
       ip: readParam(log, ['ip', 'ipAddress']) || '-',
     }),
   IP_BLACKLIST_REMOVE: (log) =>
-    t('{user} 将 {ip} 移出 IP 黑名单', {
+    fillTemplate('{user} 将 {ip} 移出 IP 黑名单', {
       user: actorName(log),
       ip: readParam(log, ['ip', 'ipAddress']) || '-',
     }),
   // —— 高频读（仅失败记录）——
   USER_LOGIN: (log) => t('{user} 登录失败', { user: actorName(log) }),
   FILE_UPLOAD: (log) =>
-    t('{user} 上传文件 {file} 失败', {
+    fillTemplate('{user} 上传文件 {file} 失败', {
       user: actorName(log),
       file: readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
     }),
   FILE_DOWNLOAD: (log) =>
-    t('{user} 下载文件 {file} 失败', {
+    fillTemplate('{user} 下载文件 {file} 失败', {
       user: actorName(log),
       file: readParam(log, ['fileName', 'filePath', 'name']) || resourceName(log),
     }),
@@ -253,7 +254,7 @@ const ACTION_TEMPLATES: Record<string, (log: AuditLog) => string> = {
   USER_BIND_WECHAT: (log) => t('{user} 绑定了微信', { user: actorName(log) }),
   // —— 过渡保留：alert ——
   ALERT_RESOLVE: (log) =>
-    t('{user} 解决了告警 {alert}', {
+    fillTemplate('{user} 解决了告警 {alert}', {
       user: actorName(log),
       alert: resourceName(log),
     }),
@@ -265,7 +266,7 @@ export function getActionDescription(log: AuditLog): string {
   if (renderer) {
     return renderer(log);
   }
-  return t('{action}（{resource}）', {
+  return fillTemplate('{action}（{resource}）', {
     action: log.action,
     resource: resourceName(log),
   });

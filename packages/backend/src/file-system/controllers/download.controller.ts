@@ -132,6 +132,7 @@ export class DownloadController {
         res.setHeader('Content-Length', stats.size.toString());
         res.setHeader('Cache-Control', 'no-cache');
         fileStream.pipe(res);
+        res.once('close', () => fileStream.destroy());
 
         fileStream.on('error', (error) => {
           this.logger.error(
@@ -174,6 +175,7 @@ export class DownloadController {
     res.setHeader('Cache-Control', 'no-cache');
 
     fileStream.pipe(res);
+    res.once('close', () => fileStream.destroy());
 
     fileStream.on('error', (error) => {
       this.logger.error(`读取缩略图失败: ${error.message}`, error.stack);
@@ -211,6 +213,7 @@ export class DownloadController {
       res.setHeader('Content-Length', stats.size.toString());
       res.setHeader('Cache-Control', 'no-cache');
       fileStream.pipe(res);
+      res.once('close', () => fileStream.destroy());
 
       fileStream.on('error', (error) => {
         this.logger.error(`读取默认缩略图失败: ${error.message}`, error.stack);
@@ -383,6 +386,18 @@ export class DownloadController {
       );
 
       stream.pipe(res);
+
+      // 客户端中断下载 → 销毁读流句柄，避免文件被一直占用（大文件/转换产物
+      // 中断下载是句柄泄漏高发点）。正常完成时 res close 也触发，此时流已读完，destroy 为 no-op。
+      res.once('close', () => {
+        if (
+          stream &&
+          typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
+            .destroy === 'function'
+        ) {
+          (stream as NodeJS.ReadableStream & { destroy: () => void }).destroy();
+        }
+      });
 
       stream.on('error', (error) => {
         this.logger.error(`文件流传输错误: ${error.message}`, error.stack);

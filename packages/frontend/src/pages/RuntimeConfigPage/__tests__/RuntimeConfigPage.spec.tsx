@@ -204,94 +204,122 @@ vi.mock('@/contexts/RuntimeConfigContext', () => ({
 function makeReturn(
   overrides: Partial<UseRuntimeConfigReturn> = {}
 ): UseRuntimeConfigReturn {
-  const configs = overrides.configs ?? mockItems;
-  const groups = overrides.groups ?? toGroups(configs);
+  const listOverrides = overrides.list ?? {};
+  const channelOverrides = overrides.channel ?? {};
+  const modeOverrides = overrides.mode ?? {};
+  const resetOverrides = overrides.reset ?? {};
+  const historyOverrides = overrides.history ?? {};
+  const configs = listOverrides.configs ?? mockItems;
+  const groups = listOverrides.groups ?? toGroups(configs);
   return {
-    configs,
-    configsByKey:
-      overrides.configsByKey ?? new Map(configs.map((c) => [c.key, c])),
-    dependencyStatus:
-      overrides.dependencyStatus ??
-      new Map(
-        configs
-          .filter((c) => c.requires?.length)
-          .map((c) => [
-            c.key,
-            c.requires!.map((depKey) => {
-              const dep = configs.find((d) => d.key === depKey);
-              return {
-                key: depKey,
-                label: dep?.description || depKey,
-                satisfied: dep?.value === true,
-              };
-            }),
-          ]),
-      ),
-    groups,
-    loading: false,
-    configsError: null,
-    retryFetch: vi.fn().mockResolvedValue(undefined),
-    drafts: {},
-    fieldErrors: {},
-    saving: new Set(),
-    savingCategory: false,
-    modeSwitchTarget: null,
-    modePreviewing: false,
-    modePreviewTarget: 'secure',
-    modePreview: [],
-    modeSaving: false,
-    resetPreviewCategory: null,
-    resetPreviewItems: [],
-    historyKey: null,
-    history: [],
-    historyLoading: false,
-    historyError: null,
-    collapsed: new Set(),
-    keyword: '',
-    onlyModified: false,
-    advancedCount: configs.filter((c) => c.tier === 'advanced').length,
-    showAdvanced: false,
-    secretVisible: new Set(),
-    canManageConfig: true,
-    stats: {
+    list: {
+      configs,
+      configsByKey:
+        listOverrides.configsByKey ?? new Map(configs.map((c) => [c.key, c])),
+      dependencyStatus:
+        listOverrides.dependencyStatus ??
+        new Map(
+          configs
+            .filter((c) => c.requires?.length)
+            .map((c) => [
+              c.key,
+              c.requires!.map((depKey) => {
+                const dep = configs.find((d) => d.key === depKey);
+                return {
+                  key: depKey,
+                  label: dep?.description || depKey,
+                  satisfied: dep?.value === true,
+                };
+              }),
+            ]),
+        ),
+      groups,
+      loading: false,
+      configsError: null,
+      retryFetch: vi.fn().mockResolvedValue(undefined),
+      drafts: {},
+      fieldErrors: {},
+      saving: new Set(),
+      collapsed: new Set(),
+      keyword: '',
+      onlyModified: false,
+      advancedCount: configs.filter((c) => c.tier === 'advanced').length,
+      showAdvanced: false,
+      secretVisible: new Set(),
+      canManageConfig: true,
+      setKeyword: vi.fn(),
+      setOnlyModified: vi.fn(),
+      setShowAdvanced: vi.fn(),
+      toggleCollapsed: vi.fn(),
+      setAllCollapsed: vi.fn(),
+      highlightKey: null,
+      focusConfigItem: vi.fn(),
+      draftOf: (it) => defaultDraftOf(it),
+      isDirty: (it) => it.isModified,
+      handleDraftChange: vi.fn(),
+      handleFormatJson: vi.fn(),
+      handleSave: vi.fn().mockResolvedValue(true),
+      handleReset: vi.fn().mockResolvedValue(undefined),
+      toggleSecretVisibility: vi.fn(),
+      clearKeys: vi.fn(),
+      clearCategory: vi.fn(),
+      refetchSilent: vi.fn().mockResolvedValue(undefined),
+      invalidatePublicCache: vi.fn().mockResolvedValue(undefined),
+      refreshChannelStatuses: vi.fn().mockResolvedValue(undefined),
+      ...listOverrides,
+    },
+    channel: {
+      channelStatuses: [],
+      channelTesting: new Set(),
+      channelTestTarget: null,
+      channelTestRecipient: '',
+      channelTestResult: null,
+      openChannelTest: vi.fn(),
+      closeChannelTest: vi.fn(),
+      setChannelTestRecipient: vi.fn(),
+      confirmChannelTest: vi.fn().mockResolvedValue(undefined),
+      refreshChannelStatuses: vi.fn().mockResolvedValue(undefined),
+      loadChannelStatuses: vi.fn().mockResolvedValue(undefined),
+      ...channelOverrides,
+    },
+    mode: {
+      modeSwitchTarget: null,
+      modePreviewing: false,
+      modePreviewTarget: 'secure',
+      modePreview: [],
+      modeSaving: false,
+      modeProfileKeys: new Set<string>(),
+      requestModeSwitch: vi.fn().mockResolvedValue(undefined),
+      confirmModeSwitch: vi.fn().mockResolvedValue(undefined),
+      cancelModeSwitch: vi.fn(),
+      loadModePreview: vi.fn().mockResolvedValue(undefined),
+      ...modeOverrides,
+    },
+    reset: {
+      savingCategory: false,
+      resetPreviewCategory: null,
+      resetPreviewItems: [],
+      requestResetCategory: vi.fn(),
+      confirmResetCategory: vi.fn().mockResolvedValue(undefined),
+      cancelResetCategory: vi.fn(),
+      ...resetOverrides,
+    },
+    history: {
+      historyKey: null,
+      history: [],
+      historyLoading: false,
+      historyError: null,
+      openHistory: vi.fn().mockResolvedValue(undefined),
+      closeHistory: vi.fn(),
+      ...historyOverrides,
+    },
+    stats: overrides.stats ?? {
       total: configs.length,
       modified: configs.filter((c) => c.isModified).length,
       envDriven: configs.filter((c) => c.envValue != null).length,
       pendingSave: 0,
       modeManaged: 0,
     },
-    setKeyword: vi.fn(),
-    setOnlyModified: vi.fn(),
-    setShowAdvanced: vi.fn(),
-    toggleCollapsed: vi.fn(),
-    setAllCollapsed: vi.fn(),
-    highlightKey: null,
-    focusConfigItem: vi.fn(),
-    draftOf: (it) => defaultDraftOf(it),
-    isDirty: (it) => it.isModified,
-    handleDraftChange: vi.fn(),
-    handleFormatJson: vi.fn(),
-    handleSave: vi.fn().mockResolvedValue(true),
-    handleReset: vi.fn().mockResolvedValue(undefined),
-    toggleSecretVisibility: vi.fn(),
-    channelStatuses: [],
-    channelTesting: new Set(),
-    channelTestTarget: null,
-    channelTestRecipient: '',
-    channelTestResult: null,
-    openChannelTest: vi.fn(),
-    closeChannelTest: vi.fn(),
-    setChannelTestRecipient: vi.fn(),
-    confirmChannelTest: vi.fn().mockResolvedValue(undefined),
-    requestResetCategory: vi.fn(),
-    confirmResetCategory: vi.fn().mockResolvedValue(undefined),
-    cancelResetCategory: vi.fn(),
-    requestModeSwitch: vi.fn().mockResolvedValue(undefined),
-    confirmModeSwitch: vi.fn().mockResolvedValue(undefined),
-    cancelModeSwitch: vi.fn(),
-    openHistory: vi.fn().mockResolvedValue(undefined),
-    closeHistory: vi.fn(),
-    ...overrides,
   };
 }
 
@@ -321,7 +349,7 @@ describe('RuntimeConfigPage 渲染', () => {
     expect(screen.getByText('mail.smtpHost')).toBeTruthy();
 
     fireEvent.click(screen.getAllByTestId('rc-card-toggle')[0]);
-    expect(mockState.return.toggleCollapsed).toHaveBeenCalledWith('mail');
+    expect(mockState.return.list.toggleCollapsed).toHaveBeenCalledWith('mail');
   });
 
   it('有子分组的分类渲染小节标题（文案走 i18n），无子分组的分类平铺无标题', () => {
@@ -346,8 +374,10 @@ describe('RuntimeConfigPage 渲染', () => {
     expect(screen.getByText('折叠全部')).toBeTruthy();
 
     mockState.return = makeReturn({
+    list: {
       collapsed: new Set(['mail', 'user', 'file', 'security', 'system', 'brand']),
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('展开全部')).toBeTruthy();
   });
@@ -375,7 +405,7 @@ describe('RuntimeConfigPage 渲染', () => {
     render(<RuntimeConfigPage />);
     // 点中文标签即勾选（label 关联 input，Checkbox 把 data-testid 放在 input 上）
     fireEvent.click(screen.getByText(/显示高级项（2 项）/));
-    expect(mockState.return.setShowAdvanced).toHaveBeenCalledWith(true);
+    expect(mockState.return.list.setShowAdvanced).toHaveBeenCalledWith(true);
   });
 
   it('已修改项显示「默认值 → 当前值」对比', () => {
@@ -393,7 +423,12 @@ describe('RuntimeConfigPage 渲染', () => {
     const configs = mockItems.map((it) =>
       it.key === 'file.maxFileSize' ? { ...it, isModified: true } : it
     );
-    mockState.return = makeReturn({ configs, groups: toGroups(configs) });
+    mockState.return = makeReturn({
+    list: {
+      configs,
+      groups: toGroups(configs),
+    },
+  });
     render(<RuntimeConfigPage />);
     const row = rowOf('file.maxFileSize');
     expect(
@@ -430,6 +465,7 @@ describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
 
   it('依赖项未满足：渲染依赖项名称与「未满足」', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [
         item({
           key: 'mailEnabled',
@@ -440,7 +476,8 @@ describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
         }),
         dependentItem,
       ],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
 
     const dep = within(rowOf('requireEmailVerification')).getByTestId(
@@ -452,6 +489,7 @@ describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
 
   it('依赖项已满足：渲染「已满足」', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [
         item({
           key: 'mailEnabled',
@@ -462,7 +500,8 @@ describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
         }),
         dependentItem,
       ],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
 
     const dep = within(rowOf('requireEmailVerification')).getByTestId(
@@ -473,6 +512,7 @@ describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
 
   it('未声明依赖的开关不渲染依赖行', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [
         item({
           key: 'mailEnabled',
@@ -482,7 +522,8 @@ describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
           description: '邮件服务开关',
         }),
       ],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
 
     expect(
@@ -542,7 +583,7 @@ describe('RuntimeConfigPage 类型感知控件', () => {
     fireEvent.change(within(row).getByDisplayValue('主体A'), {
       target: { value: '主体B' },
     });
-    expect(mockState.return.handleDraftChange).toHaveBeenCalledWith(
+    expect(mockState.return.list.handleDraftChange).toHaveBeenCalledWith(
       'brandProfile',
       expect.any(String)
     );
@@ -561,7 +602,7 @@ describe('RuntimeConfigPage 类型感知控件', () => {
     const input = screen.getByPlaceholderText('smtp-password');
     expect(input.type).toBe('password');
     fireEvent.click(screen.getByLabelText(/显示值|隐藏值/));
-    expect(mockState.return.toggleSecretVisibility).toHaveBeenCalledWith(
+    expect(mockState.return.list.toggleSecretVisibility).toHaveBeenCalledWith(
       'mail.smtpPassword'
     );
   });
@@ -576,7 +617,7 @@ describe('RuntimeConfigPage 类型感知控件', () => {
     fireEvent.change(screen.getByPlaceholderText('smtp.example.com'), {
       target: { value: 'smtp.other.com' },
     });
-    expect(mockState.return.handleDraftChange).toHaveBeenCalledWith(
+    expect(mockState.return.list.handleDraftChange).toHaveBeenCalledWith(
       'mail.smtpHost',
       'smtp.other.com'
     );
@@ -585,7 +626,7 @@ describe('RuntimeConfigPage 类型感知控件', () => {
   it('点击格式化按钮触发 handleFormatJson', () => {
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getByText('格式化'));
-    expect(mockState.return.handleFormatJson).toHaveBeenCalledWith(
+    expect(mockState.return.list.handleFormatJson).toHaveBeenCalledWith(
       'security.corsOrigins'
     );
   });
@@ -597,31 +638,44 @@ describe('RuntimeConfigPage 搜索与筛选', () => {
     fireEvent.change(screen.getByTestId('rc-search'), {
       target: { value: 'smtp' },
     });
-    expect(mockState.return.setKeyword).toHaveBeenCalledWith('smtp');
+    expect(mockState.return.list.setKeyword).toHaveBeenCalledWith('smtp');
   });
 
   it('勾选「只看已修改的」触发 setOnlyModified', () => {
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getByText('只看已修改的'));
-    expect(mockState.return.setOnlyModified).toHaveBeenCalledWith(true);
+    expect(mockState.return.list.setOnlyModified).toHaveBeenCalledWith(true);
   });
 
   it('搜索无结果时展示空态，且不含分组卡片', () => {
-    mockState.return = makeReturn({ groups: [] });
+    mockState.return = makeReturn({
+    list: {
+      groups: [],
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('没有匹配的配置项')).toBeTruthy();
     expect(screen.queryByTestId('rc-card')).toBeNull();
   });
 
   it('后端返回空列表时展示另一套空态', () => {
-    mockState.return = makeReturn({ configs: [], groups: [] });
+    mockState.return = makeReturn({
+    list: {
+      configs: [],
+      groups: [],
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('暂无配置项')).toBeTruthy();
     expect(screen.getByText('系统尚未配置任何运行时参数')).toBeTruthy();
   });
 
   it('loading 时展示加载态', () => {
-    mockState.return = makeReturn({ loading: true });
+    mockState.return = makeReturn({
+    list: {
+      loading: true,
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('正在加载配置...')).toBeTruthy();
   });
@@ -633,13 +687,15 @@ describe('RuntimeConfigPage 保存与恢复默认', () => {
     const saveBtn = screen.getAllByTestId('rc-save')[0];
     expect(saveBtn).not.toBeDisabled();
     fireEvent.click(saveBtn);
-    expect(mockState.return.handleSave).toHaveBeenCalledWith('mail.smtpHost');
+    expect(mockState.return.list.handleSave).toHaveBeenCalledWith('mail.smtpHost');
   });
 
   it('未修改项的保存按钮被禁用', () => {
     mockState.return = makeReturn({
+    list: {
       isDirty: () => false,
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getAllByTestId('rc-save')).toHaveLength(
       mockItems.length
@@ -652,20 +708,22 @@ describe('RuntimeConfigPage 保存与恢复默认', () => {
   it('点击恢复默认触发 handleReset(key)', () => {
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getAllByTestId('rc-reset')[0]);
-    expect(mockState.return.handleReset).toHaveBeenCalled();
+    expect(mockState.return.list.handleReset).toHaveBeenCalled();
   });
 
   it('点击修改历史触发 openHistory(key)', () => {
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getAllByTestId('rc-history')[0]);
-    expect(mockState.return.openHistory).toHaveBeenCalled();
+    expect(mockState.return.history.openHistory).toHaveBeenCalled();
   });
 
   it('就地错误文案渲染在字段错误容器内', () => {
     mockState.return = makeReturn({
+    list: {
       fieldErrors: { 'mail.port': '不能大于 65535端口' },
       isDirty: () => true,
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByTestId('rc-field-error')).toBeTruthy();
     expect(screen.getByText('不能大于 65535端口')).toBeTruthy();
@@ -675,9 +733,11 @@ describe('RuntimeConfigPage 保存与恢复默认', () => {
 describe('RuntimeConfigPage 分类批量恢复', () => {
   it('打开预览弹窗，列出该分类全部项并标记将恢复项', () => {
     mockState.return = makeReturn({
+    reset: {
       resetPreviewCategory: 'mail',
       resetPreviewItems: mockItems.filter((i) => i.category === 'mail'),
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText(/恢复「mail」为默认值/)).toBeTruthy();
     const preview = screen.getByTestId('rc-reset-preview');
@@ -686,30 +746,34 @@ describe('RuntimeConfigPage 分类批量恢复', () => {
     expect(within(preview).getByText('将恢复')).toBeTruthy();
     expect(screen.getByText(/确认恢复 \d+ 项/)).toBeTruthy();
     fireEvent.click(screen.getByTestId('rc-confirm-reset-category'));
-    expect(mockState.return.confirmResetCategory).toHaveBeenCalled();
+    expect(mockState.return.reset.confirmResetCategory).toHaveBeenCalled();
   });
 
   it('点取消触发 cancelResetCategory', () => {
     mockState.return = makeReturn({
+    reset: {
       resetPreviewCategory: 'mail',
       resetPreviewItems: mockItems,
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getByText('取消'));
-    expect(mockState.return.cancelResetCategory).toHaveBeenCalled();
+    expect(mockState.return.reset.cancelResetCategory).toHaveBeenCalled();
   });
 
   it('分类头按钮触发 requestResetCategory', () => {
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getAllByTestId('rc-reset-category')[0]);
-    expect(mockState.return.requestResetCategory).toHaveBeenCalledWith('mail');
+    expect(mockState.return.reset.requestResetCategory).toHaveBeenCalledWith('mail');
   });
 
   it('分类内有环境变量项时给出 env 回退提示', () => {
     mockState.return = makeReturn({
+    reset: {
       resetPreviewCategory: 'file',
       resetPreviewItems: mockItems.filter((i) => i.category === 'file'),
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(
       screen.getByText(
@@ -724,16 +788,22 @@ describe('RuntimeConfigPage 分类批量恢复', () => {
 
   it('批量恢复预览里标注危险项（分类级一次确认会连危险项一起还原）', () => {
     mockState.return = makeReturn({
+    reset: {
       resetPreviewCategory: 'user',
       resetPreviewItems: mockItems.filter((i) => i.category === 'user'),
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     const preview = screen.getByTestId('rc-reset-preview');
     expect(within(preview).getByText('危险项')).toBeTruthy();
   });
 
   it('只读权限下分类重置按钮禁用', () => {
-    mockState.return = makeReturn({ canManageConfig: false });
+    mockState.return = makeReturn({
+    list: {
+      canManageConfig: false,
+    },
+  });
     render(<RuntimeConfigPage />);
     const buttons = screen.getAllByTestId('rc-reset-category');
     for (const button of buttons) {
@@ -762,12 +832,14 @@ describe('RuntimeConfigPage 安全模式切换预览', () => {
 
   it('预览行显示配置项说明，原始 key 降为副标签', () => {
     mockState.return = makeReturn({
+    mode: {
       modeSwitchTarget: 'normal',
       modePreview: [
         previewEntry('mail.smtpHost', 'a', 'b'),
         previewEntry('file.maxFileSize', 100, 500),
       ],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     const preview = screen.getByTestId('rc-mode-preview');
     // 说明作主标题
@@ -780,9 +852,11 @@ describe('RuntimeConfigPage 安全模式切换预览', () => {
 
   it('configsByKey 查不到该键时回退显示 key 本身', () => {
     mockState.return = makeReturn({
+    mode: {
       modeSwitchTarget: 'normal',
       modePreview: [previewEntry('unknown.key', false, true)],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     const preview = screen.getByTestId('rc-mode-preview');
     expect(within(preview).getByText('unknown.key')).toBeTruthy();
@@ -791,9 +865,11 @@ describe('RuntimeConfigPage 安全模式切换预览', () => {
 
   it('无改动的项标注「不变动」', () => {
     mockState.return = makeReturn({
+    mode: {
       modeSwitchTarget: 'normal',
       modePreview: [previewEntry('mail.smtpHost', 'a', 'a', false)],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('不变动')).toBeTruthy();
   });
@@ -802,21 +878,28 @@ describe('RuntimeConfigPage 安全模式切换预览', () => {
 describe('RuntimeConfigPage 首次加载错误态', () => {
   it('拉取失败显示错误与重试，而不是「暂无配置项」', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [],
       groups: [],
       configsError: '网络异常',
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByTestId('rc-error-state')).toBeTruthy();
     expect(screen.getByText('获取配置失败')).toBeTruthy();
     expect(screen.getByText('网络异常')).toBeTruthy();
     expect(screen.queryByText('暂无配置项')).toBeNull();
     fireEvent.click(screen.getByTestId('rc-retry'));
-    expect(mockState.return.retryFetch).toHaveBeenCalled();
+    expect(mockState.return.list.retryFetch).toHaveBeenCalled();
   });
 
   it('正常空态仍显示「暂无配置项」', () => {
-    mockState.return = makeReturn({ configs: [], groups: [] });
+    mockState.return = makeReturn({
+    list: {
+      configs: [],
+      groups: [],
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('暂无配置项')).toBeTruthy();
     expect(screen.queryByTestId('rc-error-state')).toBeNull();
@@ -826,9 +909,11 @@ describe('RuntimeConfigPage 首次加载错误态', () => {
 describe('RuntimeConfigPage 修改历史', () => {
   it('加载中文案', () => {
     mockState.return = makeReturn({
+    history: {
       historyKey: 'mail.smtpHost',
       historyLoading: true,
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByTestId('rc-history-loading')).toBeTruthy();
     expect(screen.getByText('正在加载修改历史...')).toBeTruthy();
@@ -836,21 +921,28 @@ describe('RuntimeConfigPage 修改历史', () => {
 
   it('加载失败显示错误', () => {
     mockState.return = makeReturn({
+    history: {
       historyKey: 'mail.smtpHost',
       historyError: '获取修改历史失败',
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByTestId('rc-history-error')).toBeTruthy();
   });
 
   it('无记录时显示空态', () => {
-    mockState.return = makeReturn({ historyKey: 'mail.smtpHost' });
+    mockState.return = makeReturn({
+    history: {
+      historyKey: 'mail.smtpHost',
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('该配置项暂无修改记录')).toBeTruthy();
   });
 
   it('展示历史记录：旧值 → 新值、操作人、IP', async () => {
     mockState.return = makeReturn({
+    history: {
       historyKey: 'mail.smtpHost',
       history: [
         {
@@ -863,7 +955,8 @@ describe('RuntimeConfigPage 修改历史', () => {
           createdAt: '2026-09-01T02:00:00.000Z',
         },
       ],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     await waitFor(() => {
       expect(screen.getByTestId('rc-history-list')).toBeTruthy();
@@ -878,7 +971,11 @@ describe('RuntimeConfigPage 修改历史', () => {
 
 describe('RuntimeConfigPage 只读模式', () => {
   it('无写权限时展示只读横幅并禁用控件', () => {
-    mockState.return = makeReturn({ canManageConfig: false });
+    mockState.return = makeReturn({
+    list: {
+      canManageConfig: false,
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByTestId('rc-readonly-banner')).toBeTruthy();
     for (const btn of screen.getAllByTestId('rc-save')) {
@@ -906,9 +1003,11 @@ describe('RuntimeConfigPage 只读模式', () => {
   it('无环境变量项时不展示该横幅', () => {
     const configs = mockItems.filter((i) => !i.envValue);
     mockState.return = makeReturn({
+    list: {
       configs,
       groups: toGroups(configs),
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(
       screen.queryByText(/项配置由系统预置/)
@@ -940,9 +1039,11 @@ describe('RuntimeConfigPage 通道测试对话框（按通道能力渲染）', (
 
   it('邮件通道：显示接收方输入框，占位说明留空只校验连接不发信', () => {
     mockState.return = makeReturn({
+    channel: {
       channelStatuses: [statusOf('mail')],
       channelTestTarget: 'mail',
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByTestId('rc-channel-test-recipient')).toBeTruthy();
     expect(screen.getByPlaceholderText(/不发送邮件/)).toBeTruthy();
@@ -952,9 +1053,11 @@ describe('RuntimeConfigPage 通道测试对话框（按通道能力渲染）', (
 
   it('短信通道：接收方标签是手机号，占位说明留空只探测不发短信', () => {
     mockState.return = makeReturn({
+    channel: {
       channelStatuses: [statusOf('sms')],
       channelTestTarget: 'sms',
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('手机号（可选）')).toBeTruthy();
     expect(screen.getByPlaceholderText(/不发送短信/)).toBeTruthy();
@@ -969,9 +1072,11 @@ describe('RuntimeConfigPage 通道测试对话框（按通道能力渲染）', (
     ];
     for (const [channel, note] of probes) {
       mockState.return = makeReturn({
-        channelStatuses: [statusOf(channel)],
-        channelTestTarget: channel,
-      });
+    channel: {
+      channelStatuses: [statusOf(channel)],
+      channelTestTarget: channel,
+    },
+  });
       render(<RuntimeConfigPage />);
       expect(
         screen.queryByTestId('rc-channel-test-recipient'),
@@ -991,7 +1096,11 @@ describe('RuntimeConfigPage 通道测试对话框（按通道能力渲染）', (
 
   it('每个通道有各自图标，非邮件通道不再共用 Plug 兜底', () => {
     const channels = ['mail', 'sms', 'wechat', 'payment', 'webhook'];
-    mockState.return = makeReturn({ channelStatuses: channels.map(statusOf) });
+    mockState.return = makeReturn({
+    channel: {
+      channelStatuses: channels.map(statusOf),
+    },
+  });
     render(<RuntimeConfigPage />);
     const icons = channels.map(
       (channel) =>
@@ -1032,9 +1141,13 @@ describe('RuntimeConfigPage 通道缺失键清单（定位 + 格式示例）', (
 
   it('缺失键渲染中文说明、键名与格式示例，而非只给裸键名', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [smtpHostItem],
+    },
+    channel: {
       channelStatuses: [statusOf(['smtpHost'])],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     const list = screen.getByTestId('rc-missing-keys');
     expect(list.textContent).toContain('SMTP 服务器主机');
@@ -1045,25 +1158,35 @@ describe('RuntimeConfigPage 通道缺失键清单（定位 + 格式示例）', (
   it('点击缺失键定位到对应配置项', () => {
     const focusConfigItem = vi.fn();
     mockState.return = makeReturn({
+    list: {
       configs: [smtpHostItem],
-      channelStatuses: [statusOf(['smtpHost'])],
       focusConfigItem,
-    });
+    },
+    channel: {
+      channelStatuses: [statusOf(['smtpHost'])],
+    },
+  });
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getByTestId('rc-missing-key'));
     expect(focusConfigItem).toHaveBeenCalledWith('smtpHost');
   });
 
   it('配置完整时不渲染缺失键清单', () => {
-    mockState.return = makeReturn({ channelStatuses: [statusOf([])] });
+    mockState.return = makeReturn({
+    channel: {
+      channelStatuses: [statusOf([])],
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(screen.queryByTestId('rc-missing-keys')).toBeNull();
   });
 
   it('配置列表查不到该键时回落显示键名，不猜格式示例', () => {
     mockState.return = makeReturn({
+    channel: {
       channelStatuses: [statusOf(['smtpHost'])],
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     const list = screen.getByTestId('rc-missing-keys');
     expect(list.textContent).toContain('smtpHost');
@@ -1072,10 +1195,14 @@ describe('RuntimeConfigPage 通道缺失键清单（定位 + 格式示例）', (
 
   it('测试对话框的缺失提示用中文说明而非裸键名', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [smtpHostItem],
+    },
+    channel: {
       channelStatuses: [statusOf(['smtpHost'])],
       channelTestTarget: 'mail',
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(
       screen.getByText(/通道配置不完整/).textContent
@@ -1111,7 +1238,10 @@ describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配�
 
   it('测试失败：对话框展示错误文案与后端归因的出错配置项（中文说明 + 键名 + 示例）', () => {
     mockState.return = makeReturn({
+    list: {
       configs: [wechatAppIdItem],
+    },
+    channel: {
       channelStatuses: [statusOf('wechat')],
       channelTestTarget: 'wechat',
       channelTestResult: {
@@ -1120,7 +1250,8 @@ describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配�
           '微信凭据探测失败（errcode 40013：invalid appid rid: xxx）——AppID 不正确：请核对填写的 AppID 与微信公众平台后台一致',
         problemKeys: ['wechatAppId'],
       },
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(
       screen.getByTestId('rc-test-failure-message').textContent
@@ -1135,7 +1266,11 @@ describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配�
     const focusConfigItem = vi.fn();
     const closeChannelTest = vi.fn();
     mockState.return = makeReturn({
+    list: {
       configs: [wechatAppIdItem],
+      focusConfigItem,
+    },
+    channel: {
       channelStatuses: [statusOf('wechat')],
       channelTestTarget: 'wechat',
       channelTestResult: {
@@ -1143,9 +1278,9 @@ describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配�
         message: '微信凭据探测失败（errcode 40013）——AppID 不正确',
         problemKeys: ['wechatAppId'],
       },
-      focusConfigItem,
       closeChannelTest,
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     fireEvent.click(screen.getByTestId('rc-test-problem-key'));
     expect(focusConfigItem).toHaveBeenCalledWith('wechatAppId');
@@ -1154,6 +1289,7 @@ describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配�
 
   it('后端无法归因出错配置键（problemKeys 为空）：只展示错误文案，不渲染清单', () => {
     mockState.return = makeReturn({
+    channel: {
       channelStatuses: [statusOf('wechat')],
       channelTestTarget: 'wechat',
       channelTestResult: {
@@ -1161,7 +1297,8 @@ describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配�
         message: '微信 gettoken 探测失败：fetch failed',
         problemKeys: [],
       },
-    });
+    },
+  });
     render(<RuntimeConfigPage />);
     expect(
       screen.getByTestId('rc-test-failure-message').textContent

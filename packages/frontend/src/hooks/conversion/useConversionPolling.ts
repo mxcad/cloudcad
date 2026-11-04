@@ -15,6 +15,7 @@ import {
   conversionStatusControllerGetConversionStatus,
   conversionStatusControllerTriggerConversion,
 } from '@/api-sdk';
+import type { ConversionStatusResponseDto } from '@/api-sdk';
 import {
   FILE_STATUS,
   isCompletedStatus,
@@ -34,6 +35,7 @@ export type ConversionStatus = {
   taskId?: string;
   taskStatus?: string;
   error?: string;
+  errorCategory?: ConversionStatusResponseDto['errorCategory'];
 };
 
 export interface ConversionPollingOptions {
@@ -54,6 +56,8 @@ export interface ConversionPollingResult {
   taskStatus?: string;
   /** 错误信息：后端上报的转换错误，或轮询本身的传输错误（见 MAX_CONSECUTIVE_POLL_ERRORS） */
   error?: string;
+  /** 失败性质分类（仅终态失败有意义），供前端区分「文件内容问题」vs「引擎/服务异常」 */
+  errorCategory?: ConversionStatusResponseDto['errorCategory'];
   /** fileStatus 是否为 COMPLETED */
   completed: boolean;
   /** 是否在达到总超时时仍未完成 */

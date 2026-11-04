@@ -7,6 +7,35 @@ import net from 'net';
  */
 export class RedisError extends Error {}
 
+/**
+ * 解码 URL 的 userinfo 组件（WHATWG URL 的 .password/.username 返回 percent-encoded
+ * 形式，如 jA75@gCosr@8-u_e 编码为 jA75%40gCosr%408-u_e）。密码含 @ 等特殊字符时
+ * 不解码会把编码串发给 Redis AUTH → ERR invalid password（2026-11-04 部署事故根因）。
+ * 非法 % 序列（理论上 new URL 已校验，防御性兜底）回退原值。
+ */
+function safeDecode(v: string): string {
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return v;
+  }
+}
+
+/**
+ * 脱敏 Redis URL 用于日志：把 userinfo 里的密码替换为 ***。
+ * URL 合法时用 WHATWG 解析重写 password（对任意特殊字符密码都稳）；
+ * 解析失败（无效 REDIS_URL 报错场景）退回正则脱敏。绝不让明文密码进日志。
+ */
+export function maskRedisUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.password) u.password = '***';
+    return u.toString();
+  } catch {
+    return url.replace(/(:\/\/[^:@/]+):[^@/]+@/, '$1:***@');
+  }
+}
+
 // RESP 回复值是多态的（字符串/整数/Buffer/错误/数组/null），此处以 any 表达动态边界
 type RespValue = string | number | Buffer | RedisError | null | RespValue[];
 
@@ -156,15 +185,17 @@ class RedisClient {
       try {
         parsed = new URL(this.url);
       } catch (err) {
-        return reject(new RedisError(`无效的 REDIS_URL: ${this.url}`));
+        return reject(new RedisError(`无效的 REDIS_URL: ${maskRedisUrl(this.url)}`));
       }
       const port = parseInt(parsed.port || '6379', 10);
       const host = parsed.hostname || '127.0.0.1';
       const db = parseInt((parsed.pathname || '/0').replace(/^\//, '') || '0', 10);
       // URL 密码（redis://:pass@host / redis://user:pass@host）。requirepass 的 Redis
       // 未认证即回 -NOAUTH，故 PING 前须先 AUTH——缺它则本最小客户端永远连不上带密码的 Redis。
-      const username = parsed.username || '';
-      const password = parsed.password || '';
+      // .username/.password 是 percent-encoded 形式，须解码回原始密码再发 AUTH
+      //（密码含 @ 等特殊字符时不解码 → ERR invalid password，2026-11-04 事故根因）。
+      const username = parsed.username ? safeDecode(parsed.username) : '';
+      const password = parsed.password ? safeDecode(parsed.password) : '';
 
       const socket = net.createConnection({ host, port });
       socket.setNoDelay(true);

@@ -4,38 +4,43 @@
 // https://www.mxdraw.com/
 /////////////////////////////////////////////////////////////////////////////
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, Plus, RefreshCw, Search, X, FileCode2, Wand2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Menu } from '@/components/ui/Menu';
-import { Tag } from '@/components/ui/Tag';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useFileBrowserSelection } from '@/hooks/file-browser';
-import { useSelectionShortcuts } from '@/hooks/common/useSelectionShortcuts';
-import { useAccumulatedPagination } from '@/hooks/common/useAccumulatedPagination';
-import { SelectableTable } from '@/components/common/SelectableTable';
-import { BatchActionBar } from '@/components/common/BatchActionBar';
-import { t } from '@/languages';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import { globalShowToast } from '@/utils/notificationEvents';
-import { useCopy } from '@/hooks/useCopy';
-import { ipWhitelistControllerRemove } from '@/api-sdk';
-import { AddEntryModal } from './components/AddEntryModal';
-import { RemoveEntryModal } from './components/RemoveEntryModal';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Copy,
+  Plus,
+  RefreshCw,
+  Search,
+  X,
+  FileCode2,
+  Wand2,
+} from "lucide-react";
+import { Button, Card, Input, Menu, Tag } from "@/components/ui";
+
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useFileBrowserSelection } from "@/hooks/file-browser";
+import { useSelectionShortcuts } from "@/hooks/common/useSelectionShortcuts";
+import { useAccumulatedPagination } from "@/hooks/common/useAccumulatedPagination";
+import { SelectableTable } from "@/components/common/SelectableTable";
+import { BatchActionBar } from "@/components/common/BatchActionBar";
+import { t } from "@/languages";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import { globalShowToast } from "@/utils/notificationEvents";
+import { useCopy } from "@/hooks/useCopy";
+import { ipWhitelistControllerRemove } from "@/api-sdk";
+import { AddEntryModal } from "./components/AddEntryModal";
+import { RemoveEntryModal } from "./components/RemoveEntryModal";
 import {
   FILE_ENTRY_ID_PREFIX,
   IP_WHITELIST_PAGE_SIZE,
-  IP_WHITELIST_PRESETS,
-  IP_WHITELIST_SOURCE_META,
-} from './constants';
+  getIpWhitelistPresets,
+  getIpWhitelistSourceLabel,
+} from "./constants";
 import {
   useAddIpWhitelistEntry,
   useBatchAddIpWhitelistPreset,
   useIpWhitelistList,
-} from './hooks/useIpWhitelist';
-import type { IpWhitelistEntry, IpWhitelistEntryForm } from './types';
+} from "./hooks/useIpWhitelist";
+import type { IpWhitelistEntry, IpWhitelistEntryForm } from "./types";
 
 /** 本地文件条目（id 以 file: 开头）不可经接口移除 */
 function isFileEntry(entry: IpWhitelistEntry): boolean {
@@ -51,23 +56,23 @@ export default function IpWhitelistPage({
 }: {
   embedded?: boolean;
 }) {
-  useDocumentTitle(t('管理员 IP 白名单'), embedded);
+  useDocumentTitle(t("管理员 IP 白名单"), embedded);
 
   // 保留 copyToClipboard 名称，调用点无需改动
   const { copy: copyToClipboard } = useCopy({
-    successMessage: t('复制成功'),
-    failMessage: t('复制失败'),
+    successMessage: t("复制成功"),
+    failMessage: t("复制失败"),
   });
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(IP_WHITELIST_PAGE_SIZE);
   const [addOpen, setAddOpen] = useState(false);
   const [removeTargets, setRemoveTargets] = useState<IpWhitelistEntry[] | null>(
-    null
+    null,
   );
   const [removing, setRemoving] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   // 输入防抖 500ms 后生效
   useEffect(() => {
@@ -81,7 +86,7 @@ export default function IpWhitelistPage({
   const { items, total, loading, refetch } = useIpWhitelistList(
     page,
     keyword,
-    pageSize
+    pageSize,
   );
   const addMutation = useAddIpWhitelistEntry(() => setAddOpen(false));
   const batchAddMutation = useBatchAddIpWhitelistPreset();
@@ -103,11 +108,8 @@ export default function IpWhitelistPage({
   // ── 多选（ADR-0052 统一机制）──
   // 本地文件条目不可移除，从可选集合中排除，避免被批量移除
   const selectableItems = useMemo(
-    () =>
-      viewItems
-        .filter((i) => !isFileEntry(i))
-        .map((i) => ({ id: i.id })),
-    [viewItems]
+    () => viewItems.filter((i) => !isFileEntry(i)).map((i) => ({ id: i.id })),
+    [viewItems],
   );
   const {
     selectedNodes,
@@ -115,7 +117,7 @@ export default function IpWhitelistPage({
     handleSelectAll,
     clearSelection,
     selectMany,
-  } = useFileBrowserSelection({ nodes: selectableItems, multiple: 'always' });
+  } = useFileBrowserSelection({ nodes: selectableItems, multiple: "always" });
   const selectedCount = selectedNodes.size;
 
   // 搜索词变化清空选择
@@ -131,18 +133,15 @@ export default function IpWhitelistPage({
       setPageSize(next);
       setPage(1);
     },
-    [pageSize, clearSelection]
+    [pageSize, clearSelection],
   );
 
-  const openRemoveConfirm = useCallback(
-    (entries: IpWhitelistEntry[]) => {
-      // 过滤本地文件条目，仅可移除目标进入确认弹窗
-      const removable = entries.filter((e) => !isFileEntry(e));
-      if (removable.length === 0) return;
-      setRemoveTargets(removable);
-    },
-    []
-  );
+  const openRemoveConfirm = useCallback((entries: IpWhitelistEntry[]) => {
+    // 过滤本地文件条目，仅可移除目标进入确认弹窗
+    const removable = entries.filter((e) => !isFileEntry(e));
+    if (removable.length === 0) return;
+    setRemoveTargets(removable);
+  }, []);
 
   const openBatchRemove = useCallback(() => {
     const targets = viewItems.filter((i) => selectedNodes.has(i.id));
@@ -170,15 +169,15 @@ export default function IpWhitelistPage({
     if (successCount > 0) {
       globalShowToast(
         successCount > 1
-          ? t('已移除 {count} 条记录', { count: String(successCount) })
-          : t('已移除'),
-        'success'
+          ? t("已移除 {count} 条记录", { count: String(successCount) })
+          : t("已移除"),
+        "success",
       );
     }
     if (failCount > 0) {
       globalShowToast(
-        t('{count} 条移除失败', { count: String(failCount) }),
-        'error'
+        t("{count} 条移除失败", { count: String(failCount) }),
+        "error",
       );
     }
     setRemoving(false);
@@ -204,29 +203,29 @@ export default function IpWhitelistPage({
     <div
       className={
         embedded
-          ? 'h-full flex flex-col overflow-hidden text-text-secondary'
-          : 'h-full flex flex-col overflow-hidden p-6 text-text-secondary'
+          ? "h-full flex flex-col overflow-hidden text-text-secondary"
+          : "h-full flex flex-col overflow-hidden p-6 text-text-secondary"
       }
     >
       <div
         className={
           embedded
-            ? 'w-full flex flex-col flex-1 min-h-0'
-            : 'max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0'
+            ? "w-full flex flex-col flex-1 min-h-0"
+            : "max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0"
         }
       >
         <div
           className={
             embedded
-              ? 'flex-shrink-0 flex items-center justify-between mb-4'
-              : 'flex-shrink-0 flex items-center justify-between mb-6'
+              ? "flex-shrink-0 flex items-center justify-between mb-4"
+              : "flex-shrink-0 flex items-center justify-between mb-6"
           }
         >
           {/* 保留占位节点：embedded 时无标题，justify-between 仍需两个子项才能把工具栏推右 */}
           <div className="flex items-center gap-2">
             {!embedded && (
               <h1 className="text-2xl font-bold text-text-primary">
-                {t('管理员 IP 白名单')}
+                {t("管理员 IP 白名单")}
               </h1>
             )}
           </div>
@@ -235,23 +234,23 @@ export default function IpWhitelistPage({
               <Search
                 size={15}
                 className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               />
               <Input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t('搜索 IP/原因/操作人')}
+                placeholder={t("搜索 IP/原因/操作人")}
                 className="pl-9 pr-8 w-64"
                 size="md"
               />
               {searchInput && (
                 <button
                   type="button"
-                  aria-label={t('清空搜索')}
-                  title={t('清空搜索')}
+                  aria-label={t("清空搜索")}
+                  title={t("清空搜索")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  onClick={() => setSearchInput('')}
+                  style={{ color: "var(--text-tertiary)" }}
+                  onClick={() => setSearchInput("")}
                 >
                   <X size={14} />
                 </button>
@@ -271,11 +270,11 @@ export default function IpWhitelistPage({
                   icon={Wand2}
                   disabled={batchAddMutation.isPending}
                 >
-                  {t('快速添加')}
+                  {t("快速添加")}
                 </Button>
               </Menu.Trigger>
               <Menu.Content align="end" style={{ width: 340 }}>
-                {IP_WHITELIST_PRESETS.map((preset) => (
+                {getIpWhitelistPresets().map((preset) => (
                   <Menu.Item
                     key={preset.key}
                     description={preset.description}
@@ -288,13 +287,18 @@ export default function IpWhitelistPage({
               </Menu.Content>
             </Menu>
             <Button size="sm" icon={Plus} onClick={() => setAddOpen(true)}>
-              {t('添加')}
+              {t("添加")}
             </Button>
           </div>
         </div>
 
         {/* 表格卡撑满剩余空间 */}
-        <Card variant="outlined" padding="none" radius="xl" className="flex-1 min-h-0 flex flex-col">
+        <Card
+          variant="outlined"
+          padding="none"
+          radius="xl"
+          className="flex-1 min-h-0 flex flex-col"
+        >
           <div className="flex-1 min-h-0 flex flex-col">
             <SelectableTable<IpWhitelistEntry>
               rows={viewItems}
@@ -305,8 +309,8 @@ export default function IpWhitelistPage({
                   <div
                     className="w-8 h-8 rounded-full animate-spin"
                     style={{
-                      border: '3px solid var(--border-default)',
-                      borderTopColor: 'var(--primary-500)',
+                      border: "3px solid var(--border-default)",
+                      borderTopColor: "var(--primary-500)",
                     }}
                   />
                 </div>
@@ -314,9 +318,9 @@ export default function IpWhitelistPage({
               emptyView={
                 <div
                   className="text-center py-8 text-sm"
-                  style={{ color: 'var(--text-tertiary)' }}
+                  style={{ color: "var(--text-tertiary)" }}
                 >
-                  {t('暂无白名单条目')}
+                  {t("暂无白名单条目")}
                 </div>
               }
               paginationMeta={{
@@ -344,9 +348,9 @@ export default function IpWhitelistPage({
                     onClear={clearSelection}
                     actions={[
                       {
-                        key: 'remove',
-                        label: t('批量移除'),
-                        variant: 'danger',
+                        key: "remove",
+                        label: t("批量移除"),
+                        variant: "danger",
                         loading: removing,
                         onClick: openBatchRemove,
                       },
@@ -356,32 +360,29 @@ export default function IpWhitelistPage({
               }
               renderHeader={() => (
                 <>
-                  <th className="text-left">{t('IP/CIDR')}</th>
-                  <th className="text-left">{t('原因')}</th>
-                  <th className="text-center">{t('来源')}</th>
-                  <th className="text-left">{t('操作人')}</th>
-                  <th className="text-left">{t('创建时间')}</th>
-                  <th className="text-left">{t('过期时间')}</th>
-                  <th className="text-center">{t('操作')}</th>
+                  <th className="text-left">{t("IP/CIDR")}</th>
+                  <th className="text-left">{t("原因")}</th>
+                  <th className="text-center">{t("来源")}</th>
+                  <th className="text-left">{t("操作人")}</th>
+                  <th className="text-left">{t("创建时间")}</th>
+                  <th className="text-left">{t("过期时间")}</th>
+                  <th className="text-center">{t("操作")}</th>
                 </>
               )}
               renderRow={(entry) => {
-                const sourceMeta = IP_WHITELIST_SOURCE_META[entry.source];
+                const sourceLabel = getIpWhitelistSourceLabel(entry.source);
                 const fileEntry = isFileEntry(entry);
                 return (
                   <>
-                    <td
-                      className="font-mono text-xs"
-                      style={{ minWidth: 180 }}
-                    >
+                    <td className="font-mono text-xs" style={{ minWidth: 180 }}>
                       <div className="flex items-center gap-1.5">
                         <span className="break-all">{entry.ip}</span>
                         <button
                           type="button"
-                          aria-label={t('复制 IP')}
-                          title={t('复制 IP')}
+                          aria-label={t("复制 IP")}
+                          title={t("复制 IP")}
                           className="shrink-0 cursor-pointer"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             void copyToClipboard(entry.ip);
@@ -398,8 +399,8 @@ export default function IpWhitelistPage({
                       </span>
                     </td>
                     <td className="text-center">
-                      <Tag variant={fileEntry ? 'info' : 'neutral'} size="xs">
-                        {sourceMeta?.label ?? entry.source}
+                      <Tag variant={fileEntry ? "info" : "neutral"} size="xs">
+                        {sourceLabel ?? entry.source}
                       </Tag>
                     </td>
                     <td className="font-mono text-xs" style={{ minWidth: 180 }}>
@@ -407,10 +408,10 @@ export default function IpWhitelistPage({
                         <span className="break-all">{entry.createdBy}</span>
                         <button
                           type="button"
-                          aria-label={t('复制操作人 ID')}
-                          title={t('复制操作人 ID')}
+                          aria-label={t("复制操作人 ID")}
+                          title={t("复制操作人 ID")}
                           className="shrink-0 cursor-pointer"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             void copyToClipboard(entry.createdBy);
@@ -421,21 +422,26 @@ export default function IpWhitelistPage({
                       </div>
                     </td>
                     <td className="text-xs">
-                      {fileEntry ? t('—') : formatDateTimeWithSeconds(entry.createdAt)}
+                      {fileEntry
+                        ? t("—")
+                        : formatDateTimeWithSeconds(entry.createdAt)}
                     </td>
                     <td className="text-xs">
                       {entry.expiresAt ? (
                         formatDateTimeWithSeconds(entry.expiresAt)
                       ) : (
                         <Tag variant="success" size="xs">
-                          {t('永久')}
+                          {t("永久")}
                         </Tag>
                       )}
                     </td>
                     <td className="text-center">
                       {fileEntry ? (
-                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          {t('文件条目')}
+                        <span
+                          className="text-xs"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          {t("文件条目")}
                         </span>
                       ) : (
                         <Button
@@ -446,7 +452,7 @@ export default function IpWhitelistPage({
                             openRemoveConfirm([entry]);
                           }}
                         >
-                          {t('移除')}
+                          {t("移除")}
                         </Button>
                       )}
                     </td>
@@ -460,12 +466,12 @@ export default function IpWhitelistPage({
         {/* 本地文件兜底说明 */}
         <div
           className="flex-shrink-0 mt-3 flex items-center gap-2 text-xs"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: "var(--text-tertiary)" }}
         >
           <FileCode2 size={14} />
           <span>
             {t(
-              '本地文件白名单条目来自服务器文件（默认 config/admin-ip-whitelist.json），用于界面误删白名单后的兜底恢复，不可在此移除。'
+              "本地文件白名单条目来自服务器文件（默认 config/admin-ip-whitelist.json），用于界面误删白名单后的兜底恢复，不可在此移除。",
             )}
           </span>
         </div>

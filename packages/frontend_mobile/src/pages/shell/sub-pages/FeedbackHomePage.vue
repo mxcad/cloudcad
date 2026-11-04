@@ -21,6 +21,7 @@ import type {
   FeedbackRewardResponseDto,
 } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { fillTemplate } from '@/utils/i18nFill'
 import { errMsg, unwrap } from '@/utils/apiError'
 import { copyText } from '@/utils/clipboard'
 import { stripHtmlTags } from '@/utils/richtext'
@@ -359,7 +360,7 @@ const detailShow = ref(false)
           <div v-for="r in rewards" :key="r.id" class="fb-item">
             <div class="fb-item-head">
               <span class="fb-item-title">
-                {{ t('VIP{level} 会员 {days} 天', { level: r.vipTierLevel, days: r.durationDays }) }}
+                {{ fillTemplate('VIP{level} 会员 {days} 天', { level: r.vipTierLevel, days: r.durationDays }) }}
               </span>
               <span
                 class="fb-badge"

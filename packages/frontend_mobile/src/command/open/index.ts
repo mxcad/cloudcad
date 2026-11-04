@@ -4,6 +4,7 @@ import { showToastOnce } from '@/utils/toast';
 import { cachedApiUrl } from '@/utils/apiConfig';
 import { publicFileAccessPath } from '@/utils/mxwebUrl';
 import { waitPublicConversion } from '@/services/conversionStream';
+import { describeConversionError } from '@/utils/conversionError';
 import { checkPublicFileExternalRefs } from '@/composables/useFileLoader';
 import { useEditorStore } from '@/stores/editor';
 import { useOpenGuard } from '@/composables/useOpenGuard';
@@ -72,16 +73,24 @@ async function openConvertedCad(
   editorState.resetFileState();
   editorState.setProgressStage('converting');
 
-  const status = await waitPublicConversion(param.hash);
+  const { status, error, errorCategory } = await waitPublicConversion(
+    param.hash
+  );
   if (status !== 'COMPLETED') {
-    showToastOnce(t('转换失败'));
+    // 按后端 errorCategory 区分「文件内容问题」vs「引擎/服务异常」，不再一律弹「转换失败」
+    showToastOnce(describeConversionError(errorCategory, error).message);
     return false;
   }
 
-  // 转换已完成后查外部参照是否缺失（缺失则弹补传弹窗），此时 preloading.json 已就位
+  // 转换已完成，先关掉「正在转换...」遮罩（z-index 9999 会盖住 z-index 2005 的
+  // 外部参照弹框，弹框期间用户无法操作），再弹外部参照管理框（await 用户操作）；
+  // 弹框关闭后重开「正在打开图纸...」遮罩并打开 mxweb。
+  editorState.setLoading(false);
+  editorState.setProgressStage('idle');
   await checkPublicFileExternalRefs(param.hash);
 
   editorState.setProgressStage('opening');
+  editorState.setLoading(true);
   const url = cachedApiUrl(
     publicFileAccessPath(`${param.hash}.${param.ext}.mxweb`)
   );

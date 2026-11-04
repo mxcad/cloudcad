@@ -4,28 +4,29 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, Plus, RefreshCw, Search, X } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Tag } from '@/components/ui/Tag';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useFileBrowserSelection } from '@/hooks/file-browser';
-import { useSelectionShortcuts } from '@/hooks/common/useSelectionShortcuts';
-import { useAccumulatedPagination } from '@/hooks/common/useAccumulatedPagination';
-import { SelectableTable } from '@/components/common/SelectableTable';
-import { BatchActionBar } from '@/components/common/BatchActionBar';
-import { t } from '@/languages';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import { globalShowToast } from '@/utils/notificationEvents';
-import { useCopy } from '@/hooks/useCopy';
-import { ipBlacklistControllerRemove } from '@/api-sdk';
-import { AddEntryModal } from './components/AddEntryModal';
-import { RemoveEntryModal } from './components/RemoveEntryModal';
-import { IP_BLACKLIST_PAGE_SIZE, IP_BLACKLIST_SOURCE_META } from './constants';
-import { useAddIpBlacklistEntry, useIpBlacklistList } from './hooks/useIpBlacklist';
-import type { IpBlacklistEntry, IpBlacklistEntryForm } from './types';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Copy, Plus, RefreshCw, Search, X } from "lucide-react";
+import { Button, Card, Input, Tag } from "@/components/ui";
+
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useFileBrowserSelection } from "@/hooks/file-browser";
+import { useSelectionShortcuts } from "@/hooks/common/useSelectionShortcuts";
+import { useAccumulatedPagination } from "@/hooks/common/useAccumulatedPagination";
+import { SelectableTable } from "@/components/common/SelectableTable";
+import { BatchActionBar } from "@/components/common/BatchActionBar";
+import { t } from "@/languages";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import { globalShowToast } from "@/utils/notificationEvents";
+import { useCopy } from "@/hooks/useCopy";
+import { ipBlacklistControllerRemove } from "@/api-sdk";
+import { AddEntryModal } from "./components/AddEntryModal";
+import { RemoveEntryModal } from "./components/RemoveEntryModal";
+import { IP_BLACKLIST_PAGE_SIZE, getIpBlacklistSourceLabel } from "./constants";
+import {
+  useAddIpBlacklistEntry,
+  useIpBlacklistList,
+} from "./hooks/useIpBlacklist";
+import type { IpBlacklistEntry, IpBlacklistEntryForm } from "./types";
 
 /**
  * @param embedded 嵌入 IP 访问控制 Tab 时为 true：隐藏独立页头与外边距
@@ -36,23 +37,23 @@ export default function IpBlacklistPage({
 }: {
   embedded?: boolean;
 }) {
-  useDocumentTitle(t('IP 黑名单'), embedded);
+  useDocumentTitle(t("IP 黑名单"), embedded);
 
   // 保留 copyToClipboard 名称，调用点无需改动
   const { copy: copyToClipboard } = useCopy({
-    successMessage: t('复制成功'),
-    failMessage: t('复制失败'),
+    successMessage: t("复制成功"),
+    failMessage: t("复制失败"),
   });
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(IP_BLACKLIST_PAGE_SIZE);
   const [addOpen, setAddOpen] = useState(false);
   const [removeTargets, setRemoveTargets] = useState<IpBlacklistEntry[] | null>(
-    null
+    null,
   );
   const [removing, setRemoving] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   // 输入防抖 500ms 后生效
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function IpBlacklistPage({
   const { items, total, loading, refetch } = useIpBlacklistList(
     page,
     keyword,
-    pageSize
+    pageSize,
   );
   const addMutation = useAddIpBlacklistEntry(() => setAddOpen(false));
 
@@ -90,7 +91,7 @@ export default function IpBlacklistPage({
   // 跨页滚动后表头全选/Ctrl+A 作用于全部已加载页，勾选状态与行为不脱节
   const selectableItems = useMemo(
     () => viewItems.map((i) => ({ id: i.id })),
-    [viewItems]
+    [viewItems],
   );
   const {
     selectedNodes,
@@ -98,7 +99,7 @@ export default function IpBlacklistPage({
     handleSelectAll,
     clearSelection,
     selectMany,
-  } = useFileBrowserSelection({ nodes: selectableItems, multiple: 'always' });
+  } = useFileBrowserSelection({ nodes: selectableItems, multiple: "always" });
   const selectedCount = selectedNodes.size;
 
   // 搜索词变化清空选择（查询身份变更，历史选择不再指向当前列表）
@@ -114,16 +115,13 @@ export default function IpBlacklistPage({
       setPageSize(next);
       setPage(1);
     },
-    [pageSize, clearSelection]
+    [pageSize, clearSelection],
   );
 
-  const openRemoveConfirm = useCallback(
-    (entries: IpBlacklistEntry[]) => {
-      if (entries.length === 0) return;
-      setRemoveTargets(entries);
-    },
-    []
-  );
+  const openRemoveConfirm = useCallback((entries: IpBlacklistEntry[]) => {
+    if (entries.length === 0) return;
+    setRemoveTargets(entries);
+  }, []);
 
   const openBatchRemove = useCallback(() => {
     const targets = viewItems.filter((i) => selectedNodes.has(i.id));
@@ -152,15 +150,15 @@ export default function IpBlacklistPage({
     if (successCount > 0) {
       globalShowToast(
         successCount > 1
-          ? t('已移除 {count} 条记录', { count: String(successCount) })
-          : t('已移除'),
-        'success'
+          ? t("已移除 {count} 条记录", { count: String(successCount) })
+          : t("已移除"),
+        "success",
       );
     }
     if (failCount > 0) {
       globalShowToast(
-        t('{count} 条移除失败', { count: String(failCount) }),
-        'error'
+        t("{count} 条移除失败", { count: String(failCount) }),
+        "error",
       );
     }
     setRemoving(false);
@@ -186,29 +184,29 @@ export default function IpBlacklistPage({
     <div
       className={
         embedded
-          ? 'h-full flex flex-col overflow-hidden text-text-secondary'
-          : 'h-full flex flex-col overflow-hidden p-6 text-text-secondary'
+          ? "h-full flex flex-col overflow-hidden text-text-secondary"
+          : "h-full flex flex-col overflow-hidden p-6 text-text-secondary"
       }
     >
       <div
         className={
           embedded
-            ? 'w-full flex flex-col flex-1 min-h-0'
-            : 'max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0'
+            ? "w-full flex flex-col flex-1 min-h-0"
+            : "max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0"
         }
       >
         <div
           className={
             embedded
-              ? 'flex-shrink-0 flex items-center justify-between mb-4'
-              : 'flex-shrink-0 flex items-center justify-between mb-6'
+              ? "flex-shrink-0 flex items-center justify-between mb-4"
+              : "flex-shrink-0 flex items-center justify-between mb-6"
           }
         >
           {/* 保留占位节点：embedded 时无标题，justify-between 仍需两个子项才能把工具栏推右 */}
           <div className="flex items-center gap-2">
             {!embedded && (
               <h1 className="text-2xl font-bold text-text-primary">
-                {t('IP 黑名单')}
+                {t("IP 黑名单")}
               </h1>
             )}
           </div>
@@ -217,23 +215,23 @@ export default function IpBlacklistPage({
               <Search
                 size={15}
                 className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               />
               <Input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t('搜索 IP/原因/操作人')}
+                placeholder={t("搜索 IP/原因/操作人")}
                 className="pl-9 pr-8 w-64"
                 size="md"
               />
               {searchInput && (
                 <button
                   type="button"
-                  aria-label={t('清空搜索')}
-                  title={t('清空搜索')}
+                  aria-label={t("清空搜索")}
+                  title={t("清空搜索")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  onClick={() => setSearchInput('')}
+                  style={{ color: "var(--text-tertiary)" }}
+                  onClick={() => setSearchInput("")}
                 >
                   <X size={14} />
                 </button>
@@ -246,13 +244,18 @@ export default function IpBlacklistPage({
               onClick={() => void refetch()}
             />
             <Button size="sm" icon={Plus} onClick={() => setAddOpen(true)}>
-              {t('添加')}
+              {t("添加")}
             </Button>
           </div>
         </div>
 
         {/* 表格卡撑满剩余空间（页面恒一屏，列表内部滚动） */}
-        <Card variant="outlined" padding="none" radius="xl" className="flex-1 min-h-0 flex flex-col">
+        <Card
+          variant="outlined"
+          padding="none"
+          radius="xl"
+          className="flex-1 min-h-0 flex flex-col"
+        >
           <div className="flex-1 min-h-0 flex flex-col">
             <SelectableTable<IpBlacklistEntry>
               rows={viewItems}
@@ -263,8 +266,8 @@ export default function IpBlacklistPage({
                   <div
                     className="w-8 h-8 rounded-full animate-spin"
                     style={{
-                      border: '3px solid var(--border-default)',
-                      borderTopColor: 'var(--primary-500)',
+                      border: "3px solid var(--border-default)",
+                      borderTopColor: "var(--primary-500)",
                     }}
                   />
                 </div>
@@ -272,9 +275,9 @@ export default function IpBlacklistPage({
               emptyView={
                 <div
                   className="text-center py-8 text-sm"
-                  style={{ color: 'var(--text-tertiary)' }}
+                  style={{ color: "var(--text-tertiary)" }}
                 >
-                  {t('暂无黑名单条目')}
+                  {t("暂无黑名单条目")}
                 </div>
               }
               paginationMeta={{
@@ -303,9 +306,9 @@ export default function IpBlacklistPage({
                     onClear={clearSelection}
                     actions={[
                       {
-                        key: 'remove',
-                        label: t('批量移除'),
-                        variant: 'danger',
+                        key: "remove",
+                        label: t("批量移除"),
+                        variant: "danger",
                         loading: removing,
                         onClick: openBatchRemove,
                       },
@@ -315,31 +318,28 @@ export default function IpBlacklistPage({
               }
               renderHeader={() => (
                 <>
-                  <th className="text-left">{t('IP/CIDR')}</th>
-                  <th className="text-left">{t('原因')}</th>
-                  <th className="text-center">{t('来源')}</th>
-                  <th className="text-left">{t('操作人')}</th>
-                  <th className="text-left">{t('创建时间')}</th>
-                  <th className="text-left">{t('过期时间')}</th>
-                  <th className="text-center">{t('操作')}</th>
+                  <th className="text-left">{t("IP/CIDR")}</th>
+                  <th className="text-left">{t("原因")}</th>
+                  <th className="text-center">{t("来源")}</th>
+                  <th className="text-left">{t("操作人")}</th>
+                  <th className="text-left">{t("创建时间")}</th>
+                  <th className="text-left">{t("过期时间")}</th>
+                  <th className="text-center">{t("操作")}</th>
                 </>
               )}
               renderRow={(entry) => {
-                const sourceMeta = IP_BLACKLIST_SOURCE_META[entry.source];
+                const sourceLabel = getIpBlacklistSourceLabel(entry.source);
                 return (
                   <>
-                    <td
-                      className="font-mono text-xs"
-                      style={{ minWidth: 180 }}
-                    >
+                    <td className="font-mono text-xs" style={{ minWidth: 180 }}>
                       <div className="flex items-center gap-1.5">
                         <span className="break-all">{entry.ip}</span>
                         <button
                           type="button"
-                          aria-label={t('复制 IP')}
-                          title={t('复制 IP')}
+                          aria-label={t("复制 IP")}
+                          title={t("复制 IP")}
                           className="shrink-0 cursor-pointer"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             void copyToClipboard(entry.ip);
@@ -352,7 +352,7 @@ export default function IpBlacklistPage({
                     <td className="max-w-[280px] truncate">{entry.reason}</td>
                     <td className="text-center">
                       <Tag variant="neutral" size="xs">
-                        {sourceMeta?.label ?? entry.source}
+                        {sourceLabel ?? entry.source}
                       </Tag>
                     </td>
                     <td className="font-mono text-xs" style={{ minWidth: 180 }}>
@@ -360,10 +360,10 @@ export default function IpBlacklistPage({
                         <span className="break-all">{entry.createdBy}</span>
                         <button
                           type="button"
-                          aria-label={t('复制操作人 ID')}
-                          title={t('复制操作人 ID')}
+                          aria-label={t("复制操作人 ID")}
+                          title={t("复制操作人 ID")}
                           className="shrink-0 cursor-pointer"
-                          style={{ color: 'var(--text-tertiary)' }}
+                          style={{ color: "var(--text-tertiary)" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             void copyToClipboard(entry.createdBy);
@@ -373,13 +373,15 @@ export default function IpBlacklistPage({
                         </button>
                       </div>
                     </td>
-                    <td className="text-xs">{formatDateTimeWithSeconds(entry.createdAt)}</td>
+                    <td className="text-xs">
+                      {formatDateTimeWithSeconds(entry.createdAt)}
+                    </td>
                     <td className="text-xs">
                       {entry.expiresAt ? (
                         formatDateTimeWithSeconds(entry.expiresAt)
                       ) : (
                         <Tag variant="success" size="xs">
-                          {t('永久')}
+                          {t("永久")}
                         </Tag>
                       )}
                     </td>
@@ -392,7 +394,7 @@ export default function IpBlacklistPage({
                           openRemoveConfirm([entry]);
                         }}
                       >
-                        {t('移除')}
+                        {t("移除")}
                       </Button>
                     </td>
                   </>

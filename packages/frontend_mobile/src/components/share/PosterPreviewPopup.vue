@@ -44,6 +44,8 @@ const emit = defineEmits<{
   (e: 'update:layout', v: SharePosterLayout): void
   (e: 'download'): void
   (e: 'pick-region'): void
+  /** 重置：父组件用默认方式（整图包围盒）重新截图，并重置区域/版式/二维码大小/底部名称 */
+  (e: 'reset'): void
 }>()
 
 // ── 版式（手机竖版/正方形/横版）：与 PC 一致三档，预览内调整（改动即重合成预览）──
@@ -113,6 +115,14 @@ const qrScaleModel = computed({
           >
             <van-icon name="photograph" size="16" />
             <span>{{ regionActive ? t('重新指定区域') : t('指定区域') }}</span>
+          </button>
+          <button
+            class="ppp-region-btn ppp-region-btn--secondary"
+            :disabled="generating || pickingRegion"
+            @click="emit('reset')"
+          >
+            <van-icon name="replay" size="16" />
+            <span>{{ t('重置') }}</span>
           </button>
           <span v-if="regionActive" class="ppp-region-hint">{{ t('已按选定区域生成') }}</span>
         </div>
@@ -257,6 +267,13 @@ const qrScaleModel = computed({
   &:disabled {
     opacity: 0.6;
   }
+}
+
+/* 重置（次级）：描边非填充，与「指定区域」主按钮区分 */
+.ppp-region-btn--secondary {
+  background: transparent;
+  color: var(--text-primary, var(--van-text-color));
+  border: 1px solid var(--border-color, var(--van-border-color));
 }
 
 .ppp-region-hint {

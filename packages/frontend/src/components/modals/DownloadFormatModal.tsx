@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Select } from '@/components/ui/Select';
-import { Input } from '@/components/ui/Input';
-import { Download } from 'lucide-react';
-import { t } from '@/languages';
-import type { DownloadFormat, PdfOptions, DwgOptions } from '@/types/download-format';
+import React, { useState } from "react";
+import { Button, Modal, Select, Input } from "@/components/ui";
+
+import { Download } from "lucide-react";
+import { t } from "@/languages";
+import type {
+  DownloadFormat,
+  PdfOptions,
+  DwgOptions,
+} from "@/types/download-format";
 
 interface DownloadFormatModalProps {
   isOpen: boolean;
@@ -14,18 +16,18 @@ interface DownloadFormatModalProps {
   onDownload: (
     format: DownloadFormat,
     pdfOptions?: PdfOptions,
-    dwgOptions?: DwgOptions
+    dwgOptions?: DwgOptions,
   ) => void;
   loading?: boolean;
 }
 
 function getDwgVersionOptions() {
   return [
-    { value: 23, label: t('CAD 2000（默认）') },
-    { value: 25, label: t('CAD 2004') },
-    { value: 27, label: t('CAD 2007') },
-    { value: 29, label: t('CAD 2010') },
-    { value: 33, label: t('CAD 2018') },
+    { value: 23, label: t("CAD 2000（默认）") },
+    { value: 25, label: t("CAD 2004") },
+    { value: 27, label: t("CAD 2007") },
+    { value: 29, label: t("CAD 2010") },
+    { value: 33, label: t("CAD 2018") },
   ];
 }
 
@@ -36,29 +38,29 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
   onDownload,
   loading = false,
 }) => {
-  const [format, setFormat] = useState<DownloadFormat>('mxweb');
+  const [format, setFormat] = useState<DownloadFormat>("mxweb");
   const [pdfOptions, setPdfOptions] = useState<PdfOptions>({
-    width: '2000',
-    height: '2000',
-    colorPolicy: 'mono',
+    width: "2000",
+    height: "2000",
+    colorPolicy: "mono",
   });
   const [dwgVersion, setDwgVersion] = useState<number>(23);
 
   const handleClose = () => {
-    setFormat('mxweb');
+    setFormat("mxweb");
     setPdfOptions({
-      width: '2000',
-      height: '2000',
-      colorPolicy: 'mono',
+      width: "2000",
+      height: "2000",
+      colorPolicy: "mono",
     });
     setDwgVersion(23);
     onClose();
   };
 
   const handleDownload = () => {
-    if (format === 'pdf') {
+    if (format === "pdf") {
       onDownload(format, pdfOptions);
-    } else if (format === 'dwg' || format === 'dxf') {
+    } else if (format === "dwg" || format === "dxf") {
       onDownload(format, undefined, { dwgVersion });
     } else {
       onDownload(format);
@@ -67,9 +69,9 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
 
   const getDisplayFileName = (
     originalFileName: string,
-    selectedFormat: DownloadFormat
+    selectedFormat: DownloadFormat,
   ): string => {
-    const nameWithoutExt = (originalFileName || '').replace(/\.[^.]+$/, '');
+    const nameWithoutExt = (originalFileName || "").replace(/\.[^.]+$/, "");
     return `${nameWithoutExt}.${selectedFormat}`;
   };
 
@@ -78,15 +80,15 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       closeOnOverlayClick={!loading}
-      title={t('选择下载格式')}
+      title={t("选择下载格式")}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button onClick={handleDownload} loading={loading}>
             <Download className="w-4 h-4 mr-2" />
-            {t('下载')}
+            {t("下载")}
           </Button>
         </>
       }
@@ -96,11 +98,11 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         <div
           className="p-4 rounded-lg"
           style={{
-            backgroundColor: 'var(--bg-secondary, #f8fafc)',
+            backgroundColor: "var(--bg-secondary, #f8fafc)",
           }}
         >
-          <p style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-medium">{t('文件：')}</span>
+          <p style={{ color: "var(--text-secondary)" }}>
+            <span className="font-medium">{t("文件：")}</span>
             <span className="ml-2 font-mono">
               {getDisplayFileName(fileName, format)}
             </span>
@@ -111,45 +113,45 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         <div>
           <label
             className="block font-medium mb-3"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
-            {t('选择下载格式 *')}
+            {t("选择下载格式 *")}
           </label>
           <Select
             value={format}
             onChange={(val) => setFormat(val as DownloadFormat)}
             options={[
-              { value: 'mxweb', label: t('MXWEB 格式（默认）') },
-              { value: 'dwg', label: t('DWG 格式') },
-              { value: 'dxf', label: t('DXF 格式') },
-              { value: 'pdf', label: t('PDF 格式') },
+              { value: "mxweb", label: t("MXWEB 格式（默认）") },
+              { value: "dwg", label: t("DWG 格式") },
+              { value: "dxf", label: t("DXF 格式") },
+              { value: "pdf", label: t("PDF 格式") },
             ]}
           />
         </div>
 
         {/* PDF 参数 */}
-        {format === 'pdf' && (
+        {format === "pdf" && (
           <div
             className="rounded-lg p-4 space-y-4"
             style={{
-              backgroundColor: 'var(--bg-secondary, #f8fafc)',
-              border: '1px solid var(--border-default, #e2e8f0)',
+              backgroundColor: "var(--bg-secondary, #f8fafc)",
+              border: "1px solid var(--border-default, #e2e8f0)",
             }}
           >
             <p
               className="font-medium"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: "var(--text-secondary)" }}
             >
-              {t('PDF 导出参数')}
+              {t("PDF 导出参数")}
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label
                   className="block font-medium mb-1"
-                  style={{ color: 'var(--text-secondary)' }}
+                  style={{ color: "var(--text-secondary)" }}
                 >
-                  {t('宽度（像素）')}
+                  {t("宽度（像素）")}
                 </label>
                 <Input
                   value={pdfOptions.width}
@@ -162,9 +164,9 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
               <div>
                 <label
                   className="block font-medium mb-1"
-                  style={{ color: 'var(--text-secondary)' }}
+                  style={{ color: "var(--text-secondary)" }}
                 >
-                  {t('高度（像素）')}
+                  {t("高度（像素）")}
                 </label>
                 <Input
                   value={pdfOptions.height}
@@ -179,21 +181,21 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             <div>
               <label
                 className="block font-medium mb-1"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('颜色策略')}
+                {t("颜色策略")}
               </label>
               <Select
                 value={pdfOptions.colorPolicy}
                 onChange={(val) =>
                   setPdfOptions({
                     ...pdfOptions,
-                    colorPolicy: val as 'mono' | 'color',
+                    colorPolicy: val as "mono" | "color",
                   })
                 }
                 options={[
-                  { value: 'mono', label: t('黑白（单色）') },
-                  { value: 'color', label: t('彩色') },
+                  { value: "mono", label: t("黑白（单色）") },
+                  { value: "color", label: t("彩色") },
                 ]}
                 size="sm"
               />
@@ -202,27 +204,27 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         )}
 
         {/* DWG/DXF 参数 */}
-        {(format === 'dwg' || format === 'dxf') && (
+        {(format === "dwg" || format === "dxf") && (
           <div
             className="rounded-lg p-4 space-y-4"
             style={{
-              backgroundColor: 'var(--bg-secondary, #f8fafc)',
-              border: '1px solid var(--border-default, #e2e8f0)',
+              backgroundColor: "var(--bg-secondary, #f8fafc)",
+              border: "1px solid var(--border-default, #e2e8f0)",
             }}
           >
             <p
               className="font-medium"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: "var(--text-secondary)" }}
             >
-              {t(`${format === 'dwg' ? 'DWG' : 'DXF'} 导出参数`)}
+              {t(format === "dwg" ? "DWG 导出参数" : "DXF 导出参数")}
             </p>
 
             <div>
               <label
                 className="block font-medium mb-1"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('图纸版本')}
+                {t("图纸版本")}
               </label>
               <Select
                 value={dwgVersion}
@@ -235,22 +237,22 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         )}
 
         {/* 格式说明 */}
-        <div className="space-y-1" style={{ color: 'var(--text-tertiary)' }}>
+        <div className="space-y-1" style={{ color: "var(--text-tertiary)" }}>
           <p>
             • <strong>MXWEB</strong>
-            {t('：CloudCAD 专用格式，可直接在线编辑')}
+            {t("：CloudCAD 专用格式，可直接在线编辑")}
           </p>
           <p>
             • <strong>DWG</strong>
-            {t('：AutoCAD 原生格式，需要转换时间')}
+            {t("：AutoCAD 原生格式，需要转换时间")}
           </p>
           <p>
             • <strong>DXF</strong>
-            {t('：Drawing Exchange Format，需要转换时间')}
+            {t("：Drawing Exchange Format，需要转换时间")}
           </p>
           <p>
             • <strong>PDF</strong>
-            {t('：便携式文档格式，需要转换时间')}
+            {t("：便携式文档格式，需要转换时间")}
           </p>
         </div>
       </div>

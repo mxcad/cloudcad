@@ -79,8 +79,8 @@ const LOCAL_STORAGE_KEY = 'cloudcad.conversion.local-tasks';
 const MAX_LOCAL_TASKS = 100;
 /** 面板 UI（位置 + 尺寸）持久化 key（#476）：刷新后保留位置与宽高 */
 const PANEL_UI_STORAGE_KEY = 'cloudcad.conversion.panel-ui';
-/** 面板默认尺寸（#476）：导出供双击复位 / 测试引用 */
-export const DEFAULT_PANEL_SIZE = { width: 400, height: 540 };
+/** 面板默认尺寸（#476，2026-11-04 翻倍）：导出供双击复位 / 测试引用 */
+export const DEFAULT_PANEL_SIZE = { width: 800, height: 1080 };
 /** 历史分页每页数量（#476） */
 const HISTORY_PAGE_SIZE = 20;
 /** 非终态任务的轮询间隔（有进行中任务时拉取云端） */

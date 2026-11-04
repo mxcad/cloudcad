@@ -16,6 +16,7 @@ const mockedManager = vi.mocked(mxcadManager);
 const baseOptions = {
   isActive: true,
   isHomeMode: false,
+  hasDrawingOpenIntent: false,
   isCollabLink: false,
   error: null,
 };
@@ -85,6 +86,42 @@ describe('useSidebarContentReady - gate', () => {
   it('collab link + engine ready -> ready', async () => {
     mockedManager.isReady.mockReturnValue(true);
     const { result } = renderReady({ isCollabLink: true });
+    await settle();
+    expect(result.current).toBe(true);
+  });
+
+  it('home mode + engine NOT ready -> ready（库列表与引擎初始化并行）', async () => {
+    // isReady 默认 false：无图纸入口不等引擎就绪，立即放行
+    const { result } = renderReady({ isHomeMode: true });
+    await settle();
+    expect(result.current).toBe(true);
+  });
+
+  it('collab link + engine NOT ready -> ready（库列表与引擎初始化并行）', async () => {
+    const { result } = renderReady({ isCollabLink: true });
+    await settle();
+    expect(result.current).toBe(true);
+  });
+
+  it('home mode + hash 直开（hasDrawingOpenIntent）-> NOT ready（等引擎，不提前放行）', async () => {
+    // ?hash= 直开图纸：pathname 为 /cad-editor（isHomeMode true），但 hashParam 非空
+    // = 真实图纸打开，会下载 mxweb。必须等引擎就绪，避免库列表与图纸下载抢带宽。
+    const { result } = renderReady({ isHomeMode: true, hasDrawingOpenIntent: true });
+    await settle();
+    expect(result.current).toBe(false);
+  });
+
+  it('home mode + nodeId 直开（hasDrawingOpenIntent）-> NOT ready（等引擎，不提前放行）', async () => {
+    const { result } = renderReady({ isHomeMode: true, hasDrawingOpenIntent: true });
+    await settle();
+    expect(result.current).toBe(false);
+  });
+
+  it('home mode + hash 直开 + 引擎就绪且打开终态 -> ready', async () => {
+    // hash 直开但引擎就绪 + openFileComplete 到达：正常放行
+    mockedManager.isReady.mockReturnValue(true);
+    setOpenState({ settled: 1 });
+    const { result } = renderReady({ isHomeMode: true, hasDrawingOpenIntent: true });
     await settle();
     expect(result.current).toBe(true);
   });

@@ -20,13 +20,13 @@
  * Escape 仍可通过 Modal 内置的 keydown 关闭（等同确认），保持键盘可达。
  */
 
-import React from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { Z_LAYERS } from '@/constants/layers';
-import { t } from '@/languages';
+import React from "react";
+import { Modal, Button } from "@/components/ui";
 
-import type { Notice } from './noticeTypes';
+import { Z_LAYERS } from "@/constants/layers";
+import { t } from "@/languages";
+
+import type { Notice } from "./noticeTypes";
 
 /**
  * 级别 → 强调色。取主题功能色变量（theme.css 在浅/深主题各定义一份），不写死色值。
@@ -37,9 +37,9 @@ import type { Notice } from './noticeTypes';
  * 几乎不可见（只有选中高亮时看得到）。
  */
 const LEVEL_STYLES: Record<string, { color: string; border: string }> = {
-  info: { color: 'var(--info)', border: 'border-t-[var(--info)]' },
-  warning: { color: 'var(--warning)', border: 'border-t-[var(--warning)]' },
-  danger: { color: 'var(--error)', border: 'border-t-[var(--error)]' },
+  info: { color: "var(--info)", border: "border-t-[var(--info)]" },
+  warning: { color: "var(--warning)", border: "border-t-[var(--warning)]" },
+  danger: { color: "var(--error)", border: "border-t-[var(--error)]" },
 };
 
 const FALLBACK_STYLES = LEVEL_STYLES.info as { color: string; border: string };
@@ -75,14 +75,14 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
       size="md"
       footer={
         <Button variant="primary" onClick={() => onAcknowledge(notice)}>
-          {t('知道了')}
+          {t("知道了")}
         </Button>
       }
     >
       <div className="px-6 py-4">
         <p
           className="text-sm leading-relaxed whitespace-pre-wrap break-words"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: "var(--text-primary)" }}
         >
           {notice.body}
         </p>

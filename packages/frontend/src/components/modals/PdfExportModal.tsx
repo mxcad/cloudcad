@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Select } from '@/components/ui/Select';
-import { Input } from '@/components/ui/Input';
-import { Download } from 'lucide-react';
-import { t } from '@/languages';
-import type { PdfOptions } from '@/types/download-format';
+import React, { useState } from "react";
+import { Button, Modal, Select, Input } from "@/components/ui";
+
+import { Download } from "lucide-react";
+import { t } from "@/languages";
+import type { PdfOptions } from "@/types/download-format";
 
 interface PdfExportModalProps {
   isOpen: boolean;
@@ -23,16 +21,16 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
   loading = false,
 }) => {
   const [pdfOptions, setPdfOptions] = useState<PdfOptions>({
-    width: '2000',
-    height: '2000',
-    colorPolicy: 'mono',
+    width: "2000",
+    height: "2000",
+    colorPolicy: "mono",
   });
 
   const handleClose = () => {
     setPdfOptions({
-      width: '2000',
-      height: '2000',
-      colorPolicy: 'mono',
+      width: "2000",
+      height: "2000",
+      colorPolicy: "mono",
     });
     onClose();
   };
@@ -41,7 +39,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
     onExport(pdfOptions);
   };
 
-  const nameWithoutExt = (fileName || '').replace(/\.[^.]+$/, '');
+  const nameWithoutExt = (fileName || "").replace(/\.[^.]+$/, "");
   const displayFileName = `${nameWithoutExt}.pdf`;
 
   return (
@@ -49,15 +47,15 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       closeOnOverlayClick={!loading}
-      title={t('导出 PDF')}
+      title={t("导出 PDF")}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button onClick={handleExport} loading={loading}>
             <Download className="w-4 h-4 mr-2" />
-            {t('导出')}
+            {t("导出")}
           </Button>
         </>
       }
@@ -67,11 +65,11 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
         <div
           className="p-4 rounded-lg"
           style={{
-            backgroundColor: 'var(--bg-secondary, #f8fafc)',
+            backgroundColor: "var(--bg-secondary, #f8fafc)",
           }}
         >
-          <p style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-medium">{t('文件：')}</span>
+          <p style={{ color: "var(--text-secondary)" }}>
+            <span className="font-medium">{t("文件：")}</span>
             <span className="ml-2 font-mono">{displayFileName}</span>
           </p>
         </div>
@@ -80,12 +78,12 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
         <div
           className="rounded-lg p-4 space-y-4"
           style={{
-            backgroundColor: 'var(--bg-secondary, #f8fafc)',
-            border: '1px solid var(--border-default, #e2e8f0)',
+            backgroundColor: "var(--bg-secondary, #f8fafc)",
+            border: "1px solid var(--border-default, #e2e8f0)",
           }}
         >
-          <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>
-            {t('PDF 导出参数')}
+          <p className="font-medium" style={{ color: "var(--text-secondary)" }}>
+            {t("PDF 导出参数")}
           </p>
 
           {/* 宽度和高度 */}
@@ -93,9 +91,9 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
             <div>
               <label
                 className="block font-medium mb-1"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('宽度（像素）')}
+                {t("宽度（像素）")}
               </label>
               <Input
                 value={pdfOptions.width}
@@ -108,9 +106,9 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
             <div>
               <label
                 className="block font-medium mb-1"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('高度（像素）')}
+                {t("高度（像素）")}
               </label>
               <Input
                 value={pdfOptions.height}
@@ -126,21 +124,21 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
           <div>
             <label
               className="block font-medium mb-1"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: "var(--text-secondary)" }}
             >
-              {t('颜色策略')}
+              {t("颜色策略")}
             </label>
             <Select
               value={pdfOptions.colorPolicy}
               onChange={(val) =>
                 setPdfOptions({
                   ...pdfOptions,
-                  colorPolicy: val as 'mono' | 'color',
+                  colorPolicy: val as "mono" | "color",
                 })
               }
               options={[
-                { value: 'mono', label: t('黑白（单色）') },
-                { value: 'color', label: t('彩色') },
+                { value: "mono", label: t("黑白（单色）") },
+                { value: "color", label: t("彩色") },
               ]}
               size="sm"
             />

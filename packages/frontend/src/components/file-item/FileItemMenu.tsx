@@ -1,13 +1,13 @@
-import React, { useCallback } from 'react';
-import { MoreIcon } from '../FileIcons';
+import React, { useCallback } from "react";
+import { MoreIcon } from "../FileIcons";
 import {
   type ActionType,
   type FileAction,
   getActionGroups,
-} from './fileActionConfig';
-import { Tooltip } from '../ui/Tooltip';
-import { Menu } from '../ui/Menu';
-import { t } from '@/languages';
+} from "./fileActionConfig";
+import { Tooltip, Menu } from "@/components/ui";
+
+import { t } from "@/languages";
 
 interface FileItemMenuProps {
   actions: FileAction[];
@@ -47,7 +47,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
         }}
         modal={false}
       >
-        <Tooltip content={t('更多操作')} position="top">
+        <Tooltip content={t("更多操作")} position="top">
           <Menu.Trigger>
             <button
               data-tour="file-item-menu-btn"

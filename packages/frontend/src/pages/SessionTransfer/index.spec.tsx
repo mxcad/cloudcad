@@ -47,6 +47,8 @@ vi.mock('@/components/ui/Button', () => ({
   }) => <button onClick={onClick}>{children}</button>,
 }));
 vi.mock('@/languages', () => ({
+  // appConfig 的内置品牌标题按 i18nScope.activeLanguage 本地化，mock 须一并提供
+  i18nScope: { activeLanguage: 'zh-CN' },
   t: (key: string) => key,
 }));
 vi.mock('@/utils/errorHandler', () => ({

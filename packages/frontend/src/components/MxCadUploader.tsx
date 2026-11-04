@@ -10,35 +10,35 @@ import {
   useCallback,
   useRef,
   useEffect,
-} from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Upload } from 'lucide-react';
-import { queryKeys } from '@/lib/queryKeys';
-import { useMxCadUploadNative } from '../hooks/useMxCadUploadNative';
-import { useAuth } from '../contexts/AuthContext';
-import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
-import { ExternalReferencePanel } from './modals/ExternalReferencePanel';
-import { ImagePreviewModal } from './modals/ImagePreviewModal';
-import { DownloadFormatModal } from './modals/DownloadFormatModal';
-import { globalShowToast } from '../utils/notificationEvents';
-import type { ExternalReferenceFile } from '../types/filesystem';
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Upload } from "lucide-react";
+import { queryKeys } from "@/lib/queryKeys";
+import { useMxCadUploadNative } from "../hooks/useMxCadUploadNative";
+import { useAuth } from "../contexts/AuthContext";
+import { useExternalReferenceUpload } from "../hooks/useExternalReferenceUpload";
+import { ExternalReferencePanel } from "./modals/ExternalReferencePanel";
+import { ImagePreviewModal } from "./modals/ImagePreviewModal";
+import { DownloadFormatModal } from "./modals/DownloadFormatModal";
+import { globalShowToast } from "../utils/notificationEvents";
+import type { ExternalReferenceFile } from "../types/filesystem";
 import type {
   DownloadFormat,
   PdfOptions,
   DwgOptions,
-} from '../types/download-format';
-import { Button } from './ui/Button';
-import { Tooltip } from './ui/Tooltip';
-import { useUploadManager } from '../hooks/useUploadManager';
-import type { UploadListener } from '../utils/uploadManager';
+} from "../types/download-format";
+import { Button, Tooltip } from "@/components/ui";
+
+import { useUploadManager } from "../hooks/useUploadManager";
+import type { UploadListener } from "../utils/uploadManager";
 import {
   downloadExternalRefFile,
   fetchXrefViewBlobUrl,
   revokeXrefViewBlobUrl,
   type DownloadNodeQuery,
-} from '../utils/download';
-import { CAD_EXTENSIONS } from '../utils/fileUtils';
-import { t } from '@/languages';
+} from "../utils/download";
+import { CAD_EXTENSIONS } from "../utils/fileUtils";
+import { t } from "@/languages";
 
 interface MxCadUploaderProps {
   nodeId?: string | (() => string);
@@ -72,17 +72,17 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       onSuccess,
       onError,
       showProgress = true,
-      buttonText = t('上传 CAD 文件'),
-      buttonClassName = '',
+      buttonText = t("上传 CAD 文件"),
+      buttonClassName = "",
       onExternalReferenceSuccess,
       onExternalReferenceSkip,
       enableExternalReferenceCheck = true,
       openAfterUpload = true,
     },
-    ref
+    ref,
   ) => {
     const { isAuthenticated } = useAuth();
-    const [currentNodeId, setCurrentNodeId] = useState('');
+    const [currentNodeId, setCurrentNodeId] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     const { selectRawFiles } = useMxCadUploadNative();
     const { addFiles, manager } = useUploadManager({ maxConcurrent: 3 });
@@ -96,8 +96,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       },
       onError: (error) => {
         globalShowToast(
-          t('外部参照上传失败: {error}', { error: String(error) }),
-          'error'
+          t("外部参照上传失败: {error}", { error: String(error) }),
+          "error",
         );
       },
       onSkip: () => {
@@ -115,7 +115,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       async (file: ExternalReferenceFile) => {
         if (!currentNodeId) return;
 
-        if (file.type === 'img') {
+        if (file.type === "img") {
           try {
             // external-ref-view 需要 Bearer token，<img> 无法携带，走 SDK 取 blob
             const url = await fetchXrefViewBlobUrl(currentNodeId, file.name);
@@ -124,17 +124,17 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               return { file, url };
             });
           } catch (error) {
-            globalShowToast(t('打开外部参照失败'), 'error');
+            globalShowToast(t("打开外部参照失败"), "error");
           }
         } else {
           const fileUrl = `/api/v1/mxcad/external-ref-view/${encodeURIComponent(currentNodeId)}/${encodeURIComponent(file.name)}`;
           window.open(
             `/cad-editor?fileUrl=${encodeURIComponent(fileUrl)}`,
-            '_blank'
+            "_blank",
           );
         }
       },
-      [currentNodeId]
+      [currentNodeId],
     );
 
     // 外部参照下载（图片直接下载，图纸走格式转换）
@@ -142,19 +142,24 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       async (file: ExternalReferenceFile) => {
         if (!currentNodeId || !file.name) return;
 
-        if (file.type === 'img') {
+        if (file.type === "img") {
           try {
             // 走 SDK（自动带 token），避免 <a> 下载 401
-            await downloadExternalRefFile(currentNodeId, file.name, {}, file.name);
+            await downloadExternalRefFile(
+              currentNodeId,
+              file.name,
+              {},
+              file.name,
+            );
           } catch (error) {
-            globalShowToast(t('外部参照下载失败'), 'error');
+            globalShowToast(t("外部参照下载失败"), "error");
           }
         } else {
           setDownloadingExtRefFile(file);
           setShowExtRefFormatModal(true);
         }
       },
-      [currentNodeId]
+      [currentNodeId],
     );
 
     // 外部参照格式下载
@@ -166,31 +171,31 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const handleExtRefFormatDownload = async (
       format: DownloadFormat,
       pdfOptions?: PdfOptions,
-      dwgOptions?: DwgOptions
+      dwgOptions?: DwgOptions,
     ) => {
       const file = downloadingExtRefFile;
       if (!file || !currentNodeId) return;
       setExtRefDownloading(true);
       try {
         const query: DownloadNodeQuery = { format };
-        if (format === 'pdf' && pdfOptions) {
+        if (format === "pdf" && pdfOptions) {
           if (pdfOptions.width) query.width = pdfOptions.width;
           if (pdfOptions.height) query.height = pdfOptions.height;
           if (pdfOptions.colorPolicy)
             query.colorPolicy = pdfOptions.colorPolicy;
         }
-        if ((format === 'dwg' || format === 'dxf') && dwgOptions) {
+        if ((format === "dwg" || format === "dxf") && dwgOptions) {
           query.dwgVersion = String(dwgOptions.dwgVersion);
         }
-        const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+        const nameWithoutExt = file.name.replace(/\.[^.]+$/, "");
         await downloadExternalRefFile(
           currentNodeId,
           file.name,
           query,
-          `${nameWithoutExt}.${format}`
+          `${nameWithoutExt}.${format}`,
         );
       } catch (error) {
-        globalShowToast(t('外部参照下载失败'), 'error');
+        globalShowToast(t("外部参照下载失败"), "error");
       } finally {
         setExtRefDownloading(false);
         setShowExtRefFormatModal(false);
@@ -206,10 +211,10 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     }, []);
 
     const handleSelectFiles = useCallback(async () => {
-      const effectiveNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
+      const effectiveNodeId = typeof nodeId === "function" ? nodeId() : nodeId;
       if (!isAuthenticated) {
-        globalShowToast(t('请先登录后再上传文件'), 'warning');
-        onError?.(t('用户未登录'));
+        globalShowToast(t("请先登录后再上传文件"), "warning");
+        onError?.(t("用户未登录"));
         return;
       }
 
@@ -217,32 +222,32 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       if (files.length === 0) return;
 
       const allowedFiles = files.filter((file) => {
-        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+        const ext = "." + file.name.split(".").pop()?.toLowerCase();
         return CAD_EXTENSIONS.includes(ext);
       });
 
       if (allowedFiles.length === 0) {
         globalShowToast(
-          t('所选文件类型不支持（支持 .dwg, .dxf, .mxweb）'),
-          'warning'
+          t("所选文件类型不支持（支持 .dwg, .dxf, .mxweb）"),
+          "warning",
         );
         return;
       }
 
       if (allowedFiles.length !== files.length) {
         globalShowToast(
-          t('已忽略 {count} 个不支持的文件类型', {
+          t("已忽略 {count} 个不支持的文件类型", {
             count: String(files.length - allowedFiles.length),
           }),
-          'info'
+          "info",
         );
       }
 
-      setCurrentNodeId(effectiveNodeId || '');
+      setCurrentNodeId(effectiveNodeId || "");
 
       if (!manager) {
-        console.error('[MxCadUploader] UploadManager 未初始化，无法上传');
-        globalShowToast(t('上传管理器未初始化，请刷新页面后重试'), 'error');
+        console.error("[MxCadUploader] UploadManager 未初始化，无法上传");
+        globalShowToast(t("上传管理器未初始化，请刷新页面后重试"), "error");
         return;
       }
 
@@ -269,7 +274,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       };
 
       const listener: UploadListener = async (event) => {
-        if (event.type === 'task-processing') {
+        if (event.type === "task-processing") {
           const task = manager.getTask(event.taskId);
           if (!task?.result) return;
 
@@ -281,30 +286,27 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               // 故只告警，任务照常 finalize 成 done——行内保留「打开」入口可重试
               try {
                 const { openUploadedFile } =
-                  await import('../services/mxcadManager');
+                  await import("../services/mxcadManager");
                 await openUploadedFile(
                   task.result.nodeId,
-                  effectiveNodeId || ''
+                  effectiveNodeId || "",
                 );
               } catch (openError) {
                 const detail =
                   openError instanceof Error ? openError.message : undefined;
                 if (detail) {
-                  console.error(
-                    '[MxCadUploader] 上传后自动打开失败:',
-                    detail
-                  );
+                  console.error("[MxCadUploader] 上传后自动打开失败:", detail);
                 }
                 globalShowToast(
-                  t('文件已上传并转换完成，但自动打开失败：{error}', {
-                    error: detail || t('打开文件失败'),
+                  t("文件已上传并转换完成，但自动打开失败：{error}", {
+                    error: detail || t("打开文件失败"),
                   }),
-                  'error'
+                  "error",
                 );
               }
             } else {
               const { waitForFileReady } =
-                await import('../services/mxcadManager');
+                await import("../services/mxcadManager");
               await waitForFileReady(task.result.nodeId);
             }
 
@@ -315,7 +317,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             // 异步检查外部参照，不阻塞上传完成状态更新
             const isSkipXrefCheck = task.fileName
               .toLowerCase()
-              .endsWith('.mxweb');
+              .endsWith(".mxweb");
             if (enableExternalReferenceCheck && !isSkipXrefCheck) {
               // 外部参照的存储/查找以源图纸节点（fileNodeId）为准，
               // 同步更新 currentNodeId 确保查看/下载使用正确的节点 ID
@@ -323,33 +325,30 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               externalReferenceUpload.checkMissingReferences(
                 task.result.nodeId,
                 true,
-                false
+                false,
               );
             }
           } catch (error) {
             // 仅剩 waitForFileReady 的失败路径：转换产物缺失或 FAILED，
             // 文件确实不可用，标 failed 正确
             const errorMessage =
-              error instanceof Error ? error.message : t('文件处理失败');
+              error instanceof Error ? error.message : t("文件处理失败");
             manager.failTask(event.taskId, errorMessage);
             onError?.(errorMessage);
             settleTask(event.taskId);
           }
         }
 
-        if (event.type === 'task-failed') {
+        if (event.type === "task-failed") {
           settleTask(event.taskId);
-          const errorMsg = event.error || t('上传失败');
-          globalShowToast(
-            t('文件上传失败: {errorMsg}', { errorMsg }),
-            'error'
-          );
+          const errorMsg = event.error || t("上传失败");
+          globalShowToast(t("文件上传失败: {errorMsg}", { errorMsg }), "error");
         }
       };
 
       unsubRef.current = manager.subscribe(listener);
 
-      addFiles(allowedFiles, effectiveNodeId || '');
+      addFiles(allowedFiles, effectiveNodeId || "");
     }, [
       isAuthenticated,
       nodeId,
@@ -368,14 +367,14 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       () => ({
         triggerUpload: handleSelectFiles,
       }),
-      [handleSelectFiles]
+      [handleSelectFiles],
     );
 
     return (
       <div className="mxcad-uploader">
         <Tooltip
           content={
-            !isAuthenticated ? t('请先登录后再上传文件') : t('上传 CAD 文件')
+            !isAuthenticated ? t("请先登录后再上传文件") : t("上传 CAD 文件")
           }
         >
           <Button
@@ -391,9 +390,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             className={buttonClassName}
           >
             {isUploading
-              ? t('上传中...')
+              ? t("上传中...")
               : !isAuthenticated
-                ? t('请先登录')
+                ? t("请先登录")
                 : buttonText}
           </Button>
         </Tooltip>
@@ -413,16 +412,16 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         />
         <ImagePreviewModal
           isOpen={!!previewXref}
-          src={previewXref?.url || ''}
-          alt={previewXref?.file.name || ''}
+          src={previewXref?.url || ""}
+          alt={previewXref?.file.name || ""}
           onClose={() => {
-            revokeXrefViewBlobUrl(previewXref?.url || '');
+            revokeXrefViewBlobUrl(previewXref?.url || "");
             setPreviewXref(null);
           }}
         />
         <DownloadFormatModal
           isOpen={showExtRefFormatModal}
-          fileName={downloadingExtRefFile?.name || ''}
+          fileName={downloadingExtRefFile?.name || ""}
           onClose={() => {
             setShowExtRefFormatModal(false);
             setDownloadingExtRefFile(null);
@@ -432,9 +431,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         />
       </div>
     );
-  }
+  },
 );
 
-MxCadUploader.displayName = 'MxCadUploader';
+MxCadUploader.displayName = "MxCadUploader";
 
 export default MxCadUploader;

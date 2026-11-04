@@ -1,8 +1,8 @@
-import React from 'react';
-import { Tab, Tabs, Button } from '@/components/ui';
-import { RefreshIcon } from './FileIcons';
-import type { ProjectFilterType } from '@/api-sdk';
-import { t } from '@/languages';
+import React from "react";
+import { Tab, Tabs, Button } from "@/components/ui";
+import { RefreshIcon } from "./FileIcons";
+import type { ProjectFilterType } from "@/api-sdk";
+import { t } from "@/languages";
 
 interface ProjectFilterTabsProps {
   isTrashView: boolean;
@@ -17,9 +17,9 @@ interface ProjectFilterTabsProps {
 
 function getProjectFilterTabs(): { key: ProjectFilterType; label: string }[] {
   return [
-    { key: 'all', label: t('全部') },
-    { key: 'owned', label: t('我创建的') },
-    { key: 'joined', label: t('我加入的') },
+    { key: "all", label: t("全部") },
+    { key: "owned", label: t("我创建的") },
+    { key: "joined", label: t("我加入的") },
   ];
 }
 
@@ -36,18 +36,18 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
   return (
     <div
       className="flex items-center gap-2 border-b"
-      style={{ borderColor: 'var(--border-default)' }}
+      style={{ borderColor: "var(--border-default)" }}
     >
       <Tabs>
         <Tab active={!isTrashView} onClick={() => {}}>
-          {t('我的项目')}
+          {t("我的项目")}
         </Tab>
 
         {!isTrashView && isProjectRootMode && (
           <>
             <div
               className="mx-1 h-5 w-px"
-              style={{ backgroundColor: 'var(--border-default)' }}
+              style={{ backgroundColor: "var(--border-default)" }}
             />
             {getProjectFilterTabs().map((tab) => (
               <Tab
@@ -69,14 +69,14 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
             size="sm"
             onClick={onRefresh}
             disabled={loading}
-            style={{ color: 'var(--text-tertiary)' }}
-            title={t('刷新')}
+            style={{ color: "var(--text-tertiary)" }}
+            title={t("刷新")}
           >
             <RefreshIcon
               size={14}
-              className={isFetching ? 'animate-spin mr-1' : 'mr-1'}
+              className={isFetching ? "animate-spin mr-1" : "mr-1"}
             />
-            {t('刷新')}
+            {t("刷新")}
           </Button>
         </div>
       )}

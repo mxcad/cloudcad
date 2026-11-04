@@ -1,12 +1,11 @@
-import React, { useCallback, useMemo, useRef } from 'react';
-import { Loader2, AlertTriangle } from 'lucide-react';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Pagination } from '@/components/ui/Pagination';
-import { Button } from '@/components/ui/Button';
-import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
-import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
-import { useScrollPagination } from '@/hooks/common/useScrollPagination';
-import { t } from '@/languages';
+import React, { useCallback, useMemo, useRef } from "react";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { Checkbox, Pagination, Button } from "@/components/ui";
+
+import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
+import { useRubberBandSelection } from "@/hooks/common/useRubberBandSelection";
+import { useScrollPagination } from "@/hooks/common/useScrollPagination";
+import { t } from "@/languages";
 
 export interface SelectableTableRenderContext {
   /** 框选进行中（行组件可借此禁拖拽等） */
@@ -48,8 +47,16 @@ interface SelectableTableProps<T> {
   pageSizeOptions?: number[];
   /** 页脚分页使用紧凑模式（simple） */
   paginationSimple?: boolean;
-  /** 滚动分页（滚动加载；提供后启用 useScrollPagination 顶/底 loader 与最后一页提示） */
-  onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
+  /**
+   * 滚动分页（滚动加载；启用 useScrollPagination 顶/底 loader 与最后一页提示）。
+   * 默认开启：只要列表有分页信息且提供了 onScrollPageChange 或 onPageChange，滚动到底/顶即触发翻页。
+   * 传 onScrollPageChange 走累积模型（追加/前插）；未传但传了 onPageChange 时向下滚动退化为按钮翻页
+   * （向上 prev 在单页 replace 模型下天然不触发）。
+   * 传 enableScrollPagination={false} 关闭，仅保留按钮分页。
+   */
+  onScrollPageChange?: (page: number, direction: "prev" | "next") => void;
+  /** 关闭滚动分页（默认开启；传 false 仅保留按钮分页） */
+  enableScrollPagination?: boolean;
   /** 翻页/后台刷新失败信息（列表已有内容时显示为底部失败条，不整页替换） */
   loadError?: string | null;
   /** 失败条重试回调（如 react-query refetch） */
@@ -98,14 +105,15 @@ export function SelectableTable<T>({
   pageSizeOptions,
   paginationSimple = false,
   onScrollPageChange,
+  enableScrollPagination,
   loadError,
   onRetryLoadMore,
   minLoadedPage,
   renderHeader,
   renderRow,
-  selectedRowClassName = 'bg-[var(--primary-50)]/50',
+  selectedRowClassName = "bg-[var(--primary-50)]/50",
   rowClassName,
-  tableClassName = 'w-full text-sm',
+  tableClassName = "w-full text-sm",
 }: SelectableTableProps<T>) {
   const {
     scrollContainerRef,
@@ -137,12 +145,20 @@ export function SelectableTable<T>({
       // totalPages 初始 0：无分页信息时不显示「已经是最后一页」（防误报）
       totalPages: paginationMeta?.totalPages ?? 0,
       loading,
-      enabled: !!onScrollPageChange,
+      // 滚动分页默认开启：有分页信息且提供了滚动累积回调或按钮翻页回调即启用；
+      // enableScrollPagination={false} 显式关闭（仅保留按钮分页）
+      enabled:
+        enableScrollPagination !== false &&
+        (!!onScrollPageChange || !!onPageChange),
       // 框选进行中禁止滚动翻页（避免框选期间数据突变）
       shouldSkip: () => rubberBandRef.current !== null,
       loadError,
       minLoadedPage,
-      onPageChange: (page, direction) => onScrollPageChange?.(page, direction),
+      onPageChange: (page, direction) => {
+        // 优先累积回调（追加/前插）；未接累积时向下滚动退化为按钮翻页（单页 replace 模型）
+        if (onScrollPageChange) onScrollPageChange(page, direction);
+        else if (direction === "next") onPageChange?.(page);
+      },
     });
 
   // 页脚页码/上一页/下一页按钮：通知控制器（数据到位后居中定位）并透传翻页
@@ -151,13 +167,13 @@ export function SelectableTable<T>({
       jumpTo(page);
       onPageChange?.(page);
     },
-    [jumpTo, onPageChange]
+    [jumpTo, onPageChange],
   );
 
   // 页脚展示视口所在页（visiblePage），而非最近请求页，保证与可视内容同步
   const paginationMetaMemo = useMemo(
     () => (paginationMeta ? { ...paginationMeta, page: visiblePage } : null),
-    [paginationMeta, visiblePage]
+    [paginationMeta, visiblePage],
   );
 
   // 行唯一 id：优先自定义函数（token/字体名等非 id 字段），缺省取 row.id
@@ -171,9 +187,9 @@ export function SelectableTable<T>({
     rubberBandJustEndedRef,
   };
 
-  const thClassName = 'px-4 py-3 font-medium text-left whitespace-nowrap';
-  const tdClassName = 'px-4 py-3';
-  const checkboxCellClassName = 'px-3 py-3 w-10 text-center align-middle';
+  const thClassName = "px-4 py-3 font-medium text-left whitespace-nowrap";
+  const tdClassName = "px-4 py-3";
+  const checkboxCellClassName = "px-3 py-3 w-10 text-center align-middle";
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -183,7 +199,7 @@ export function SelectableTable<T>({
         // relative：框选 overlay 为 absolute 定位，以滚动容器为 containing block
         //（缺省时相对页面其他 positioned 祖先定位导致选区偏移，ADR-0052）
         className="relative flex-1 min-h-0 overflow-auto"
-        style={{ userSelect: 'none', WebkitTouchCallout: 'none' }}
+        style={{ userSelect: "none", WebkitTouchCallout: "none" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -192,16 +208,16 @@ export function SelectableTable<T>({
         {/* 内容包装：有操作栏时 min-h-full 撑满滚动容器（内容不足一屏时 mt-auto 把操作栏
             推到底部=页面底部；内容超出时操作栏随内容滚动并在视口底部吸底）。
             无操作栏时不撑满（保持原生滚动分页测量） */}
-        <div className={bottomBar ? 'min-h-full flex flex-col' : undefined}>
+        <div className={bottomBar ? "min-h-full flex flex-col" : undefined}>
           {/* 顶部加载指示（向上滚动加载进行中） */}
           {showTopLoader && (
             <div
               data-testid="top-loader"
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <Loader2 size={14} className="animate-spin" />
-              <span>{t('加载中...')}</span>
+              <span>{t("加载中...")}</span>
             </div>
           )}
 
@@ -212,15 +228,15 @@ export function SelectableTable<T>({
           ) : (
             <table
               className={tableClassName}
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
               <thead
                 // 滚动时表头钉在顶部；背景色不能省（否则内容透过），须配合
                 // 使用方 border-collapse: separate（collapse 下 sticky 背景不绘制）
                 className="sticky top-0 z-10"
-                style={{ background: 'var(--bg-tertiary)' }}
+                style={{ background: "var(--bg-tertiary)" }}
               >
-                <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                <tr style={{ borderBottom: "1px solid var(--border-default)" }}>
                   <th className={checkboxCellClassName}>
                     <Checkbox
                       size="xs"
@@ -240,11 +256,11 @@ export function SelectableTable<T>({
                       key={id}
                       data-node-id={id}
                       className={[
-                        isSelected ? selectedRowClassName : '',
-                        rowClassName?.(row) ?? '',
-                      ].join(' ')}
+                        isSelected ? selectedRowClassName : "",
+                        rowClassName?.(row) ?? "",
+                      ].join(" ")}
                       style={{
-                        borderBottom: '1px solid var(--border-default)',
+                        borderBottom: "1px solid var(--border-default)",
                       }}
                       onClick={(e) => {
                         // 框选刚结束时的 click 误触发会清掉框选结果，直接跳过
@@ -280,16 +296,16 @@ export function SelectableTable<T>({
             <div
               data-testid="bottom-loader"
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
               <Loader2 size={14} className="animate-spin" />
-              <span>{t('加载中...')}</span>
+              <span>{t("加载中...")}</span>
             </div>
           ) : loadError && rows.length > 0 ? (
             <div
               data-testid="load-more-error"
               className="flex items-center justify-center gap-2 py-3 text-xs"
-              style={{ color: 'var(--error)' }}
+              style={{ color: "var(--error)" }}
             >
               <AlertTriangle size={14} className="shrink-0" />
               <span className="max-w-[60%] truncate" title={loadError}>
@@ -297,7 +313,7 @@ export function SelectableTable<T>({
               </span>
               {onRetryLoadMore && (
                 <Button variant="outline" size="xs" onClick={onRetryLoadMore}>
-                  {t('重试')}
+                  {t("重试")}
                 </Button>
               )}
             </div>
@@ -305,9 +321,9 @@ export function SelectableTable<T>({
             <div
               data-testid="last-page"
               className="flex items-center justify-center gap-2 py-2 text-xs"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: "var(--text-muted)" }}
             >
-              <span>{t('已经是最后一页')}</span>
+              <span>{t("已经是最后一页")}</span>
             </div>
           ) : null}
           {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=页面底部），
@@ -326,7 +342,7 @@ export function SelectableTable<T>({
         <div
           data-testid="selectable-table-pagination"
           className="flex-shrink-0 px-4 py-3 flex justify-end"
-          style={{ borderTop: '1px solid var(--border-subtle)' }}
+          style={{ borderTop: "1px solid var(--border-subtle)" }}
         >
           <Pagination
             meta={paginationMetaMemo}

@@ -23,9 +23,6 @@ import { CadDownloadFormat } from '../dto/download-node.dto';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
-import * as crypto from 'crypto';
-import * as archiver from 'archiver';
-import { PassThrough } from 'stream';
 
 import { MXCAD_CONVERSION_SERVICE } from '../../common/di-tokens';
 import type { IMxcadConversionService } from '../../mxcad/interfaces/mxcad-conversion.interface';
@@ -36,10 +33,8 @@ import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { NodeUtils } from '../../common/utils/node-utils';
 import { FileUtils } from '../../common/utils/file-utils';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
-import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import {
-  conversionTargetExt,
   formatUnsupportedMessage,
   isConvertibleSourceExt,
   resolveOutputFormat,
@@ -48,21 +43,12 @@ import {
   ConversionCoreError,
   runConversionCore,
 } from './conversion-core';
+import { FileDownloadExportConversionService } from './file-download-export-conversion.service';
+import { FileDownloadArchiveService } from './file-download-archive.service';
 
-/**
- * 转换产物缓存文件名判据：`{hash}-{paramKey}{ext}`。
- * hash = 32 位 md5 hex；paramKey 与 buildParamKey 同形（pdf-{w}x{h}-{color} /
- * dwg[-vN] / dxf[-vN]，参数段为 safe() 后的 ≤8 位字母数字）；ext 与
- * conversionTargetExt 一致（.pdf/.dwg/.dxf）。
- * 清理 cron 用它在缓存目录中只删转换产物，不误删同目录的内容寻址快照
- * （{hash}.mxweb）与其他文件。
- */
-const CONVERSION_CACHE_ENTRY_RE =
-  /^[0-9a-f]{32}-(?:pdf-[a-zA-Z0-9]{0,8}x[a-zA-Z0-9]{0,8}-[a-zA-Z0-9]{0,8}\.pdf|dwg(?:-v\d+)?\.dwg|dxf(?:-v\d+)?\.dxf)$/;
-
-export function isConversionCacheEntry(entryName: string): boolean {
-  return CONVERSION_CACHE_ENTRY_RE.test(entryName);
-}
+// 清理 cron 的缓存产物判据随缓存实现走（FileDownloadExportConversionService），
+// 这里 re-export 保持既有消费方（batch-download-cleanup）的导入路径稳定。
+export { isConversionCacheEntry } from './file-download-export-conversion.service';
 
 @Injectable()
 export class FileDownloadExportService {
@@ -78,22 +64,19 @@ export class FileDownloadExportService {
     maxRecursionDepth: number;
   };
 
-  /** 转换产物缓存目录（空字符串表示未启用缓存） */
+  /** 转换产物缓存目录（空字符串表示未启用缓存），与转换服务共用同一配置 */
   private readonly conversionCacheDir: string;
-  /** 缓存 TTL（毫秒），0 = 未启用 */
-  private readonly conversionCacheTtlMs: number;
-  /** 内容寻址存储目录（uploads/），转换快照和产物统一落此目录 */
-  private readonly mxcadUploadPath: string;
 
   constructor(
     private readonly prisma: DatabaseService,
     @Inject(IStorageService) private readonly storageService: IStorageService,
     private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
-    private readonly runtimeConfigService: RuntimeConfigService,
     private readonly moduleRef: ModuleRef,
     private readonly auditLogger: AuditLogger,
-    private readonly restrictionEngine: RestrictionEngine
+    private readonly restrictionEngine: RestrictionEngine,
+    private readonly exportConversionService: FileDownloadExportConversionService,
+    private readonly archiveService: FileDownloadArchiveService
   ) {
     const limits = this.configService.get('fileLimits', { infer: true });
     this.fileLimits = {
@@ -107,35 +90,20 @@ export class FileDownloadExportService {
     const batchConfig = this.configService.get('batchDownload', {
       infer: true,
     });
-    this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
     this.conversionCacheDir =
-      this.mxcadUploadPath || batchConfig?.conversionCacheDir || '';
-    this.conversionCacheTtlMs =
-      (batchConfig?.conversionCacheTtlHours || 0) * 60 * 60 * 1000;
+      resolveMxcadUploadDir(this.configService) ||
+      batchConfig?.conversionCacheDir ||
+      '';
   }
 
-  /**
-   * 快照工作副本到 uploads/{hash}.mxweb（内容寻址、不可变、天然去重）。
-   * 转换读快照而非可变工作副本，避免执行时读到被覆盖的版本。
-   * hash = md5(工作副本内容)，与 version-history 缓存一致；快照已存在则复用。
-   * 返回 null 表示无法快照（路径缺失 / 工作副本不存在 / 未配置 uploads 目录）。
-   */
+  /** 快照工作副本到 uploads/{hash}.mxweb（委托转换服务） */
   async snapshotMxweb(node: {
     path?: string;
   }): Promise<{ snapshotPath: string; hash: string } | null> {
-    if (!node.path || !this.mxcadUploadPath) return null;
-    const workingCopyFullPath = this.storageManager.getFullPath(node.path);
-    if (!fs.existsSync(workingCopyFullPath)) return null;
-    const content = await fsPromises.readFile(workingCopyFullPath);
-    const hash = crypto.createHash('md5').update(content).digest('hex');
-    const snapshotPath = path.join(this.mxcadUploadPath, `${hash}.mxweb`);
-    if (!fs.existsSync(snapshotPath)) {
-      await fsPromises.copyFile(workingCopyFullPath, snapshotPath);
-    }
-    return { snapshotPath, hash };
+    return this.exportConversionService.snapshotMxweb(node);
   }
 
-  /** 构造格式参数键（pdf 尺寸/颜色、dwg/dxf 版本），不同参数互不污染 */
+  /** 构造格式参数键（pdf 尺寸/颜色、dwg/dxf 版本），不同参数互不污染（委托转换服务） */
   buildParamKey(
     format: CadDownloadFormat,
     pdfParams?: {
@@ -145,26 +113,12 @@ export class FileDownloadExportService {
       dwgVersion?: number;
     }
   ): string {
-    const safe = (v: string | undefined) =>
-      (v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
-    // 引擎参数默认值单一出口（FormatPolicy）：缓存 key 从与转换同一份
-    // resolved 参数派生，避免第二份默认值副本与实际转换参数漂移
-    const engineParams = resolveOutputFormat(format, pdfParams).engineParams;
-    if (format === CadDownloadFormat.PDF) {
-      return `pdf-${safe(engineParams?.width)}x${safe(engineParams?.height)}-${safe(engineParams?.colorPolicy)}`;
-    } else if (format === CadDownloadFormat.DWG) {
-      return engineParams?.dwgVersion ? `dwg-v${engineParams.dwgVersion}` : 'dwg';
-    } else {
-      return engineParams?.dwgVersion ? `dxf-v${engineParams.dwgVersion}` : 'dxf';
-    }
+    return this.exportConversionService.buildParamKey(format, pdfParams);
   }
 
   /**
    * 构造转换产物缓存 key：`{hash}-{paramKey}`（内容寻址）。
-   * - hash = md5(工作副本内容)，内容变更自动失效；
-   * - pdf 尺寸/颜色、dwg/dxf 版本等参数参与 key，不同参数互不污染；
-   * - 同内容不同参数 → 不同 key（互不覆盖）；同内容同参数 → 同 key（复用缓存）。
-   * 返回 null 表示不启用缓存（未启用或无 hash）。
+   * 委托转换服务（内容变更自动失效 / 参数参与 key / 未启用或无 hash 返回 null）。
    */
   buildConversionCacheKey(
     hash: string,
@@ -176,21 +130,14 @@ export class FileDownloadExportService {
       dwgVersion?: number;
     }
   ): string | null {
-    if (!this.conversionCacheDir || !this.conversionCacheTtlMs) return null;
-    if (!hash) return null;
-    return `${hash}-${this.buildParamKey(format, pdfParams)}`;
+    return this.exportConversionService.buildConversionCacheKey(
+      hash,
+      format,
+      pdfParams
+    );
   }
 
-  /**
-   * 转换产物名（内容寻址）的单一出口：`{hash}-{paramKey}{targetExt}`。
-   *
-   * 与缓存启用与否无关（缓存路径 = 本名 join 缓存目录），单文件导出（outname/cachePath）
-   * 与批量下载（conversion-runner 的 outname）共用同一实现，保证两侧产物名字节一致、
-   * 缓存双向命中。扩展名统一取自 resolveOutputFormat（经 conversionTargetExt），
-   * 不再让各调用点分别拼 `${cacheKey}${conversionTargetExt(format)}` /
-   * `${cacheKey}${resolved.targetExt}` / runner 手拼 `${hash}-${paramKey}${targetExt}`。
-   * 无 hash 返回空串。
-   */
+  /** 转换产物名（内容寻址）的单一出口（委托转换服务） */
   buildConversionArtifactName(
     hash: string,
     format: CadDownloadFormat,
@@ -201,37 +148,14 @@ export class FileDownloadExportService {
       dwgVersion?: number;
     }
   ): string {
-    if (!hash) return '';
-    return `${hash}-${this.buildParamKey(format, pdfParams)}${conversionTargetExt(format)}`;
+    return this.exportConversionService.buildConversionArtifactName(
+      hash,
+      format,
+      pdfParams
+    );
   }
 
-  /** 缓存命中且未过 TTL（mtime 惰性检查）；过期文件顺带删除 */
-  private isConversionCacheFresh(cachePath: string): boolean {
-    try {
-      if (!fs.existsSync(cachePath)) return false;
-      if (!this.conversionCacheTtlMs) return false;
-      const stat = fs.statSync(cachePath);
-      if (Date.now() - stat.mtimeMs > this.conversionCacheTtlMs) {
-        // 同步删除：异步 unlink 与紧随其后的重转换 rename 存在竞态，可能误删新缓存
-        try {
-          fs.unlinkSync(cachePath);
-        } catch {
-          // 忽略：文件被并发请求抢先删除/替换均无害
-        }
-        this.logger.log(`转换缓存已过期，删除: ${cachePath}`);
-        return false;
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * 查转换缓存：同 hash+格式参数 命中且未过 TTL 返回缓存文件绝对路径，否则 null。
-   * 供批量下载路径复用（与单文件 downloadNodeWithFormat 共享同一缓存目录与 key），
-   * 让「重文件反复重提交」命中缓存秒回、不再重复起 mxcadassembly（ADR-0060）。
-   */
+  /** 查转换缓存：命中且未过 TTL 返回缓存文件绝对路径，否则 null（委托转换服务） */
   getFreshConversionCachePath(
     hash: string,
     format: CadDownloadFormat,
@@ -242,20 +166,14 @@ export class FileDownloadExportService {
       dwgVersion?: number;
     }
   ): string | null {
-    const cacheKey = this.buildConversionCacheKey(hash, format, pdfParams);
-    if (!cacheKey) return null;
-    const cachePath = path.join(
-      this.conversionCacheDir,
-      this.buildConversionArtifactName(hash, format, pdfParams)
+    return this.exportConversionService.getFreshConversionCachePath(
+      hash,
+      format,
+      pdfParams
     );
-    return this.isConversionCacheFresh(cachePath) ? cachePath : null;
   }
 
-  /**
-   * 写转换缓存：把转换产物 copy 到缓存目录（同 key 覆盖，产物内容等价）。
-   * 用 copy 而非 rename——批量路径装配 ZIP 仍需原文件，不能移走；失败仅告警、不阻断下载（ADR-0060）。
-   * 内容寻址时产物已在缓存位置（同路径），跳过 copy。
-   */
+  /** 写转换缓存：把转换产物 copy 到缓存目录（委托转换服务） */
   storeConversionCache(
     hash: string,
     format: CadDownloadFormat,
@@ -267,21 +185,12 @@ export class FileDownloadExportService {
       dwgVersion?: number;
     }
   ): void {
-    const cacheKey = this.buildConversionCacheKey(hash, format, pdfParams);
-    if (!cacheKey) return;
-    const cachePath = path.join(
-      this.conversionCacheDir,
-      this.buildConversionArtifactName(hash, format, pdfParams)
+    this.exportConversionService.storeConversionCache(
+      hash,
+      format,
+      srcFilePath,
+      pdfParams
     );
-    if (srcFilePath === cachePath) return;
-    try {
-      fs.mkdirSync(this.conversionCacheDir, { recursive: true });
-      fs.copyFileSync(srcFilePath, cachePath);
-    } catch (error) {
-      this.logger.warn(
-        `转换缓存写入失败（忽略，不影响本次下载）: ${(error as Error).message}`
-      );
-    }
   }
 
   /** 旧路径降级清理：删除转换临时文件（失败仅告警） */
@@ -308,14 +217,7 @@ export class FileDownloadExportService {
 
   /**
    * 后台预转换（#474 导出/下载接入统一队列）：把节点 mxweb 转成目标格式并放入转换产物缓存，
-   * 供后续 downloadNodeWithFormat 命中新鲜缓存秒回。
-   *
-   * 复用 downloadNodeWithFormat 的 DWG/DXF/PDF 转换逻辑（convertServerFile + 缓存目录），
-   * 但不产生响应流——只确保目标格式产物已就绪。可被 AsyncConversionService 后台 fire-and-forget 调用，
-   * 使统一提交端点立即返回 202 + taskId，前端轮询队列状态到完成后再取文件。
-   *
-   * @returns { alreadyCached, cacheKey }：alreadyCached=true 表示无需真实转换
-   *   （缓存命中 / mxweb 直下 / 非 CAD 文件 / 目录节点）；cacheKey 为转换产物缓存 key（未启用缓存时为 null）。
+   * 供后续 downloadNodeWithFormat 命中新鲜缓存秒回。实现已拆至转换服务（委托）。
    */
   async precomputeExport(
     nodeId: string,
@@ -327,143 +229,17 @@ export class FileDownloadExportService {
       colorPolicy?: string;
       dwgVersion?: number;
     },
-    // 后台预转换（convertNodeForExport）透传：priority 进内层限流器队列档位，
-    // taskId（node.taskId）远端模式按 clientTaskId 别名登记
     priority?: 'high' | 'low',
     taskId?: string
   ): Promise<{ alreadyCached: boolean; cacheKey: string | null }> {
-    const node = await this.prisma.fileSystemNode.findUnique({
-      where: { id: nodeId },
-    });
-    if (!node) {
-      throw new NotFoundException(
-        I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
-      );
-    }
-    if (node.nodeType !== NodeType.FILE) {
-      // 目录/非文件节点无格式转换可预计算
-      return { alreadyCached: false, cacheKey: null };
-    }
-
-    const originalFilename = node.originalName || node.name;
-    const ext = path.extname(originalFilename).toLowerCase();
-    // mxweb 直下：无需转换
-    if (format === CadDownloadFormat.MXWEB) {
-      return { alreadyCached: true, cacheKey: null };
-    }
-    // 非 CAD 文件：无格式转换（可转换源扩展名单一事实源在 FormatPolicy）
-    if (!isConvertibleSourceExt(ext)) {
-      return { alreadyCached: false, cacheKey: null };
-    }
-    if (!node.path) {
-      throw new NotFoundException(
-        I18nContext.current()?.t('error.file_extra.path_not_exist') ??
-          '文件路径不存在'
-      );
-    }
-    const mxwebPath = node.path;
-    if (!(await this.storageService.fileExists(mxwebPath))) {
-      throw new NotFoundException(
-        I18nContext.current()?.t('error.file.mxweb_not_found') ??
-          'MXWEB 文件不存在，请确认文件已转换完成'
-      );
-    }
-
-    // 格式决策单一出口（FormatPolicy）：targetExt/引擎参数默认值由此派生；
-    // 未知格式在此显式抛错，不再静默当 PDF 产出错误内容
-    const resolved = resolveOutputFormat(format, pdfParams);
-    if (!resolved.needsConversion) {
-      // 直取格式（original/mxweb）没有可预转换的产物：显式报错，
-      // 与 conversion-runner 的直取格式守卫同文案（否则会产出无扩展名垃圾文件）
-      throw new BadRequestException(formatUnsupportedMessage(format));
-    }
-    const targetExt = resolved.targetExt;
-    const targetFilename = `${this.sanitizeFileName(
-      path.basename(originalFilename, ext)
-    )}${targetExt}`;
-
-    // 步骤 2：快照工作副本到 uploads/{hash}.mxweb（内容寻址），缓存键 {hash}-{paramKey}
-    const snapshot = await this.snapshotMxweb(node);
-    const hash = snapshot?.hash;
-    const cacheKey = hash
-      ? this.buildConversionCacheKey(hash, format, pdfParams)
-      : null;
-    const artifactName = this.buildConversionArtifactName(
-      hash ?? '',
+    return this.exportConversionService.precomputeExport(
+      nodeId,
+      userId,
       format,
-      pdfParams
+      pdfParams,
+      priority,
+      taskId
     );
-    const cachePath = cacheKey
-      ? path.join(this.conversionCacheDir, artifactName)
-      : null;
-    if (cachePath && this.isConversionCacheFresh(cachePath)) {
-      return { alreadyCached: true, cacheKey };
-    }
-
-    const srcPath = (
-      snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
-    ).replace(/\\/g, '/');
-    const outname = cacheKey ? artifactName : targetFilename;
-
-    // 共享转换核心（构造参数 → 调引擎 → 校验产物）。占位/释放走 withConversionQuota
-    // 单点（缓存命中已在上方提前返回，此处必发生真实转换）：成功消耗占位，
-    // 任何失败（含引擎原始异常 spawn 失败 / VIP 门控拒绝）保证释放；
-    // 调用点只负责按本地化文案翻译错误。
-    let targetFullPath: string;
-    try {
-      targetFullPath = await this.restrictionEngine.withConversionQuota(
-        { userId },
-        async () => {
-          const mxCadConversionService = await this.getMxCadConversionService();
-          const { artifactPath } = await runConversionCore({
-            conversionService: mxCadConversionService,
-            srcPath,
-            fileHash: node.fileHash || '',
-            nodeId: node.id,
-            userId,
-            outname,
-            engineParams: resolved.engineParams,
-            ...(priority ? { priority } : {}),
-            ...(taskId ? { taskId } : {}),
-          });
-          return artifactPath;
-        }
-      );
-    } catch (error) {
-      if (error instanceof ConversionCoreError) {
-        if (error.kind === 'engine-failed') {
-          const errMsg = error.detail || '文件转换失败';
-          throw new BadRequestException(
-            I18nContext.current()?.t('error.file_extra.conversion_failed_detail', {
-              args: { error: errMsg },
-            }) ?? `文件转换失败: ${errMsg}`
-          );
-        }
-        throw new NotFoundException(
-          I18nContext.current()?.t('error.file_extra.converted_file_not_exist', {
-            args: { path: error.detail },
-          }) ?? `转换后的文件不存在: ${error.detail}`
-        );
-      }
-      throw error;
-    }
-    // 产物移入缓存目录（内容寻址时产物已在缓存位置，无需移动）
-    if (cachePath && targetFullPath !== cachePath) {
-      try {
-        fs.mkdirSync(this.conversionCacheDir, { recursive: true });
-        fs.renameSync(targetFullPath, cachePath);
-      } catch (moveErr) {
-        // 缓存目录不可写时降级：产物留在原路径，后续 downloadNodeWithFormat 直读
-        this.logger.warn(
-          `预转换缓存写入失败，产物留在原路径直读: ${(moveErr as Error).message}`
-        );
-      }
-    }
-
-    this.logger.log(
-      `预转换完成: ${originalFilename} -> ${outname} (${nodeId}) by user ${userId}`
-    );
-    return { alreadyCached: false, cacheKey };
   }
 
   private sanitizeFileName(fileName: string): string {
@@ -530,7 +306,7 @@ export class FileDownloadExportService {
         return { stream, filename, mimeType };
       }
 
-      const zipResult = await this.downloadNodeAsZip(nodeId, userId);
+      const zipResult = await this.archiveService.buildZip(nodeId, userId);
       this.logger.log(`目录下载: ${node.name} (${nodeId}) by user ${userId}`);
 
       await this.auditLogger.audit({
@@ -588,7 +364,7 @@ export class FileDownloadExportService {
       }
 
       if (node.nodeType !== NodeType.FILE) {
-        const zipResult = await this.downloadNodeAsZip(nodeId, userId);
+        const zipResult = await this.archiveService.buildZip(nodeId, userId);
         this.logger.log(`目录下载: ${node.name} (${nodeId}) by user ${userId}`);
 
         await this.auditLogger.audit({
@@ -694,7 +470,7 @@ export class FileDownloadExportService {
           const cachePath = cacheKey
             ? path.join(this.conversionCacheDir, artifactName)
             : null;
-          if (cachePath && this.isConversionCacheFresh(cachePath)) {
+          if (cachePath && this.exportConversionService.isConversionCacheFresh(cachePath)) {
             const cachedStream = fs.createReadStream(cachePath);
             this.logger.log(
               `转换缓存命中: ${originalFilename} -> ${targetFilename} (cache: ${path.basename(cachePath)})`
@@ -857,216 +633,6 @@ export class FileDownloadExportService {
 
       throw error;
     }
-  }
-
-  /**
-   * ZIP 压缩级别每次下载时读取运行时配置。构造期固化会让配置页改级别后
-   * 单节点/目录下载永不生效（批量下载那条链路本来就是每次读）。
-   */
-  private async resolveZipCompressionLevel(): Promise<number> {
-    return this.runtimeConfigService.getValue<number>(
-      'fileZipCompressionLevel'
-    );
-  }
-
-  private async downloadNodeAsZip(
-    nodeId: string,
-    userId: string
-  ): Promise<{
-    stream: NodeJS.ReadableStream;
-    filename: string;
-    mimeType: string;
-  }> {
-    try {
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-      });
-
-      if (!node) {
-        throw new NotFoundException(
-          I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
-        );
-      }
-
-      const output = new PassThrough();
-      const archive = archiver.create('zip', {
-        zlib: { level: await this.resolveZipCompressionLevel() },
-      });
-
-      archive.on('error', (error) => {
-        this.logger.error(`ZIP 压缩失败: ${error.message}`, error.stack);
-        output.emit('error', error);
-      });
-
-      archive.pipe(output);
-
-      const result = await this.addFilesToArchive(
-        nodeId,
-        archive,
-        node.name,
-        0,
-        0,
-        0
-      );
-
-      await archive.finalize();
-
-      const filename = `${node.name}.zip`;
-      const mimeType = 'application/zip';
-
-      this.logger.log(
-        `目录压缩下载: ${node.name} (${nodeId}), files: ${result.fileCount}, size: ${result.totalSize} bytes by user ${userId}`
-      );
-
-      await this.auditLogger.audit({
-        action: AuditAction.FILE_DOWNLOAD,
-        resourceType: ResourceType.FOLDER,
-        resourceId: nodeId,
-        userId,
-        success: true,
-        details: {
-          folderName: node.name,
-          fileCount: result.fileCount,
-          totalSize: result.totalSize,
-          format: 'zip',
-        },
-      });
-
-      return { stream: output, filename, mimeType };
-    } catch (error) {
-      this.logger.error(`目录压缩下载失败: ${error.message}`, error.stack);
-
-      await this.auditLogger.audit({
-        action: AuditAction.FILE_DOWNLOAD,
-        resourceType: ResourceType.FOLDER,
-        resourceId: nodeId,
-        userId,
-        success: false,
-        errorMessage: error.message,
-      });
-
-      throw error;
-    }
-  }
-
-  private async addFilesToArchive(
-    nodeId: string,
-    archive: archiver.Archiver,
-    basePath: string,
-    depth: number = 0,
-    currentTotalSize: number = 0,
-    currentFileCount: number = 0
-  ): Promise<{ totalSize: number; fileCount: number }> {
-    if (depth > this.fileLimits.zipMaxDepth) {
-      this.logger.warn(`目录深度超过限制: ${depth}`);
-      throw new BadRequestException(
-        I18nContext.current()?.t('error.file.directory_not_exist') ??
-          '目录深度超过限制'
-      );
-    }
-
-    const node = await this.prisma.fileSystemNode.findUnique({
-      where: { id: nodeId },
-    });
-
-    if (!node) {
-      return { totalSize: currentTotalSize, fileCount: currentFileCount };
-    }
-
-    if (node.nodeType === NodeType.FILE && node.path) {
-      if (node.size && node.size > this.fileLimits.zipMaxSingleFileSize) {
-        this.logger.warn(`文件大小超过限制: ${node.name} (${node.size} bytes)`);
-        throw new BadRequestException(
-          I18nContext.current()?.t('error.file_extra.size_exceeded_with_name', {
-            args: { name: node.name },
-          }) ?? `文件大小超过限制: ${node.name}`
-        );
-      }
-
-      const filename = node.originalName || node.name;
-      const ext = path.extname(filename).toLowerCase();
-      const isCadFile = ['.dwg', '.dxf'].includes(ext);
-
-      const relativePath = isCadFile
-        ? `${path.dirname(node.path)}/${filename}.mxweb`
-        : node.path;
-      const fullPath = this.storageManager.getFullPath(relativePath);
-      let stream: NodeJS.ReadableStream | null = null;
-
-      try {
-        stream = fs.createReadStream(fullPath);
-        const sanitizedFileName = this.sanitizeFileName(filename);
-        // @ts-expect-error - NodeJS.ReadableStream and archiver's ReadableStream type mismatch, but runtime compatible
-        archive.append(stream, { name: sanitizedFileName });
-
-        stream.on('close', () => {
-          this.logger.debug(`文件流已关闭: ${filename}`);
-        });
-
-        const fileSize = node.size || 0;
-        currentTotalSize += fileSize;
-        currentFileCount++;
-
-        return { totalSize: currentTotalSize, fileCount: currentFileCount };
-      } catch (error) {
-        this.logger.warn(
-          `添加文件到压缩包失败: ${node.name} - ${error.message}`
-        );
-        if (
-          stream &&
-          typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
-            .destroy === 'function'
-        ) {
-          (
-            stream as NodeJS.ReadableStream & { destroy?: () => void }
-          ).destroy();
-        }
-        throw error;
-      }
-    }
-
-    if (node.nodeType !== NodeType.FILE) {
-      const children = await this.prisma.fileSystemNode.findMany({
-        where: {
-          parentId: nodeId,
-          deletedAt: null,
-        },
-      });
-
-      for (const child of children) {
-        const sanitizedChildName = this.sanitizeFileName(child.name);
-        const childPath = path.join(basePath, sanitizedChildName);
-
-        const result = await this.addFilesToArchive(
-          child.id,
-          archive,
-          childPath,
-          depth + 1,
-          currentTotalSize,
-          currentFileCount
-        );
-
-        currentTotalSize = result.totalSize;
-        currentFileCount = result.fileCount;
-
-        if (currentTotalSize > this.fileLimits.zipMaxTotalSize) {
-          this.logger.warn(`压缩包总大小超过限制: ${currentTotalSize} bytes`);
-          throw new BadRequestException(
-            I18nContext.current()?.t('error.file.total_size_exceeded') ??
-              '压缩包总大小超过限制'
-          );
-        }
-        if (currentFileCount > this.fileLimits.zipMaxFileCount) {
-          this.logger.warn(`文件数量超过限制: ${currentFileCount}`);
-          throw new BadRequestException(
-            I18nContext.current()?.t('error.file.count_exceeded') ??
-              '文件数量超过限制'
-          );
-        }
-      }
-    }
-
-    return { totalSize: currentTotalSize, fileCount: currentFileCount };
   }
 
   /**

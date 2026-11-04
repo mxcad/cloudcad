@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
-import { Users, UserPlus, Loader2 } from 'lucide-react';
-import { Button } from './ui/Button';
-import { CollabWorkCard } from './CollabWorkCard';
-import type { WorkData } from './CollabWorkCard';
-import styles from './CollaborateSidebar.module.css';
-import { t } from '@/languages';
+import React, { useMemo } from "react";
+import { Users, UserPlus, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui";
+import { CollabWorkCard } from "./CollabWorkCard";
+import type { WorkData } from "./CollabWorkCard";
+import styles from "./CollaborateSidebar.module.css";
+import { t } from "@/languages";
 
 interface CurrentFilePanelProps {
   works: WorkData[];
@@ -35,25 +35,25 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
 }) => {
   const activeWork = useMemo(
     () => works.find((w) => w.work_id === currentWorkId),
-    [works, currentWorkId]
+    [works, currentWorkId],
   );
 
   const otherWorks = useMemo(
     () => works.filter((w) => w.work_id !== currentWorkId),
-    [works, currentWorkId]
+    [works, currentWorkId],
   );
 
   if (!isCadReady) {
     return (
       <div className={styles.currentFilePanel}>
         <div className={styles.statusCard}>
-          <div className={styles.statusHeader}>{t('当前图纸')}</div>
+          <div className={styles.statusHeader}>{t("当前图纸")}</div>
           <div className={styles.statusBody}>
             <div className={styles.statusIcon}>
               <Users size={20} />
             </div>
-            <div className={styles.statusTitle}>{t('等待编辑器就绪...')}</div>
-            <div className={styles.statusDesc}>{t('CAD 引擎加载中')}</div>
+            <div className={styles.statusTitle}>{t("等待编辑器就绪...")}</div>
+            <div className={styles.statusDesc}>{t("CAD 引擎加载中")}</div>
           </div>
         </div>
       </div>
@@ -64,14 +64,14 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
     return (
       <div className={styles.currentFilePanel}>
         <div className={styles.statusCard}>
-          <div className={styles.statusHeader}>{t('当前图纸')}</div>
+          <div className={styles.statusHeader}>{t("当前图纸")}</div>
           <div className={styles.statusBody}>
             <div className={styles.statusIcon}>
               <Users size={20} />
             </div>
-            <div className={styles.statusTitle}>{t('暂无打开的图纸')}</div>
+            <div className={styles.statusTitle}>{t("暂无打开的图纸")}</div>
             <div className={styles.statusDesc}>
-              {t('请先在编辑器中打开图纸')}
+              {t("请先在编辑器中打开图纸")}
             </div>
           </div>
         </div>
@@ -90,8 +90,8 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
             <div className={styles.statusIcon}>
               <Loader2 size={20} className="animate-spin" />
             </div>
-            <div className={styles.statusTitle}>{t('正在建立协同连接...')}</div>
-            <div className={styles.statusDesc}>{t('等待协同会话就绪')}</div>
+            <div className={styles.statusTitle}>{t("正在建立协同连接...")}</div>
+            <div className={styles.statusDesc}>{t("等待协同会话就绪")}</div>
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
         {(activeWork || currentWorkId !== null) && (
           <span className={styles.statusLiveBadge}>
             <span className={styles.statusDot} />
-            {t('协同中')}
+            {t("协同中")}
           </span>
         )}
       </div>
@@ -119,9 +119,9 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
             <div className={styles.statusIcon}>
               <Users size={20} />
             </div>
-            <div className={styles.statusTitle}>{t('暂无协同')}</div>
+            <div className={styles.statusTitle}>{t("暂无协同")}</div>
             <div className={styles.statusDesc}>
-              {t('创建协同以开始实时协作')}
+              {t("创建协同以开始实时协作")}
             </div>
             <Button
               variant="primary"
@@ -130,7 +130,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
               onClick={onCreateWork}
               data-tour="create-collaborate-btn"
             >
-              {creating ? t('创建中...') : t('创建协同')}
+              {creating ? t("创建中...") : t("创建协同")}
             </Button>
           </div>
         </div>
@@ -142,8 +142,8 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
             <div className={styles.statusIcon}>
               <Users size={20} />
             </div>
-            <div className={styles.statusTitle}>{t('协同中')}</div>
-            <div className={styles.statusDesc}>{t('正在获取协同信息...')}</div>
+            <div className={styles.statusTitle}>{t("协同中")}</div>
+            <div className={styles.statusDesc}>{t("正在获取协同信息...")}</div>
           </div>
         </div>
       )}
@@ -183,9 +183,9 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
             icon={UserPlus}
             loading={creating}
             onClick={onCreateWork}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
           >
-            {creating ? t('创建中...') : t('创建新协同')}
+            {creating ? t("创建中...") : t("创建新协同")}
           </Button>
         </div>
       )}

@@ -4,27 +4,32 @@
 // https://www.mxdraw.com/
 /////////////////////////////////////////////////////////////////////////////
 
-import { useEffect, useState } from 'react';
-import { Copy, RefreshCw, Search, ShieldBan, ShieldCheck, X } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Tag } from '@/components/ui/Tag';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { t } from '@/languages';
-import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
-import { globalShowToast } from '@/utils/notificationEvents';
-import { useCopy } from '@/hooks/useCopy';
+import { useEffect, useState } from "react";
+import {
+  Copy,
+  RefreshCw,
+  Search,
+  ShieldBan,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import { Button, Card, Input, Tag } from "@/components/ui";
+
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { t } from "@/languages";
+import { formatDateTimeWithSeconds } from "@/utils/dateUtils";
+import { globalShowToast } from "@/utils/notificationEvents";
+import { useCopy } from "@/hooks/useCopy";
 import {
   SECURITY_ATTEMPT_PAGE_SIZE,
-  SECURITY_ATTEMPT_REASON_META,
-} from './constants';
+  getSecurityAttemptReasonMeta,
+} from "./constants";
 import {
   useBlacklistSecurityAttempt,
   useSecurityAccessAttemptList,
   useWhitelistSecurityAttempt,
-} from './hooks/useSecurityAccessAttempt';
-import type { SecurityAccessAttemptAggregate } from './types';
+} from "./hooks/useSecurityAccessAttempt";
+import type { SecurityAccessAttemptAggregate } from "./types";
 
 /**
  * @param embedded 嵌入 IP 访问控制 Tab 时为 true：隐藏独立页头与外边距
@@ -35,17 +40,17 @@ export default function SecurityAccessAttemptPage({
 }: {
   embedded?: boolean;
 }) {
-  useDocumentTitle(t('高危访问尝试'), embedded);
+  useDocumentTitle(t("高危访问尝试"), embedded);
 
   // 保留 copyToClipboard 名称，调用点无需改动
   const { copy: copyToClipboard } = useCopy({
-    successMessage: t('复制成功'),
-    failMessage: t('复制失败'),
+    successMessage: t("复制成功"),
+    failMessage: t("复制失败"),
   });
 
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   // 输入防抖 500ms 后生效
   useEffect(() => {
@@ -58,7 +63,7 @@ export default function SecurityAccessAttemptPage({
 
   const { items, total, loading, refetch } = useSecurityAccessAttemptList(
     page,
-    keyword
+    keyword,
   );
   const whitelistMutation = useWhitelistSecurityAttempt();
   const blacklistMutation = useBlacklistSecurityAttempt();
@@ -67,12 +72,12 @@ export default function SecurityAccessAttemptPage({
 
   const handleWhitelist = (item: SecurityAccessAttemptAggregate) => {
     if (item.inWhitelist) {
-      globalShowToast(t('该 IP 已在白名单中'), 'info');
+      globalShowToast(t("该 IP 已在白名单中"), "info");
       return;
     }
     if (
       window.confirm(
-        t('确定将该 IP（{ip}）加入管理员白名单？', { ip: item.ip })
+        t("确定将该 IP（{ip}）加入管理员白名单？", { ip: item.ip }),
       )
     ) {
       whitelistMutation.mutate(item.ip);
@@ -81,14 +86,10 @@ export default function SecurityAccessAttemptPage({
 
   const handleBlacklist = (item: SecurityAccessAttemptAggregate) => {
     if (item.inBlacklist) {
-      globalShowToast(t('该 IP 已在黑名单中'), 'info');
+      globalShowToast(t("该 IP 已在黑名单中"), "info");
       return;
     }
-    if (
-      window.confirm(
-        t('确定将该 IP（{ip}）加入黑名单？', { ip: item.ip })
-      )
-    ) {
+    if (window.confirm(t("确定将该 IP（{ip}）加入黑名单？", { ip: item.ip }))) {
       blacklistMutation.mutate(item.ip);
     }
   };
@@ -103,32 +104,32 @@ export default function SecurityAccessAttemptPage({
     <div
       className={
         embedded
-          ? 'h-full flex flex-col overflow-hidden text-text-secondary'
-          : 'h-full flex flex-col overflow-hidden p-6 text-text-secondary'
+          ? "h-full flex flex-col overflow-hidden text-text-secondary"
+          : "h-full flex flex-col overflow-hidden p-6 text-text-secondary"
       }
     >
       <div
         className={
           embedded
-            ? 'w-full flex flex-col flex-1 min-h-0'
-            : 'max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0'
+            ? "w-full flex flex-col flex-1 min-h-0"
+            : "max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0"
         }
       >
         <div
           className={
             embedded
-              ? 'flex-shrink-0 flex items-center justify-between mb-4'
-              : 'flex-shrink-0 flex items-center justify-between mb-6'
+              ? "flex-shrink-0 flex items-center justify-between mb-4"
+              : "flex-shrink-0 flex items-center justify-between mb-6"
           }
         >
           <div className="flex items-center gap-2">
             {!embedded && (
               <h1 className="text-2xl font-bold text-text-primary">
-                {t('高危访问尝试')}
+                {t("高危访问尝试")}
               </h1>
             )}
             <Tag variant="error" size="xs">
-              {t('管理员登录被拒记录')}
+              {t("管理员登录被拒记录")}
             </Tag>
           </div>
           <div className="flex items-center gap-2">
@@ -136,23 +137,23 @@ export default function SecurityAccessAttemptPage({
               <Search
                 size={15}
                 className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: "var(--text-tertiary)" }}
               />
               <Input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t('搜索 IP/账号')}
+                placeholder={t("搜索 IP/账号")}
                 className="pl-9 pr-8 w-64"
                 size="md"
               />
               {searchInput && (
                 <button
                   type="button"
-                  aria-label={t('清空搜索')}
-                  title={t('清空搜索')}
+                  aria-label={t("清空搜索")}
+                  title={t("清空搜索")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  onClick={() => setSearchInput('')}
+                  style={{ color: "var(--text-tertiary)" }}
+                  onClick={() => setSearchInput("")}
                 >
                   <X size={14} />
                 </button>
@@ -178,17 +179,17 @@ export default function SecurityAccessAttemptPage({
               <div
                 className="w-8 h-8 rounded-full animate-spin"
                 style={{
-                  border: '3px solid var(--border-default)',
-                  borderTopColor: 'var(--primary-500)',
+                  border: "3px solid var(--border-default)",
+                  borderTopColor: "var(--primary-500)",
                 }}
               />
             </div>
           ) : items.length === 0 ? (
             <div
               className="text-center py-8 text-sm"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: "var(--text-tertiary)" }}
             >
-              {t('暂无高危访问尝试')}
+              {t("暂无高危访问尝试")}
             </div>
           ) : (
             <div className="overflow-auto">
@@ -196,15 +197,15 @@ export default function SecurityAccessAttemptPage({
                 <thead>
                   <tr
                     className="text-left"
-                    style={{ borderBottom: '1px solid var(--border-default)' }}
+                    style={{ borderBottom: "1px solid var(--border-default)" }}
                   >
-                    <th className="px-4 py-3">{t('IP')}</th>
-                    <th className="px-4 py-3 text-center">{t('次数')}</th>
-                    <th className="px-4 py-3">{t('拒绝原因')}</th>
-                    <th className="px-4 py-3">{t('最近账号')}</th>
-                    <th className="px-4 py-3">{t('最近尝试')}</th>
-                    <th className="px-4 py-3 text-center">{t('当前状态')}</th>
-                    <th className="px-4 py-3 text-center">{t('操作')}</th>
+                    <th className="px-4 py-3">{t("IP")}</th>
+                    <th className="px-4 py-3 text-center">{t("次数")}</th>
+                    <th className="px-4 py-3">{t("拒绝原因")}</th>
+                    <th className="px-4 py-3">{t("最近账号")}</th>
+                    <th className="px-4 py-3">{t("最近尝试")}</th>
+                    <th className="px-4 py-3 text-center">{t("当前状态")}</th>
+                    <th className="px-4 py-3 text-center">{t("操作")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,7 +213,9 @@ export default function SecurityAccessAttemptPage({
                     <tr
                       key={item.ip}
                       className="align-middle"
-                      style={{ borderBottom: '1px solid var(--border-default)' }}
+                      style={{
+                        borderBottom: "1px solid var(--border-default)",
+                      }}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
@@ -221,10 +224,10 @@ export default function SecurityAccessAttemptPage({
                           </span>
                           <button
                             type="button"
-                            aria-label={t('复制 IP')}
-                            title={t('复制 IP')}
+                            aria-label={t("复制 IP")}
+                            title={t("复制 IP")}
                             className="shrink-0 cursor-pointer"
-                            style={{ color: 'var(--text-tertiary)' }}
+                            style={{ color: "var(--text-tertiary)" }}
                             onClick={(e) => {
                               e.stopPropagation();
                               void copyToClipboard(item.ip);
@@ -243,23 +246,23 @@ export default function SecurityAccessAttemptPage({
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(item.reasons).map(
                             ([reason, count]) => {
-                              const meta = SECURITY_ATTEMPT_REASON_META[reason];
+                              const meta = getSecurityAttemptReasonMeta(reason);
                               return (
                                 <Tag
                                   key={reason}
-                                  variant={meta?.variant ?? 'neutral'}
+                                  variant={meta?.variant ?? "neutral"}
                                   size="xs"
                                 >
                                   {meta?.label ?? reason}
-                                  {count > 1 ? ` ×${count}` : ''}
+                                  {count > 1 ? ` ×${count}` : ""}
                                 </Tag>
                               );
-                            }
+                            },
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs max-w-[180px] truncate">
-                        {item.account ?? t('—')}
+                        {item.account ?? t("—")}
                       </td>
                       <td className="px-4 py-3 text-xs">
                         {formatDateTimeWithSeconds(item.lastSeen)}
@@ -268,20 +271,20 @@ export default function SecurityAccessAttemptPage({
                         <div className="flex justify-center gap-1">
                           {item.inWhitelist && (
                             <Tag variant="success" size="xs">
-                              {t('白名单')}
+                              {t("白名单")}
                             </Tag>
                           )}
                           {item.inBlacklist && (
                             <Tag variant="error" size="xs">
-                              {t('黑名单')}
+                              {t("黑名单")}
                             </Tag>
                           )}
                           {!item.inWhitelist && !item.inBlacklist && (
                             <span
                               className="text-xs"
-                              style={{ color: 'var(--text-tertiary)' }}
+                              style={{ color: "var(--text-tertiary)" }}
                             >
-                              {t('未处理')}
+                              {t("未处理")}
                             </span>
                           )}
                         </div>
@@ -292,19 +295,23 @@ export default function SecurityAccessAttemptPage({
                             variant="ghost"
                             size="xs"
                             icon={ShieldCheck}
-                            disabled={item.inWhitelist || whitelistMutation.isPending}
+                            disabled={
+                              item.inWhitelist || whitelistMutation.isPending
+                            }
                             onClick={() => handleWhitelist(item)}
                           >
-                            {t('加白')}
+                            {t("加白")}
                           </Button>
                           <Button
                             variant="ghost"
                             size="xs"
                             icon={ShieldBan}
-                            disabled={item.inBlacklist || blacklistMutation.isPending}
+                            disabled={
+                              item.inBlacklist || blacklistMutation.isPending
+                            }
                             onClick={() => handleBlacklist(item)}
                           >
-                            {t('拉黑')}
+                            {t("拉黑")}
                           </Button>
                         </div>
                       </td>
@@ -318,10 +325,10 @@ export default function SecurityAccessAttemptPage({
           {/* 分页 */}
           <div
             className="flex-shrink-0 flex items-center justify-between px-4 py-3 text-xs"
-            style={{ borderTop: '1px solid var(--border-default)' }}
+            style={{ borderTop: "1px solid var(--border-default)" }}
           >
-            <span style={{ color: 'var(--text-tertiary)' }}>
-              {t('共 {total} 个 IP', { total: String(total) })}
+            <span style={{ color: "var(--text-tertiary)" }}>
+              {t("共 {total} 个 IP", { total: String(total) })}
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -330,7 +337,7 @@ export default function SecurityAccessAttemptPage({
                 disabled={page <= 1}
                 onClick={() => goToPage(page - 1)}
               >
-                {t('上一页')}
+                {t("上一页")}
               </Button>
               <span>
                 {page} / {totalPages || 1}
@@ -341,7 +348,7 @@ export default function SecurityAccessAttemptPage({
                 disabled={page >= totalPages}
                 onClick={() => goToPage(page + 1)}
               >
-                {t('下一页')}
+                {t("下一页")}
               </Button>
             </div>
           </div>

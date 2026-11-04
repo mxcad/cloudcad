@@ -5,22 +5,22 @@ import React, {
   createContext,
   useContext,
   useEffect,
-} from 'react';
-import { t } from '@/languages';
-import { useCADEditorStore } from '../stores/useCADEditorStore';
-import type { ToastType } from '../components/ui/Toast';
+} from "react";
+import { t } from "@/languages";
+import { useCADEditorStore } from "../stores/useCADEditorStore";
+import type { ToastType } from "@/components/ui";
 import {
   ToastStack,
   ConfirmDialog,
   ThreeButtonDialog,
   PromptDialog,
-} from '../components/notification';
+} from "../components/notification";
 import type {
   ConfirmDialogState,
   ThreeButtonDialogState,
   PromptDialogState,
   ToastItem,
-} from '../components/notification';
+} from "../components/notification";
 import {
   TOAST_EVENT,
   CONFIRM_EVENT,
@@ -33,13 +33,13 @@ import {
   type PromptOptions,
   type ThreeButtonConfirmOptions,
   type ToastOptions,
-} from '../utils/notificationEvents';
+} from "../utils/notificationEvents";
 
 interface NotificationContextValue {
   showToast: (
     message: string,
     type?: ToastType,
-    options?: ToastOptions
+    options?: ToastOptions,
   ) => void;
   showConfirm: (options: ConfirmOptions) => Promise<boolean>;
 }
@@ -52,13 +52,13 @@ function routeToCadMessage(message: string, type: ToastType) {
   if (!mx) return false;
   const m = mx();
   switch (type) {
-    case 'success':
+    case "success":
       m.success(message);
       break;
-    case 'error':
+    case "error":
       m.error(message);
       break;
-    case 'warning':
+    case "warning":
       m.warning(message);
       break;
     default:
@@ -69,7 +69,7 @@ function routeToCadMessage(message: string, type: ToastType) {
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(
-  null
+  null,
 );
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -80,43 +80,43 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const timerRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
   const threeButtonResolveRef = useRef<
-    ((value: 'confirm' | 'discard' | 'cancel') => void) | null
+    ((value: "confirm" | "discard" | "cancel") => void) | null
   >(null);
   const promptResolveRef = useRef<((value: string | null) => void) | null>(
-    null
+    null,
   );
 
   const [confirmState, setConfirmState] = useState<ConfirmDialogState>({
     isOpen: false,
-    title: '',
-    message: '',
-    confirmText: t('确定'),
-    cancelText: t('取消'),
-    dialogType: 'warning',
+    title: "",
+    message: "",
+    confirmText: t("确定"),
+    cancelText: t("取消"),
+    dialogType: "warning",
   });
 
   const [threeButtonState, setThreeButtonState] =
     useState<ThreeButtonDialogState>({
       isOpen: false,
-      title: '',
-      message: '',
-      confirmText: t('保存'),
-      discardText: t('不保存'),
-      cancelText: t('取消'),
-      dialogType: 'warning',
+      title: "",
+      message: "",
+      confirmText: t("保存"),
+      discardText: t("不保存"),
+      cancelText: t("取消"),
+      dialogType: "warning",
     });
 
   const [promptState, setPromptState] = useState<PromptDialogState>({
     isOpen: false,
-    title: '',
-    label: '',
-    defaultValue: '',
-    confirmText: t('确定'),
-    cancelText: t('取消'),
+    title: "",
+    label: "",
+    defaultValue: "",
+    confirmText: t("确定"),
+    cancelText: t("取消"),
     multiline: false,
     required: true,
   });
-  const [promptInputValue, setPromptInputValue] = useState('');
+  const [promptInputValue, setPromptInputValue] = useState("");
 
   const handleConfirm = useCallback(() => {
     const resolve = confirmResolveRef.current;
@@ -139,7 +139,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleThreeButtonConfirm = useCallback(() => {
     const resolve = threeButtonResolveRef.current;
     if (resolve) {
-      resolve('confirm');
+      resolve("confirm");
       threeButtonResolveRef.current = null;
     }
     setThreeButtonState((prev) => ({ ...prev, isOpen: false }));
@@ -148,7 +148,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleThreeButtonDiscard = useCallback(() => {
     const resolve = threeButtonResolveRef.current;
     if (resolve) {
-      resolve('discard');
+      resolve("discard");
       threeButtonResolveRef.current = null;
     }
     setThreeButtonState((prev) => ({ ...prev, isOpen: false }));
@@ -157,7 +157,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleThreeButtonCancel = useCallback(() => {
     const resolve = threeButtonResolveRef.current;
     if (resolve) {
-      resolve('cancel');
+      resolve("cancel");
       threeButtonResolveRef.current = null;
     }
     setThreeButtonState((prev) => ({ ...prev, isOpen: false }));
@@ -182,7 +182,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const showToast = useCallback(
-    (message: string, type: ToastType = 'info', options?: ToastOptions) => {
+    (message: string, type: ToastType = "info", options?: ToastOptions) => {
       // CAD 编辑器活动时普通提示走 CAD 消息条；但通知提示必须可点击，
       // CAD 消息条不可点，故 forceOverlay 时保留本应用浮层。
       if (
@@ -203,7 +203,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         ) {
           return prev;
         }
-        return [...prev, { id, type, message, onClick: options?.onClick, duration: options?.duration }];
+        return [
+          ...prev,
+          {
+            id,
+            type,
+            message,
+            onClick: options?.onClick,
+            duration: options?.duration,
+          },
+        ];
       });
 
       const timerId = setTimeout(() => {
@@ -212,7 +221,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       }, options?.duration ?? TOAST_DEFAULT_DURATION_MS);
       timerRefs.current.add(timerId);
     },
-    [isCadActive]
+    [isCadActive],
   );
 
   const removeToast = useCallback((id: string) => {
@@ -227,40 +236,40 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           isOpen: true,
           title: options.title,
           message: options.message,
-          confirmText: options.confirmText || t('确定'),
-          cancelText: options.cancelText || t('取消'),
-          dialogType: options.type || 'warning',
+          confirmText: options.confirmText || t("确定"),
+          cancelText: options.cancelText || t("取消"),
+          dialogType: options.type || "warning",
         });
       });
     },
-    []
+    [],
   );
 
   const showPrompt = useCallback(
     (options: PromptOptions): Promise<string | null> => {
       return new Promise((resolve) => {
         promptResolveRef.current = resolve;
-        const defaultValue = options.defaultValue || '';
+        const defaultValue = options.defaultValue || "";
         setPromptState({
           isOpen: true,
           title: options.title,
           label: options.label,
           defaultValue,
-          confirmText: options.confirmText || t('确定'),
-          cancelText: options.cancelText || t('取消'),
+          confirmText: options.confirmText || t("确定"),
+          cancelText: options.cancelText || t("取消"),
           multiline: options.multiline || false,
           required: options.required !== false,
         });
         setPromptInputValue(defaultValue);
       });
     },
-    []
+    [],
   );
 
   const showThreeButtonConfirm = useCallback(
     (
-      options: ThreeButtonConfirmOptions
-    ): Promise<'confirm' | 'discard' | 'cancel'> => {
+      options: ThreeButtonConfirmOptions,
+    ): Promise<"confirm" | "discard" | "cancel"> => {
       return new Promise((resolve) => {
         threeButtonResolveRef.current = resolve;
         setThreeButtonState({
@@ -270,19 +279,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           confirmText: options.confirmText,
           discardText: options.discardText,
           cancelText: options.cancelText,
-          dialogType: options.dialogType || 'warning',
+          dialogType: options.dialogType || "warning",
         });
       });
     },
-    []
+    [],
   );
 
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<ToastOptions & {
-        message: string;
-        type: ToastType;
-      }>;
+      const customEvent = e as CustomEvent<
+        ToastOptions & {
+          message: string;
+          type: ToastType;
+        }
+      >;
       const { message, type, ...options } = customEvent.detail;
       showToast(message, type, options);
     };
@@ -293,7 +304,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         window.dispatchEvent(
           new CustomEvent(CONFIRM_RESPONSE_EVENT, {
             detail: { confirmed },
-          })
+          }),
         );
       });
     };
@@ -304,7 +315,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         window.dispatchEvent(
           new CustomEvent(THREE_BUTTON_CONFIRM_RESPONSE_EVENT, {
             detail: { value },
-          })
+          }),
         );
       });
     };
@@ -315,7 +326,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         window.dispatchEvent(
           new CustomEvent(PROMPT_RESPONSE_EVENT, {
             detail: { value },
-          })
+          }),
         );
       });
     };
@@ -324,26 +335,26 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     window.addEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
     window.addEventListener(
       THREE_BUTTON_CONFIRM_EVENT,
-      handleThreeButtonConfirmEvent as EventListener
+      handleThreeButtonConfirmEvent as EventListener,
     );
     window.addEventListener(PROMPT_EVENT, handlePromptEvent as EventListener);
 
     return () => {
       window.removeEventListener(
         TOAST_EVENT,
-        handleToastEvent as EventListener
+        handleToastEvent as EventListener,
       );
       window.removeEventListener(
         CONFIRM_EVENT,
-        handleConfirmEvent as EventListener
+        handleConfirmEvent as EventListener,
       );
       window.removeEventListener(
         THREE_BUTTON_CONFIRM_EVENT,
-        handleThreeButtonConfirmEvent as EventListener
+        handleThreeButtonConfirmEvent as EventListener,
       );
       window.removeEventListener(
         PROMPT_EVENT,
-        handlePromptEvent as EventListener
+        handlePromptEvent as EventListener,
       );
     };
   }, [showToast, showConfirm, showThreeButtonConfirm, showPrompt]);
@@ -389,7 +400,7 @@ export const useNotification = (): NotificationContextValue => {
   const context = useContext(NotificationContext);
   if (!context) {
     throw new Error(
-      'useNotification must be used within a NotificationProvider'
+      "useNotification must be used within a NotificationProvider",
     );
   }
   return context;

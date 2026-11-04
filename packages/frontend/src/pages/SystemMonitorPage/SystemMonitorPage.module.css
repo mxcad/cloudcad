@@ -1020,6 +1020,10 @@
 
 .tableScroll {
   overflow-x: auto;
+  /* 纵向滚动：表格区自身成为滚动分页容器（useScrollPagination containerRef），
+     数据超 60vh 出现内嵌滚动条，避免整页滚动与滚动分页边界触发冲突 */
+  overflow-y: auto;
+  max-height: 60vh;
 }
 
 .table {

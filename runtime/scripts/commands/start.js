@@ -343,7 +343,11 @@ function getConversionServiceConfig() {
   const redisPort = envConfig.REDIS_PORT || '6379';
   const redisDb = envConfig.REDIS_DB || '0';
   const redisPassword = envConfig.REDIS_PASSWORD || '';
-  const auth = redisPassword ? `:${redisPassword}@` : '';
+  // 密码可能含 URL 特殊字符（@/#/%/:/? 等，如 jA75@gCosr@8-u_e）：必须 encodeURIComponent，
+  // 否则 URL 语义错乱（# 截断 fragment、/ 改写 path、@ 被 WHATWG 解析器自动编码成 %40）。
+  // 消费端（conversion-service 的 redis-client.ts）按同规则 decodeURIComponent 还原，
+  // 两端匹配密码才能正确 AUTH——缺编码曾致 ERR invalid password（2026-11-04 部署事故）。
+  const auth = redisPassword ? `:${encodeURIComponent(redisPassword)}@` : '';
   const env = {
     NODE_ENV: 'production',
     CONVERSION_SERVICE_PORT: String(PORTS.conversion),

@@ -574,7 +574,7 @@ export const useExternalReferenceUpload = (
           )
         );
       } catch (error) {
-        handleError(error, t(`上传 ${fileInfo.name} 失败`));
+        handleError(error, t('上传 {name} 失败', { name: fileInfo.name }));
         // 透传后端具体原因（配额/权限等），不再只显示固定"上传 xx 失败"
         config.onError?.(
           `${getErrorMessage(error) || t('上传失败')}：${fileInfo.name}`

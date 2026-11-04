@@ -1,9 +1,7 @@
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
-import { Z_LAYERS } from '../../constants/layers';
-import type { PromptDialogState } from './types';
+import { Modal, Button, Input, Textarea } from "@/components/ui";
+
+import { Z_LAYERS } from "../../constants/layers";
+import type { PromptDialogState } from "./types";
 
 /**
  * 输入弹框——必须做选择，mustChoose：点遮罩/按 Esc 都不关闭，也不能点右上角 ×。
@@ -49,7 +47,7 @@ export function PromptDialog({
     >
       <label
         className="block text-sm font-medium mb-2"
-        style={{ color: 'var(--text-secondary)' }}
+        style={{ color: "var(--text-secondary)" }}
       >
         {state.label}
       </label>
@@ -59,7 +57,7 @@ export function PromptDialog({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           size="lg"
-          style={{ minHeight: '100px' }}
+          style={{ minHeight: "100px" }}
           placeholder={state.label}
         />
       ) : (
@@ -69,7 +67,7 @@ export function PromptDialog({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (!state.required || value.trim())) {
+            if (e.key === "Enter" && (!state.required || value.trim())) {
               onConfirm();
             }
           }}

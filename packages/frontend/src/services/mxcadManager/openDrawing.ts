@@ -1,12 +1,15 @@
 import { t } from '@/languages';
 import { handleError } from '@/utils/errorHandler';
 import { hasReadyArtifact, isTerminalFailureStatus } from '@/lib/fileStatus';
+import { describeConversionError } from '@/lib/conversionError';
+import type { ConversionErrorInfo } from '@/lib/conversionError';
 import { globalShowToast } from '@/utils/notificationEvents';
 import {
   nodeControllerGetNode,
   nodeControllerGetRootNode,
   libraryControllerGetDrawingNode,
   libraryControllerGetBlockNode,
+  conversionStatusControllerGetConversionStatus,
 } from '@/api-sdk';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import {
@@ -100,6 +103,34 @@ export async function openUnderLoading(plan: {
   }
 }
 
+/**
+ * 打开图纸失败终态：多查一次节点转换状态端点取真实失败原因（error + errorCategory），
+ * 按性质分类映射成「文件内容问题」vs「引擎/服务异常」两种文案后抛出，取代历史上
+ * 统一折叠的「该文件转换失败，请检查文件内容」兜底。
+ *
+ * 查询失败（网络/权限/任务记录已清理）静默降级为兜底文案，不阻断失败流程。
+ * 抛出的 Error 额外挂 conversionError（kind/canRetry/detail），供调用方按需区分处理。
+ */
+async function failWithReason(nodeId: string): Promise<never> {
+  let info: ConversionErrorInfo | undefined;
+  try {
+    const { data } = await conversionStatusControllerGetConversionStatus({
+      path: { nodeId },
+    });
+    if (data && isTerminalFailureStatus(data.fileStatus)) {
+      info = describeConversionError(data.errorCategory, data.error);
+    }
+  } catch {
+    // 降级：下面用兜底文案
+  }
+  const error = new Error(info?.message ?? t('该文件转换失败，请检查文件内容'));
+  if (info) {
+    (error as Error & { conversionError?: ConversionErrorInfo }).conversionError =
+      info;
+  }
+  throw error;
+}
+
 export async function waitForFileReady(
   nodeId: string,
   // 120×2s=240s：须大于后端引擎超时（打开/导出档 180s）+ 排队余量，
@@ -123,7 +154,7 @@ export async function waitForFileReady(
       // 「节点不存在」。其他错误（网络/500）透传真实原因。
       const code = (fileInfoResponse.error as { code?: string })?.code;
       if (code === 'NOT_FOUND') {
-        throw new Error(t('该文件转换失败，请检查文件内容'));
+        await failWithReason(nodeId);
       }
       throw fileInfoResponse.error;
     }
@@ -133,7 +164,7 @@ export async function waitForFileReady(
     // maxAttempts（默认 120×2s=240s）才报「文件转换未完成」，用户误以为还在转换。
     // 这里立即失败并给出与 useCadFileLoader 一致的失败文案。
     if (isTerminalFailureStatus(fileInfo.fileStatus)) {
-      throw new Error(t('该文件转换失败，请检查文件内容'));
+      await failWithReason(nodeId);
     }
     if (hasReadyArtifact(fileInfo)) {
       return {

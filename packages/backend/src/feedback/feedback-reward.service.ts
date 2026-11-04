@@ -29,7 +29,7 @@ import {
   FEEDBACK_MAX_TIER_LEVEL,
   FEEDBACK_MIN_TIER_LEVEL,
 } from './feedback.constants';
-import { AdoptFeedbackDto, IssueRewardDto, RevokeRewardDto } from './dto/feedback.dto';
+import { AdoptFeedbackDto, IssueRewardDto } from './dto/feedback.dto';
 import { FeedbackRewardResponseDto } from './dto/feedback-response.dto';
 
 const t = (key: string, fallback: string): string =>
@@ -230,59 +230,6 @@ export class FeedbackRewardService {
     this.logger.log(
       `奖励已发放：rewardId=${rewardId}, userId=${dto.userId}, tier=${targetTierLevel}, days=${durationDays}`
     );
-    return this.loadRewardWithFeedback(rewardId);
-  }
-
-  /** 撤销奖励（误采纳/作弊；已发放的会员回收由人工处理，审计留痕） */
-  @Audit(AuditAction.FEEDBACK_REWARD_REVOKE, ResourceType.FEEDBACK, {
-    resourceId: (result) => (result as FeedbackRewardResponseDto)?.feedbackId,
-    userId: (_result, args) => args[2] as string,
-    details: (_result, args) => {
-      const dto = args[1] as RevokeRewardDto;
-      return { reason: dto?.reason };
-    },
-  })
-  async revoke(
-    rewardId: string,
-    dto: RevokeRewardDto,
-    operatorId: string
-  ): Promise<FeedbackRewardResponseDto> {
-    const reward = await this.prisma.feedbackReward.findUnique({
-      where: { id: rewardId },
-    });
-    if (!reward) {
-      throw new NotFoundException(
-        t('error.feedback.reward_not_found', '奖励记录不存在')
-      );
-    }
-    if (reward.status === PrismaRewardStatus.REVOKED) {
-      throw new BadRequestException(
-        t('error.feedback.reward_already_revoked', '该奖励已撤销')
-      );
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      const rew = await tx.feedbackReward.update({
-        where: { id: rewardId },
-        data: {
-          status: PrismaRewardStatus.REVOKED,
-          remark: dto.reason,
-          issuedById: operatorId,
-        },
-      });
-      await tx.feedback.update({
-        where: { id: reward.feedbackId },
-        data: { rewardStatus: PrismaRewardStatus.REVOKED },
-      });
-      return rew;
-    });
-
-    if (reward.status === PrismaRewardStatus.ISSUED) {
-      // 已发放的撤销：会员实际回收由客服人工处理（此处只标记+留痕）
-      this.logger.warn(
-        `已发放奖励被撤销（需人工回收会员）：rewardId=${rewardId}, operator=${operatorId}`
-      );
-    }
     return this.loadRewardWithFeedback(rewardId);
   }
 

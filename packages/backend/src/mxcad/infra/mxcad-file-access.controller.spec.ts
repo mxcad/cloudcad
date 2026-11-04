@@ -51,6 +51,7 @@ function makeRes(): any {
     json: jest.fn().mockReturnThis(),
     setHeader: jest.fn().mockReturnThis(),
     end: jest.fn().mockReturnThis(),
+    once: jest.fn().mockReturnThis(),
   };
 }
 

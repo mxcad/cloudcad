@@ -215,7 +215,7 @@ function setup() {
 /** 等首屏配置拉取结束，返回 hook 句柄 */
 async function load() {
   const hook = setup();
-  await waitFor(() => expect(hook.result.current.loading).toBe(false));
+  await waitFor(() => expect(hook.result.current.list.loading).toBe(false));
   return hook;
 }
 
@@ -241,7 +241,7 @@ describe('useRuntimeConfig', () => {
       const hook = await load();
       // 默认收起高级项会让 security 组整组消失，先展开再校验完整分类顺序
       await act(async () => {
-        hook.result.current.setShowAdvanced(true);
+        hook.result.current.list.setShowAdvanced(true);
       });
       const rc = hook.result.current;
 
@@ -254,7 +254,7 @@ describe('useRuntimeConfig', () => {
         modeManaged: 0,
       });
       // 已登记的分类按元数据顺序；未登记的分类追加在最后
-      expect(rc.groups.map((g) => g.category)).toEqual([
+      expect(rc.list.groups.map((g) => g.category)).toEqual([
         'account',
         'file',
         'alert',
@@ -262,7 +262,7 @@ describe('useRuntimeConfig', () => {
         'maintenance',
         'experimental',
       ]);
-      const alertGroup = rc.groups.find((g) => g.category === 'alert')!;
+      const alertGroup = rc.list.groups.find((g) => g.category === 'alert')!;
       expect(alertGroup.label).toBe('告警配置');
       expect(alertGroup.items.map((i) => i.key)).toEqual([
         'mail.port',
@@ -275,14 +275,14 @@ describe('useRuntimeConfig', () => {
       ]);
       expect(alertGroup.subgroups[0]!.label).toBe('邮件通道');
       expect(
-        rc.groups.find((g) => g.category === 'file')!.subgroups
+        rc.list.groups.find((g) => g.category === 'file')!.subgroups
       ).toEqual([]);
-      expect(rc.canManageConfig).toBe(true);
+      expect(rc.list.canManageConfig).toBe(true);
     });
 
     it('未登记的分类回落到分类名本身作为显示名', async () => {
       const hook = await load();
-      const group = hook.result.current.groups.find(
+      const group = hook.result.current.list.groups.find(
         (g) => g.category === 'experimental'
       );
       expect(group?.label).toBe('experimental');
@@ -291,8 +291,8 @@ describe('useRuntimeConfig', () => {
     it('响应不是数组时归一化为空列表，页面不崩溃', async () => {
       getAllConfigs.mockResolvedValue(ok(null));
       const hook = await load();
-      expect(hook.result.current.configs).toEqual([]);
-      expect(hook.result.current.groups).toEqual([]);
+      expect(hook.result.current.list.configs).toEqual([]);
+      expect(hook.result.current.list.groups).toEqual([]);
       expect(hook.result.current.stats.total).toBe(0);
     });
 
@@ -300,7 +300,7 @@ describe('useRuntimeConfig', () => {
       // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
       getAllConfigs.mockRejectedValue(new Error('boom'));
       const hook = await load();
-      expect(hook.result.current.configs).toEqual([]);
+      expect(hook.result.current.list.configs).toEqual([]);
       expect(showToast).toHaveBeenCalledWith('boom', 'error');
     });
   });
@@ -309,20 +309,20 @@ describe('useRuntimeConfig', () => {
     it('数字超出上限：就地报错，不发请求', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '99999');
+        hook.result.current.list.handleDraftChange('mail.port', '99999');
       });
 
-      const item = hook.result.current.configs.find((c) => c.key === 'mail.port')!;
-      expect(hook.result.current.isDirty(item)).toBe(true);
+      const item = hook.result.current.list.configs.find((c) => c.key === 'mail.port')!;
+      expect(hook.result.current.list.isDirty(item)).toBe(true);
       expect(hook.result.current.stats.pendingSave).toBe(1);
 
       let saved = true;
       await act(async () => {
-        saved = await hook.result.current.handleSave('mail.port');
+        saved = await hook.result.current.list.handleSave('mail.port');
       });
       expect(saved).toBe(false);
       expect(updateConfig).not.toHaveBeenCalled();
-      expect(hook.result.current.fieldErrors['mail.port']).toBe(
+      expect(hook.result.current.list.fieldErrors['mail.port']).toBe(
         '不能大于 65535端口'
       );
     });
@@ -330,35 +330,35 @@ describe('useRuntimeConfig', () => {
     it('数字超出下限同样被拦', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '0');
+        hook.result.current.list.handleDraftChange('mail.port', '0');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.port');
+        await hook.result.current.list.handleSave('mail.port');
       });
-      expect(hook.result.current.fieldErrors['mail.port']).toBe('不能小于 1端口');
+      expect(hook.result.current.list.fieldErrors['mail.port']).toBe('不能小于 1端口');
     });
 
     it('数字输入非数字被拦', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', 'abc');
+        hook.result.current.list.handleDraftChange('mail.port', 'abc');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.port');
+        await hook.result.current.list.handleSave('mail.port');
       });
-      expect(hook.result.current.fieldErrors['mail.port']).toBe('必须是数字');
+      expect(hook.result.current.list.fieldErrors['mail.port']).toBe('必须是数字');
     });
 
     it('JSON 项留空（未声明 allowNull）被拦', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('security.corsOrigins', '   ');
+        hook.result.current.list.handleDraftChange('security.corsOrigins', '   ');
       });
       await act(async () => {
-        await hook.result.current.handleSave('security.corsOrigins');
+        await hook.result.current.list.handleSave('security.corsOrigins');
       });
       expect(updateConfig).not.toHaveBeenCalled();
-      expect(hook.result.current.fieldErrors['security.corsOrigins']).toBe(
+      expect(hook.result.current.list.fieldErrors['security.corsOrigins']).toBe(
         '该项不能为空'
       );
     });
@@ -366,11 +366,11 @@ describe('useRuntimeConfig', () => {
     it('字符串留空是合法取值（后端接受空串），照常提交空串', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', '');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', '');
       });
       let saved = false;
       await act(async () => {
-        saved = await hook.result.current.handleSave('mail.smtpHost');
+        saved = await hook.result.current.list.handleSave('mail.smtpHost');
       });
       expect(saved).toBe(true);
       expect(updateConfig).toHaveBeenCalledWith({
@@ -383,12 +383,12 @@ describe('useRuntimeConfig', () => {
     it('字符串超过 maxLength 被拦', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'x'.repeat(101));
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'x'.repeat(101));
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.smtpHost');
+        await hook.result.current.list.handleSave('mail.smtpHost');
       });
-      expect(hook.result.current.fieldErrors['mail.smtpHost']).toBe(
+      expect(hook.result.current.list.fieldErrors['mail.smtpHost']).toBe(
         '不能超过 100 个字符'
       );
     });
@@ -396,12 +396,12 @@ describe('useRuntimeConfig', () => {
     it('枚举取值不在 options 内被拦', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('system.logLevel', 'trace');
+        hook.result.current.list.handleDraftChange('system.logLevel', 'trace');
       });
       await act(async () => {
-        await hook.result.current.handleSave('system.logLevel');
+        await hook.result.current.list.handleSave('system.logLevel');
       });
-      expect(hook.result.current.fieldErrors['system.logLevel']).toBe(
+      expect(hook.result.current.list.fieldErrors['system.logLevel']).toBe(
         '仅支持：debug / info'
       );
     });
@@ -409,13 +409,13 @@ describe('useRuntimeConfig', () => {
     it('JSON 草稿非法：就地报错，不发请求', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('security.corsOrigins', '{oops');
+        hook.result.current.list.handleDraftChange('security.corsOrigins', '{oops');
       });
       await act(async () => {
-        await hook.result.current.handleSave('security.corsOrigins');
+        await hook.result.current.list.handleSave('security.corsOrigins');
       });
       expect(updateConfig).not.toHaveBeenCalled();
-      expect(hook.result.current.fieldErrors['security.corsOrigins']).toBe(
+      expect(hook.result.current.list.fieldErrors['security.corsOrigins']).toBe(
         'JSON 格式不合法，或顶层必须是对象'
       );
     });
@@ -423,12 +423,12 @@ describe('useRuntimeConfig', () => {
     it('JSON 顶层为数组同样被拦（后端只接受对象）', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('security.corsOrigins', '[]');
+        hook.result.current.list.handleDraftChange('security.corsOrigins', '[]');
       });
       await act(async () => {
-        await hook.result.current.handleSave('security.corsOrigins');
+        await hook.result.current.list.handleSave('security.corsOrigins');
       });
-      expect(hook.result.current.fieldErrors['security.corsOrigins']).toContain(
+      expect(hook.result.current.list.fieldErrors['security.corsOrigins']).toContain(
         '顶层必须是对象'
       );
     });
@@ -436,17 +436,17 @@ describe('useRuntimeConfig', () => {
     it('修改草稿即清除该项就地错误', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '99999');
+        hook.result.current.list.handleDraftChange('mail.port', '99999');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.port');
+        await hook.result.current.list.handleSave('mail.port');
       });
-      expect(hook.result.current.fieldErrors['mail.port']).toBeTruthy();
+      expect(hook.result.current.list.fieldErrors['mail.port']).toBeTruthy();
 
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '25');
+        hook.result.current.list.handleDraftChange('mail.port', '25');
       });
-      expect(hook.result.current.fieldErrors['mail.port']).toBeUndefined();
+      expect(hook.result.current.list.fieldErrors['mail.port']).toBeUndefined();
     });
   });
 
@@ -454,10 +454,10 @@ describe('useRuntimeConfig', () => {
     it('合法数字草稿以 number 提交，成功后清草稿并提示', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '25');
+        hook.result.current.list.handleDraftChange('mail.port', '25');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.port');
+        await hook.result.current.list.handleSave('mail.port');
       });
 
       expect(updateConfig).toHaveBeenCalledWith({
@@ -466,21 +466,21 @@ describe('useRuntimeConfig', () => {
         body: { val: 25 },
       });
       expect(showToast).toHaveBeenCalledWith('配置已保存', 'success');
-      expect(hook.result.current.drafts['mail.port']).toBeUndefined();
-      expect(hook.result.current.fieldErrors['mail.port']).toBeUndefined();
+      expect(hook.result.current.list.drafts['mail.port']).toBeUndefined();
+      expect(hook.result.current.list.fieldErrors['mail.port']).toBeUndefined();
     });
 
     it('JSON 草稿提交前解析为对象', async () => {
       const hook = await load();
       const next = { allow: ['https://b.example.com'] };
       await act(async () => {
-        hook.result.current.handleDraftChange(
+        hook.result.current.list.handleDraftChange(
           'security.corsOrigins',
           JSON.stringify(next, null, 2)
         );
       });
       await act(async () => {
-        await hook.result.current.handleSave('security.corsOrigins');
+        await hook.result.current.list.handleSave('security.corsOrigins');
       });
       expect(updateConfig).toHaveBeenCalledWith({
         throwOnError: true,
@@ -493,10 +493,10 @@ describe('useRuntimeConfig', () => {
       const spy = vi.spyOn(queryClient, 'invalidateQueries');
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('maxFileSize', '800');
+        hook.result.current.list.handleDraftChange('maxFileSize', '800');
       });
       await act(async () => {
-        await hook.result.current.handleSave('maxFileSize');
+        await hook.result.current.list.handleSave('maxFileSize');
       });
       expect(spy).toHaveBeenCalledWith({ queryKey: ['runtimeConfig', 'public'] });
       spy.mockRestore();
@@ -509,10 +509,10 @@ describe('useRuntimeConfig', () => {
       const spy = vi.spyOn(queryClient, 'invalidateQueries');
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('user.allowRegister', true);
+        hook.result.current.list.handleDraftChange('user.allowRegister', true);
       });
       await act(async () => {
-        await hook.result.current.handleSave('user.allowRegister');
+        await hook.result.current.list.handleSave('user.allowRegister');
       });
       expect(spy).toHaveBeenCalledWith({ queryKey: ['runtimeConfig', 'public'] });
       spy.mockRestore();
@@ -522,10 +522,10 @@ describe('useRuntimeConfig', () => {
       const spy = vi.spyOn(queryClient, 'invalidateQueries');
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.other.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.other.com');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.smtpHost');
+        await hook.result.current.list.handleSave('mail.smtpHost');
       });
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
@@ -533,25 +533,25 @@ describe('useRuntimeConfig', () => {
 
     it('保存后回读走静默刷新，不切全页 loading', async () => {
       const hook = await load();
-      const before = hook.result.current.loading;
+      const before = hook.result.current.list.loading;
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.other.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.other.com');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.smtpHost');
+        await hook.result.current.list.handleSave('mail.smtpHost');
       });
       // loading 只在首次拉取时置真；保存后的回读必须静默，
       // 否则整页闪成「正在加载配置...」并丢失滚位
-      expect(hook.result.current.loading).toBe(before);
+      expect(hook.result.current.list.loading).toBe(before);
     });
 
     it('保存成功后重新拉取配置（回读服务端真值）', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '25');
+        hook.result.current.list.handleDraftChange('mail.port', '25');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.port');
+        await hook.result.current.list.handleSave('mail.port');
       });
       expect(getAllConfigs).toHaveBeenCalledTimes(2);
     });
@@ -559,10 +559,10 @@ describe('useRuntimeConfig', () => {
     it('非危险项直接提交，不弹二次确认', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.other.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.other.com');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.smtpHost');
+        await hook.result.current.list.handleSave('mail.smtpHost');
       });
       expect(showConfirm).not.toHaveBeenCalled();
       expect(updateConfig).toHaveBeenCalledTimes(1);
@@ -572,12 +572,12 @@ describe('useRuntimeConfig', () => {
       showConfirm.mockResolvedValueOnce(false);
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('user.allowRegister', true);
+        hook.result.current.list.handleDraftChange('user.allowRegister', true);
       });
 
       let saved = true;
       await act(async () => {
-        saved = await hook.result.current.handleSave('user.allowRegister');
+        saved = await hook.result.current.list.handleSave('user.allowRegister');
       });
 
       expect(saved).toBe(false);
@@ -593,10 +593,10 @@ describe('useRuntimeConfig', () => {
       showConfirm.mockResolvedValueOnce(true);
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('user.allowRegister', true);
+        hook.result.current.list.handleDraftChange('user.allowRegister', true);
       });
       await act(async () => {
-        await hook.result.current.handleSave('user.allowRegister');
+        await hook.result.current.list.handleSave('user.allowRegister');
       });
       expect(updateConfig).toHaveBeenCalledWith({
         throwOnError: true,
@@ -611,18 +611,18 @@ describe('useRuntimeConfig', () => {
       updateConfig.mockRejectedValueOnce(new Error('该主机名已被占用'));
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.busy.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.busy.com');
       });
 
       let saved = true;
       await act(async () => {
-        saved = await hook.result.current.handleSave('mail.smtpHost');
+        saved = await hook.result.current.list.handleSave('mail.smtpHost');
       });
 
       expect(saved).toBe(false);
-      expect(hook.result.current.fieldErrors['mail.smtpHost']).toBe('该主机名已被占用');
+      expect(hook.result.current.list.fieldErrors['mail.smtpHost']).toBe('该主机名已被占用');
       expect(showToast).toHaveBeenCalledWith('该主机名已被占用', 'error');
-      expect(hook.result.current.drafts['mail.smtpHost']).toBe('smtp.busy.com');
+      expect(hook.result.current.list.drafts['mail.smtpHost']).toBe('smtp.busy.com');
       expect(hook.result.current.stats.pendingSave).toBe(1);
     });
   });
@@ -632,7 +632,7 @@ describe('useRuntimeConfig', () => {
       showConfirm.mockResolvedValueOnce(false);
       const hook = await load();
       await act(async () => {
-        await hook.result.current.handleReset('mail.port');
+        await hook.result.current.list.handleReset('mail.port');
       });
       expect(resetConfig).not.toHaveBeenCalled();
     });
@@ -641,12 +641,12 @@ describe('useRuntimeConfig', () => {
       showConfirm.mockResolvedValueOnce(true);
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '8025');
-        hook.result.current.handleDraftChange('mail.smtpHost', 'bad');
+        hook.result.current.list.handleDraftChange('mail.port', '8025');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'bad');
       });
 
       await act(async () => {
-        await hook.result.current.handleReset('mail.port');
+        await hook.result.current.list.handleReset('mail.port');
       });
 
       expect(resetConfig).toHaveBeenCalledWith({
@@ -654,16 +654,16 @@ describe('useRuntimeConfig', () => {
         path: { key: 'mail.port' },
       });
       expect(showToast).toHaveBeenCalledWith('已恢复默认', 'success');
-      expect(hook.result.current.drafts['mail.port']).toBeUndefined();
+      expect(hook.result.current.list.drafts['mail.port']).toBeUndefined();
       // 其它项的草稿不受影响
-      expect(hook.result.current.drafts['mail.smtpHost']).toBe('bad');
+      expect(hook.result.current.list.drafts['mail.smtpHost']).toBe('bad');
     });
 
     it('已由环境变量注入的项，确认文案说明恢复后会退回环境变量值', async () => {
       showConfirm.mockResolvedValueOnce(true);
       const hook = await load();
       await act(async () => {
-        await hook.result.current.handleReset('maxFileSize');
+        await hook.result.current.list.handleReset('maxFileSize');
       });
       const message = showConfirm.mock.calls[0]![0].message;
       expect(message).toContain('系统预置');
@@ -674,7 +674,7 @@ describe('useRuntimeConfig', () => {
       showConfirm.mockResolvedValueOnce(true);
       const hook = await load();
       await act(async () => {
-        await hook.result.current.handleReset('mail.port');
+        await hook.result.current.list.handleReset('mail.port');
       });
       expect(showConfirm.mock.calls[0]![0].message).toContain('不可撤销');
     });
@@ -682,19 +682,19 @@ describe('useRuntimeConfig', () => {
     it('分类批量恢复：先预览该分类下的项，确认后调用 reset-category', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.port', '25');
-        hook.result.current.handleDraftChange('mail.smtpHost', 'x');
-        hook.result.current.requestResetCategory('alert');
+        hook.result.current.list.handleDraftChange('mail.port', '25');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'x');
+        hook.result.current.reset.requestResetCategory('alert');
       });
 
-      expect(hook.result.current.resetPreviewCategory).toBe('alert');
-      expect(hook.result.current.resetPreviewItems.map((i) => i.key)).toEqual([
+      expect(hook.result.current.reset.resetPreviewCategory).toBe('alert');
+      expect(hook.result.current.reset.resetPreviewItems.map((i) => i.key)).toEqual([
         'mail.smtpHost',
         'mail.port',
       ]);
 
       await act(async () => {
-        await hook.result.current.confirmResetCategory();
+        await hook.result.current.reset.confirmResetCategory();
       });
 
       expect(resetCategory).toHaveBeenCalledWith({
@@ -702,17 +702,17 @@ describe('useRuntimeConfig', () => {
         body: { category: 'alert' },
       });
       expect(showToast).toHaveBeenCalledWith('已恢复默认', 'success');
-      expect(hook.result.current.resetPreviewCategory).toBeNull();
+      expect(hook.result.current.reset.resetPreviewCategory).toBeNull();
       // 只清该分类的草稿，其它分类保留
-      expect(hook.result.current.drafts).not.toHaveProperty('mail.port');
-      expect(hook.result.current.drafts).not.toHaveProperty('mail.smtpHost');
-      expect(hook.result.current.fieldErrors).toEqual({});
+      expect(hook.result.current.list.drafts).not.toHaveProperty('mail.port');
+      expect(hook.result.current.list.drafts).not.toHaveProperty('mail.smtpHost');
+      expect(hook.result.current.list.fieldErrors).toEqual({});
     });
 
     it('未请求预览时 confirmResetCategory 直接返回', async () => {
       const hook = await load();
       await act(async () => {
-        await hook.result.current.confirmResetCategory();
+        await hook.result.current.reset.confirmResetCategory();
       });
       expect(resetCategory).not.toHaveBeenCalled();
     });
@@ -720,11 +720,11 @@ describe('useRuntimeConfig', () => {
     it('cancelResetCategory 关闭预览', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.requestResetCategory('mail');
-        hook.result.current.cancelResetCategory();
+        hook.result.current.reset.requestResetCategory('mail');
+        hook.result.current.reset.cancelResetCategory();
       });
-      expect(hook.result.current.resetPreviewCategory).toBeNull();
-      expect(hook.result.current.resetPreviewItems).toEqual([]);
+      expect(hook.result.current.reset.resetPreviewCategory).toBeNull();
+      expect(hook.result.current.reset.resetPreviewItems).toEqual([]);
     });
   });
 
@@ -732,7 +732,7 @@ describe('useRuntimeConfig', () => {
     it('打开历史拉取并归一化，限制条数为 50', async () => {
       const hook = await load();
       await act(async () => {
-        await hook.result.current.openHistory('mail.port');
+        await hook.result.current.history.openHistory('mail.port');
       });
 
       expect(getConfigHistory).toHaveBeenCalledWith({
@@ -740,10 +740,10 @@ describe('useRuntimeConfig', () => {
         path: { key: 'mail.port' },
         query: { limit: '50' },
       });
-      expect(hook.result.current.historyKey).toBe('mail.port');
-      expect(hook.result.current.historyLoading).toBe(false);
-      expect(hook.result.current.historyError).toBeNull();
-      expect(hook.result.current.history).toEqual([
+      expect(hook.result.current.history.historyKey).toBe('mail.port');
+      expect(hook.result.current.history.historyLoading).toBe(false);
+      expect(hook.result.current.history.historyError).toBeNull();
+      expect(hook.result.current.history.history).toEqual([
         expect.objectContaining({
           key: 'mail.port',
           oldValue: '25',
@@ -759,24 +759,24 @@ describe('useRuntimeConfig', () => {
       getConfigHistory.mockRejectedValue(new Error('网络异常'));
       const hook = await load();
       await act(async () => {
-        await hook.result.current.openHistory('mail.port');
+        await hook.result.current.history.openHistory('mail.port');
       });
-      expect(hook.result.current.history).toEqual([]);
-      expect(hook.result.current.historyError).toBe('网络异常');
-      expect(hook.result.current.historyLoading).toBe(false);
+      expect(hook.result.current.history.history).toEqual([]);
+      expect(hook.result.current.history.historyError).toBe('网络异常');
+      expect(hook.result.current.history.historyLoading).toBe(false);
     });
 
     it('关闭历史面板清空历史与错误', async () => {
       const hook = await load();
       await act(async () => {
-        await hook.result.current.openHistory('mail.port');
+        await hook.result.current.history.openHistory('mail.port');
       });
       await act(async () => {
-        hook.result.current.closeHistory();
+        hook.result.current.history.closeHistory();
       });
-      expect(hook.result.current.historyKey).toBeNull();
-      expect(hook.result.current.history).toEqual([]);
-      expect(hook.result.current.historyError).toBeNull();
+      expect(hook.result.current.history.historyKey).toBeNull();
+      expect(hook.result.current.history.history).toEqual([]);
+      expect(hook.result.current.history.historyError).toBeNull();
     });
   });
 
@@ -784,69 +784,69 @@ describe('useRuntimeConfig', () => {
     it('关键字可匹配 key 与描述', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.setKeyword('smtp');
+        hook.result.current.list.setKeyword('smtp');
       });
-      expect(hook.result.current.groups[0].items.map((i) => i.key)).toEqual([
+      expect(hook.result.current.list.groups[0].items.map((i) => i.key)).toEqual([
         'mail.port',
         'mail.smtpHost',
       ]);
 
       await act(async () => {
-        hook.result.current.setKeyword('是否开放注册');
+        hook.result.current.list.setKeyword('是否开放注册');
       });
-      expect(hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
+      expect(hook.result.current.list.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
         'user.allowRegister',
       ]);
 
       // 中文分类名按新标签命中（#500 重划后安全类标签是「安全策略」）
       await act(async () => {
-        hook.result.current.setKeyword('安全策略');
+        hook.result.current.list.setKeyword('安全策略');
       });
-      expect(hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
+      expect(hook.result.current.list.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
         'security.corsOrigins',
       ]);
 
       // 影响说明（改了会怎样）可搜
       await act(async () => {
-        hook.result.current.setKeyword('跨域请求');
+        hook.result.current.list.setKeyword('跨域请求');
       });
-      expect(hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
+      expect(hook.result.current.list.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
         'security.corsOrigins',
       ]);
 
       await act(async () => {
-        hook.result.current.setKeyword('   ');
+        hook.result.current.list.setKeyword('   ');
       });
       // 默认收起 1 项高级项（security.corsOrigins）
       expect(hook.result.current.stats.total).toBe(7);
-      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
+      expect(hook.result.current.list.groups.flatMap((g) => g.items).length).toBe(6);
     });
 
     it('默认收起高级项，展开后恢复全量；隐藏时仍可被搜索到', async () => {
       const hook = await load();
-      expect(hook.result.current.showAdvanced).toBe(false);
-      expect(hook.result.current.advancedCount).toBe(1);
+      expect(hook.result.current.list.showAdvanced).toBe(false);
+      expect(hook.result.current.list.advancedCount).toBe(1);
       const keys = () =>
-        hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
+        hook.result.current.list.groups.flatMap((g) => g.items.map((i) => i.key));
       expect(keys()).not.toContain('security.corsOrigins');
 
       // 搜索时不隐藏高级项，避免「找不到」
       await act(async () => {
-        hook.result.current.setKeyword('corsOrigins');
+        hook.result.current.list.setKeyword('corsOrigins');
       });
       expect(keys()).toContain('security.corsOrigins');
 
       await act(async () => {
-        hook.result.current.setKeyword('');
-        hook.result.current.setShowAdvanced(true);
+        hook.result.current.list.setKeyword('');
+        hook.result.current.list.setShowAdvanced(true);
       });
       expect(keys()).toContain('security.corsOrigins');
-      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(7);
+      expect(hook.result.current.list.groups.flatMap((g) => g.items).length).toBe(7);
 
       await act(async () => {
-        hook.result.current.setShowAdvanced(false);
+        hook.result.current.list.setShowAdvanced(false);
       });
-      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
+      expect(hook.result.current.list.groups.flatMap((g) => g.items).length).toBe(6);
     });
 
     it('运维基线项在默认（收起高级项）时就必须可见，不被档位折叠误伤', async () => {
@@ -884,10 +884,10 @@ describe('useRuntimeConfig', () => {
       ]));
 
       const hook = await load();
-      expect(hook.result.current.showAdvanced).toBe(false);
+      expect(hook.result.current.list.showAdvanced).toBe(false);
       // 分组顺序即 CATEGORY_META 的登记顺序（account < alert < security < audit < maintenance < backup），
       // 组内已修改项置顶、其余按 key 升序（本例无已修改项）
-      expect(hook.result.current.groups.map((g) => g.category)).toEqual([
+      expect(hook.result.current.list.groups.map((g) => g.category)).toEqual([
         'account',
         'alert',
         'security',
@@ -896,7 +896,7 @@ describe('useRuntimeConfig', () => {
         'backup',
       ]);
       const keys = () =>
-        hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
+        hook.result.current.list.groups.flatMap((g) => g.items.map((i) => i.key));
       expect(keys()).toEqual([
         'deviceAuthFrontendDomain',
         'alertEmailEnabled',
@@ -908,10 +908,10 @@ describe('useRuntimeConfig', () => {
       ]);
       // 限流阈值仍是高级项，默认收起
       expect(keys()).not.toContain('rateLimitLoginMax');
-      expect(hook.result.current.advancedCount).toBe(1);
+      expect(hook.result.current.list.advancedCount).toBe(1);
 
       await act(async () => {
-        hook.result.current.setShowAdvanced(true);
+        hook.result.current.list.setShowAdvanced(true);
       });
       expect(keys()).toContain('rateLimitLoginMax');
       expect(keys().length).toBe(8);
@@ -944,7 +944,7 @@ describe('useRuntimeConfig', () => {
       ]));
 
       const hook = await load();
-      const group = hook.result.current.groups.find(
+      const group = hook.result.current.list.groups.find(
         (g) => g.category === 'security'
       )!;
       // 空串小节（未声明子分组）在最前；已登记子分组按 SUBGROUP_ORDER；
@@ -979,35 +979,35 @@ describe('useRuntimeConfig', () => {
     it('只看已修改项时只保留 isModified 的项', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.setOnlyModified(true);
+        hook.result.current.list.setOnlyModified(true);
       });
-      const keys = hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
+      const keys = hook.result.current.list.groups.flatMap((g) => g.items.map((i) => i.key));
       // 分组顺序按元数据：account 在 alert 之前
       expect(keys).toEqual(['user.allowRegister', 'mail.port']);
 
       await act(async () => {
-        hook.result.current.setOnlyModified(false);
+        hook.result.current.list.setOnlyModified(false);
       });
-      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
+      expect(hook.result.current.list.groups.flatMap((g) => g.items).length).toBe(6);
     });
 
     it('折叠分类可切换，也可一键全部折叠/展开', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.toggleCollapsed('mail');
-        hook.result.current.toggleCollapsed('mail');
+        hook.result.current.list.toggleCollapsed('mail');
+        hook.result.current.list.toggleCollapsed('mail');
       });
-      expect(hook.result.current.collapsed.has('mail')).toBe(false);
+      expect(hook.result.current.list.collapsed.has('mail')).toBe(false);
 
       // 展开高级项后「折叠全部」覆盖 security 组（默认收起时它不在可见分组内）
       // 分两次提交：setAllCollapsed 读的是分组 memo，需等上一轮状态算完
       await act(async () => {
-        hook.result.current.setShowAdvanced(true);
+        hook.result.current.list.setShowAdvanced(true);
       });
       await act(async () => {
-        hook.result.current.setAllCollapsed(true);
+        hook.result.current.list.setAllCollapsed(true);
       });
-      expect([...hook.result.current.collapsed].sort()).toEqual([
+      expect([...hook.result.current.list.collapsed].sort()).toEqual([
         'account',
         'alert',
         'experimental',
@@ -1017,95 +1017,95 @@ describe('useRuntimeConfig', () => {
       ]);
 
       await act(async () => {
-        hook.result.current.setAllCollapsed(false);
+        hook.result.current.list.setAllCollapsed(false);
       });
-      expect(hook.result.current.collapsed.size).toBe(0);
+      expect(hook.result.current.list.collapsed.size).toBe(0);
     });
 
     it('secret 项的可见性可切换', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.toggleSecretVisibility('mail.smtpHost');
+        hook.result.current.list.toggleSecretVisibility('mail.smtpHost');
       });
-      expect(hook.result.current.secretVisible.has('mail.smtpHost')).toBe(true);
+      expect(hook.result.current.list.secretVisible.has('mail.smtpHost')).toBe(true);
       await act(async () => {
-        hook.result.current.toggleSecretVisibility('mail.smtpHost');
+        hook.result.current.list.toggleSecretVisibility('mail.smtpHost');
       });
-      expect(hook.result.current.secretVisible.has('mail.smtpHost')).toBe(false);
+      expect(hook.result.current.list.secretVisible.has('mail.smtpHost')).toBe(false);
     });
   });
 
   describe('草稿语义', () => {
     it('初始草稿：布尔取当前值，JSON 格式化为两空格缩进', async () => {
       const hook = await load();
-      const boolItem = hook.result.current.configs.find(
+      const boolItem = hook.result.current.list.configs.find(
         (c) => c.key === 'user.allowRegister'
       )!;
-      const jsonItem = hook.result.current.configs.find(
+      const jsonItem = hook.result.current.list.configs.find(
         (c) => c.key === 'security.corsOrigins'
       )!;
-      expect(hook.result.current.draftOf(boolItem)).toBe(false);
-      expect(hook.result.current.draftOf(jsonItem)).toBe(
+      expect(hook.result.current.list.draftOf(boolItem)).toBe(false);
+      expect(hook.result.current.list.draftOf(jsonItem)).toBe(
         '{\n  "allow": [\n    "https://a.example.com"\n  ]\n}'
       );
     });
 
     it('仅美化 JSON（无语义变化）不视为已修改', async () => {
       const hook = await load();
-      const jsonItem = hook.result.current.configs.find(
+      const jsonItem = hook.result.current.list.configs.find(
         (c) => c.key === 'security.corsOrigins'
       )!;
       await act(async () => {
-        hook.result.current.handleDraftChange('security.corsOrigins', '{"allow":["https://a.example.com"]}');
-        hook.result.current.handleFormatJson('security.corsOrigins');
+        hook.result.current.list.handleDraftChange('security.corsOrigins', '{"allow":["https://a.example.com"]}');
+        hook.result.current.list.handleFormatJson('security.corsOrigins');
       });
-      expect(hook.result.current.isDirty(jsonItem)).toBe(false);
+      expect(hook.result.current.list.isDirty(jsonItem)).toBe(false);
       expect(hook.result.current.stats.pendingSave).toBe(0);
     });
 
     it('handleFormatJson 无法解析时原样保留草稿', async () => {
       const hook = await load();
       await act(async () => {
-        hook.result.current.handleDraftChange('security.corsOrigins', '{oops');
-        hook.result.current.handleFormatJson('security.corsOrigins');
+        hook.result.current.list.handleDraftChange('security.corsOrigins', '{oops');
+        hook.result.current.list.handleFormatJson('security.corsOrigins');
       });
-      expect(hook.result.current.drafts['security.corsOrigins']).toBe('{oops');
+      expect(hook.result.current.list.drafts['security.corsOrigins']).toBe('{oops');
     });
 
     it('把草稿改回与当前值相同不算待保存；留空与非法草稿都算待保存', async () => {
       const hook = await load();
-      const item = hook.result.current.configs.find(
+      const item = hook.result.current.list.configs.find(
         (c) => c.key === 'mail.smtpHost'
       )!;
 
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.other.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.other.com');
       });
-      expect(hook.result.current.isDirty(item)).toBe(true);
+      expect(hook.result.current.list.isDirty(item)).toBe(true);
       expect(hook.result.current.stats.pendingSave).toBe(1);
 
       // 改回当前值：不算变化
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.example.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.example.com');
       });
-      expect(hook.result.current.isDirty(item)).toBe(false);
+      expect(hook.result.current.list.isDirty(item)).toBe(false);
       expect(hook.result.current.stats.pendingSave).toBe(0);
 
       // 留空对字符串是合法取值（后端接受空串），与当前值不同 → 计为待保存
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', '');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', '');
       });
-      expect(hook.result.current.isDirty(item)).toBe(true);
+      expect(hook.result.current.list.isDirty(item)).toBe(true);
 
       // 非法草稿也计入待保存：否则保存按钮被禁用，用户看不到任何报错原因
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.example.com');
-        hook.result.current.handleDraftChange('mail.port', '99999');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.example.com');
+        hook.result.current.list.handleDraftChange('mail.port', '99999');
       });
-      const portItem = hook.result.current.configs.find(
+      const portItem = hook.result.current.list.configs.find(
         (c) => c.key === 'mail.port'
       )!;
-      expect(hook.result.current.isDirty(portItem)).toBe(true);
+      expect(hook.result.current.list.isDirty(portItem)).toBe(true);
     });
   });
 
@@ -1133,7 +1133,7 @@ describe('useRuntimeConfig', () => {
       );
       // 断言直接读 hook.result.current：hook 每次渲染返回新对象，
       // 冻在局部变量上会读到旧 state
-      expect(hook.result.current.modePreviewTarget).toBe('secure');
+      expect(hook.result.current.mode.modePreviewTarget).toBe('secure');
       expect(previewProfile).toHaveBeenCalledTimes(1);
       expect(previewProfile).toHaveBeenCalledWith({
         throwOnError: true,
@@ -1143,22 +1143,22 @@ describe('useRuntimeConfig', () => {
 
     it('切换模式重新拉预览；应用后清掉被覆盖项的草稿并刷新公开配置缓存', async () => {
       const hook = await load();
-      await waitFor(() => expect(hook.result.current.modePreviewTarget).not.toBe(null));
+      await waitFor(() => expect(hook.result.current.mode.modePreviewTarget).not.toBe(null));
 
       // 留一条将被 profile 覆盖的草稿
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.draft.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.draft.com');
       });
 
       previewProfile.mockResolvedValue(
         ok([entry('rateLimitLoginMax', 500, 30)])
       );
       await act(async () => {
-        await hook.result.current.requestModeSwitch('normal');
+        await hook.result.current.mode.requestModeSwitch('normal');
       });
       // 目标模式变了必须重拉，否则对话框展示的是上一轮预览
-      expect(hook.result.current.modeSwitchTarget).toBe('normal');
-      expect(hook.result.current.modePreview[0]?.key).toBe('rateLimitLoginMax');
+      expect(hook.result.current.mode.modeSwitchTarget).toBe('normal');
+      expect(hook.result.current.mode.modePreview[0]?.key).toBe('rateLimitLoginMax');
 
       applyProfile.mockResolvedValue(
         ok({
@@ -1168,7 +1168,7 @@ describe('useRuntimeConfig', () => {
         })
       );
       await act(async () => {
-        await hook.result.current.confirmModeSwitch();
+        await hook.result.current.mode.confirmModeSwitch();
       });
       const after = hook.result.current;
 
@@ -1176,9 +1176,9 @@ describe('useRuntimeConfig', () => {
         throwOnError: true,
         body: { profile: 'normal' },
       });
-      expect(after.modeSwitchTarget).toBe(null);
+      expect(after.mode.modeSwitchTarget).toBe(null);
       // 覆盖项的草稿被清掉，未覆盖项的草稿保留
-      expect(after.drafts['mail.smtpHost']).toBeUndefined();
+      expect(after.list.drafts['mail.smtpHost']).toBeUndefined();
       expect(after.stats.modeManaged).toBe(1);
       // 横幅读公开配置缓存，应用后必须失效，否则全局横幅仍显示旧模式
       expect(
@@ -1190,8 +1190,8 @@ describe('useRuntimeConfig', () => {
       previewProfile.mockRejectedValue(new Error('boom'));
       const hook = await load();
 
-      await waitFor(() => expect(hook.result.current.modePreviewing).toBe(false));
-      expect(hook.result.current.modePreview).toEqual([]);
+      await waitFor(() => expect(hook.result.current.mode.modePreviewing).toBe(false));
+      expect(hook.result.current.mode.modePreview).toEqual([]);
       expect(hook.result.current.stats.modeManaged).toBe(0);
     });
   });
@@ -1210,24 +1210,24 @@ describe('useRuntimeConfig', () => {
       getChannelsStatus.mockResolvedValue(ok([mailChannel]));
       const hook = await load();
 
-      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
-      expect(hook.result.current.channelStatuses[0].channel).toBe('mail');
+      await waitFor(() => expect(hook.result.current.channel.channelStatuses.length).toBe(1));
+      expect(hook.result.current.channel.channelStatuses[0].channel).toBe('mail');
       expect(getChannelsStatus).toHaveBeenCalledWith({ throwOnError: true });
     });
 
     it('测试发送成功：toast 后端文案 + 关对话框 + 刷新通道状态', async () => {
       getChannelsStatus.mockResolvedValue(ok([mailChannel]));
       const hook = await load();
-      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      await waitFor(() => expect(hook.result.current.channel.channelStatuses.length).toBe(1));
 
       await act(async () => {
-        hook.result.current.openChannelTest('mail');
+        hook.result.current.channel.openChannelTest('mail');
       });
       await act(async () => {
-        hook.result.current.setChannelTestRecipient('a@b.c');
+        hook.result.current.channel.setChannelTestRecipient('a@b.c');
       });
       await act(async () => {
-        await hook.result.current.confirmChannelTest();
+        await hook.result.current.channel.confirmChannelTest();
       });
 
       expect(testChannel).toHaveBeenCalledWith({
@@ -1237,9 +1237,9 @@ describe('useRuntimeConfig', () => {
       });
       expect(showToast).toHaveBeenCalledWith('测试邮件已发送至 a@b.c', 'success');
       // 成功后关对话框并清空收件人与测试结果
-      expect(hook.result.current.channelTestTarget).toBe(null);
-      expect(hook.result.current.channelTestRecipient).toBe('');
-      expect(hook.result.current.channelTestResult).toBe(null);
+      expect(hook.result.current.channel.channelTestTarget).toBe(null);
+      expect(hook.result.current.channel.channelTestRecipient).toBe('');
+      expect(hook.result.current.channel.channelTestResult).toBe(null);
       // 成功会写验证记录，必须刷新通道状态
       expect(getChannelsStatus).toHaveBeenCalledTimes(2);
     });
@@ -1255,13 +1255,13 @@ describe('useRuntimeConfig', () => {
         })
       );
       const hook = await load();
-      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      await waitFor(() => expect(hook.result.current.channel.channelStatuses.length).toBe(1));
 
       await act(async () => {
-        hook.result.current.openChannelTest('mail');
+        hook.result.current.channel.openChannelTest('mail');
       });
       await act(async () => {
-        await hook.result.current.confirmChannelTest();
+        await hook.result.current.channel.confirmChannelTest();
       });
 
       expect(showToast).toHaveBeenCalledWith(
@@ -1269,19 +1269,19 @@ describe('useRuntimeConfig', () => {
         'error'
       );
       // 失败不关对话框：用户可改配置后重试
-      expect(hook.result.current.channelTestTarget).toBe('mail');
+      expect(hook.result.current.channel.channelTestTarget).toBe('mail');
       // 失败结果保留在对话框：错误文案 + 可定位的出错配置键
-      expect(hook.result.current.channelTestResult).toEqual({
+      expect(hook.result.current.channel.channelTestResult).toEqual({
         ok: false,
         message: '微信凭据探测失败（errcode 40013）：invalid appid',
         problemKeys: ['wechatAppId'],
       });
 
       await act(async () => {
-        hook.result.current.closeChannelTest();
+        hook.result.current.channel.closeChannelTest();
       });
       // 关闭对话框清空测试结果
-      expect(hook.result.current.channelTestResult).toBe(null);
+      expect(hook.result.current.channel.channelTestResult).toBe(null);
     });
 
     it('后端未返回 problemKeys（老版本）：归一为空数组，对话框只展示文案', async () => {
@@ -1290,16 +1290,16 @@ describe('useRuntimeConfig', () => {
         ok({ channel: 'mail', ok: false, message: '配置不完整（缺失：smtpHost）' })
       );
       const hook = await load();
-      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      await waitFor(() => expect(hook.result.current.channel.channelStatuses.length).toBe(1));
 
       await act(async () => {
-        hook.result.current.openChannelTest('mail');
+        hook.result.current.channel.openChannelTest('mail');
       });
       await act(async () => {
-        await hook.result.current.confirmChannelTest();
+        await hook.result.current.channel.confirmChannelTest();
       });
 
-      expect(hook.result.current.channelTestResult).toEqual({
+      expect(hook.result.current.channel.channelTestResult).toEqual({
         ok: false,
         message: '配置不完整（缺失：smtpHost）',
         problemKeys: [],
@@ -1310,13 +1310,13 @@ describe('useRuntimeConfig', () => {
       getChannelsStatus.mockResolvedValue(ok([mailChannel]));
       testChannel.mockRejectedValue(new Error('通道 mail 未注册测试动作'));
       const hook = await load();
-      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      await waitFor(() => expect(hook.result.current.channel.channelStatuses.length).toBe(1));
 
       await act(async () => {
-        hook.result.current.openChannelTest('mail');
+        hook.result.current.channel.openChannelTest('mail');
       });
       await act(async () => {
-        await hook.result.current.confirmChannelTest();
+        await hook.result.current.channel.confirmChannelTest();
       });
 
       expect(showToast).toHaveBeenCalledWith('通道 mail 未注册测试动作', 'error');
@@ -1325,15 +1325,15 @@ describe('useRuntimeConfig', () => {
     it('保存配置项后刷新通道状态（配置变更使验证记录失效）', async () => {
       getChannelsStatus.mockResolvedValue(ok([mailChannel]));
       const hook = await load();
-      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      await waitFor(() => expect(hook.result.current.channel.channelStatuses.length).toBe(1));
       // 首屏拉取一次
       expect(getChannelsStatus).toHaveBeenCalledTimes(1);
 
       await act(async () => {
-        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.new.com');
+        hook.result.current.list.handleDraftChange('mail.smtpHost', 'smtp.new.com');
       });
       await act(async () => {
-        await hook.result.current.handleSave('mail.smtpHost');
+        await hook.result.current.list.handleSave('mail.smtpHost');
       });
 
       // 保存成功后刷新一次

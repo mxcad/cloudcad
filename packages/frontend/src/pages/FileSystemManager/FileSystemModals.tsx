@@ -1,26 +1,26 @@
-import React from 'react';
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { CreateFolderModal } from '@/components/modals/CreateFolderModal';
-import { NewDrawingModal } from '@/components/modals/NewDrawingModal';
-import { RenameModal } from '@/components/modals/RenameModal';
-import { ProjectModal } from '@/components/modals/ProjectModal';
-import { MembersModal } from '@/components/modals/MembersModal';
-import { ProjectRolesModal } from '@/components/modals/ProjectRolesModal';
-import { OperationHistoryModal } from '@/components/modals/OperationHistoryModal';
-import { SelectFolderModal } from '@/components/modals/SelectFolderModal';
-import { useTransferTargetRoots } from '@/components/modals/hooks/useTransferTargetRoots';
-import { useTransferSettings } from '@/components/modals/hooks/useTransferSettings';
-import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
-import { DownloadFormatModal } from '@/components/modals/DownloadFormatModal';
-import { BatchDownloadDialog } from '@/components/modals/BatchDownloadDialog';
-import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
-import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
-import { ShareDialog } from '@/components/modals/ShareDialog';
-import { t } from '@/languages';
-import type { MxLogEntryDto } from '@/api-sdk';
-import type { FileSystemNode, TransferSettings } from '@/types/filesystem';
+import React from "react";
+import { AlertCircle } from "lucide-react";
+import { Button, Modal } from "@/components/ui";
+
+import { CreateFolderModal } from "@/components/modals/CreateFolderModal";
+import { NewDrawingModal } from "@/components/modals/NewDrawingModal";
+import { RenameModal } from "@/components/modals/RenameModal";
+import { ProjectModal } from "@/components/modals/ProjectModal";
+import { MembersModal } from "@/components/modals/MembersModal";
+import { ProjectRolesModal } from "@/components/modals/ProjectRolesModal";
+import { OperationHistoryModal } from "@/components/modals/OperationHistoryModal";
+import { SelectFolderModal } from "@/components/modals/SelectFolderModal";
+import { useTransferTargetRoots } from "@/components/modals/hooks/useTransferTargetRoots";
+import { useTransferSettings } from "@/components/modals/hooks/useTransferSettings";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { DownloadFormatModal } from "@/components/modals/DownloadFormatModal";
+import { BatchDownloadDialog } from "@/components/modals/BatchDownloadDialog";
+import { useBatchDownloadStore } from "@/stores/useBatchDownloadStore";
+import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
+import { ShareDialog } from "@/components/modals/ShareDialog";
+import { t } from "@/languages";
+import type { MxLogEntryDto } from "@/api-sdk";
+import type { FileSystemNode, TransferSettings } from "@/types/filesystem";
 
 export interface FileSystemModalsProps {
   showCreateFolderModal: boolean;
@@ -61,15 +61,15 @@ export interface FileSystemModalsProps {
   setEditingProject: (v: FileSystemNode | null) => void;
   urlProjectId: string | undefined;
   /** 当前视图模式：项目 / 个人空间（跨项目转移门控判定源域用） */
-  mode: 'project' | 'personal-space';
+  mode: "project" | "personal-space";
   showSelectFolderModal: boolean;
-  moveSourceNode: FileSystemNode | { id: 'batch' } | null;
-  copySourceNode: FileSystemNode | { id: 'batch' } | null;
+  moveSourceNode: FileSystemNode | { id: "batch" } | null;
+  copySourceNode: FileSystemNode | { id: "batch" } | null;
   /** 需从目标树剔除的源节点 id 全集（批量=选中集合；防选入任一源的子树） */
   selectFolderExcludeNodeIds: string[];
   setShowSelectFolderModal: (v: boolean) => void;
-  setMoveSourceNode: (v: FileSystemNode | { id: 'batch' } | null) => void;
-  setCopySourceNode: (v: FileSystemNode | { id: 'batch' } | null) => void;
+  setMoveSourceNode: (v: FileSystemNode | { id: "batch" } | null) => void;
+  setCopySourceNode: (v: FileSystemNode | { id: "batch" } | null) => void;
   handleConfirmMoveOrCopy: (targetParentId: string) => Promise<void>;
   handleUploadExternalReference: (node: FileSystemNode) => void;
   currentNode: FileSystemNode | null;
@@ -78,17 +78,17 @@ export interface FileSystemModalsProps {
   setShowDownloadFormatModal: (v: boolean) => void;
   setDownloadingNode: (v: FileSystemNode | null) => void;
   handleDownloadWithFormat: (
-    format: 'dwg' | 'dxf' | 'mxweb' | 'pdf',
+    format: "dwg" | "dxf" | "mxweb" | "pdf",
     pdfOptions?: {
       width?: string;
       height?: string;
-      colorPolicy?: 'mono' | 'color';
-    }
+      colorPolicy?: "mono" | "color";
+    },
   ) => Promise<void>;
   projectId: string;
   showToast: (
     message: string,
-    type?: 'info' | 'success' | 'error' | 'warning'
+    type?: "info" | "success" | "error" | "warning",
   ) => void;
   showVersionHistoryModal: boolean;
   versionHistoryNode: FileSystemNode | null;
@@ -200,7 +200,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : String(error),
-        'error'
+        "error",
       );
     }
   };
@@ -222,7 +222,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
         loading={loading}
         onClose={() => {
           setShowCreateDrawingModal(false);
-          setDrawingName('');
+          setDrawingName("");
         }}
         onDrawingNameChange={setDrawingName}
         onCreate={handleCreateDrawing}
@@ -236,7 +236,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
         onClose={() => {
           setShowRenameModal(false);
           setEditingNode(null);
-          setFolderName('');
+          setFolderName("");
         }}
         onNameChange={setFolderName}
         onRename={handleRename}
@@ -258,7 +258,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
       <Modal
         isOpen={deleteConfirmOpen}
         onClose={cancelDelete}
-        title={t('确认删除项目')}
+        title={t("确认删除项目")}
         footer={
           <>
             <Button
@@ -266,14 +266,14 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
               onClick={cancelDelete}
               disabled={projectLoading}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               onClick={confirmDelete}
               disabled={projectLoading}
               className="bg-red-600 hover:bg-red-700"
             >
-              {projectLoading ? t('删除中...') : t('确认删除')}
+              {projectLoading ? t("删除中...") : t("确认删除")}
             </Button>
           </>
         }
@@ -282,19 +282,19 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
           <div
             className="flex items-start gap-3 p-4 rounded-lg"
             style={{
-              background: 'var(--warning-dim)',
-              border: '1px solid var(--warning)',
+              background: "var(--warning-dim)",
+              border: "1px solid var(--warning)",
             }}
           >
             <AlertCircle
               size={20}
               className="flex-shrink-0 mt-0.5"
-              style={{ color: 'var(--warning)' }}
+              style={{ color: "var(--warning)" }}
             />
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              <p className="font-semibold mb-1">{t('重要提示')}</p>
-              <p style={{ color: 'var(--text-tertiary)' }}>
-                {t('删除项目后，项目中的所有文件和数据可能无法恢复。')}
+            <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              <p className="font-semibold mb-1">{t("重要提示")}</p>
+              <p style={{ color: "var(--text-tertiary)" }}>
+                {t("删除项目后，项目中的所有文件和数据可能无法恢复。")}
               </p>
             </div>
           </div>
@@ -302,24 +302,24 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
             <div className="space-y-2">
               <p
                 className="text-sm font-medium"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: "var(--text-secondary)" }}
               >
-                {t('删除项目：')}
+                {t("删除项目：")}
               </p>
               <div
                 className="p-3 rounded-lg"
-                style={{ background: 'var(--bg-tertiary)' }}
+                style={{ background: "var(--bg-tertiary)" }}
               >
                 <p
                   className="text-sm font-medium"
-                  style={{ color: 'var(--text-primary)' }}
+                  style={{ color: "var(--text-primary)" }}
                 >
                   {projectToDelete.name}
                 </p>
                 {projectToDelete.description && (
                   <p
                     className="text-xs mt-1"
-                    style={{ color: 'var(--text-muted)' }}
+                    style={{ color: "var(--text-muted)" }}
                   >
                     {projectToDelete.description}
                   </p>
@@ -327,15 +327,15 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
               </div>
             </div>
           )}
-          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            {t('确定要删除该项目吗？此操作不可恢复。')}
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
+            {t("确定要删除该项目吗？此操作不可恢复。")}
           </p>
         </div>
       </Modal>
 
       <MembersModal
         isOpen={isMembersModalOpen}
-        projectId={editingProject?.id ?? ''}
+        projectId={editingProject?.id ?? ""}
         onClose={() => {
           setIsMembersModalOpen(false);
           setEditingProject(null);
@@ -344,7 +344,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
 
       <ProjectRolesModal
         isOpen={isProjectRolesModalOpen}
-        projectId={editingProject?.id ?? ''}
+        projectId={editingProject?.id ?? ""}
         onClose={() => {
           setIsProjectRolesModalOpen(false);
           setEditingProject(null);
@@ -353,7 +353,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
 
       <OperationHistoryModal
         isOpen={isOperationHistoryModalOpen}
-        projectId={editingProject?.id ?? ''}
+        projectId={editingProject?.id ?? ""}
         projectName={editingProject?.name}
         onClose={() => {
           setIsOperationHistoryModalOpen(false);
@@ -364,16 +364,16 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
       <SelectFolderModal
         isOpen={showSelectFolderModal}
         currentNodeId={
-          moveSourceNode?.id === 'batch' || copySourceNode?.id === 'batch'
-            ? ''
-            : moveSourceNode?.id || copySourceNode?.id || ''
+          moveSourceNode?.id === "batch" || copySourceNode?.id === "batch"
+            ? ""
+            : moveSourceNode?.id || copySourceNode?.id || ""
         }
         excludeNodeIds={selectFolderExcludeNodeIds}
         projectId={urlProjectId}
         roots={transferRoots}
         // 跨项目转移门控：源为项目视图时才启用（个人空间源不做策略拦截）
-        sourceProjectId={mode === 'project' ? urlProjectId : undefined}
-        operation={moveSourceNode ? 'move' : 'copy'}
+        sourceProjectId={mode === "project" ? urlProjectId : undefined}
+        operation={moveSourceNode ? "move" : "copy"}
         onClose={() => {
           setShowSelectFolderModal(false);
           setMoveSourceNode(null);
@@ -389,7 +389,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
 
       <DownloadFormatModal
         isOpen={showDownloadFormatModal}
-        fileName={downloadingNode?.name ?? ''}
+        fileName={downloadingNode?.name ?? ""}
         onClose={() => {
           setShowDownloadFormatModal(false);
           setDownloadingNode(null);
@@ -422,7 +422,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
         onClose={() => {
           setShareDialogOpen(false);
           setShareFileId(null);
-          setShareFileName('');
+          setShareFileName("");
         }}
         fileId={shareFileId ?? undefined}
         fileName={shareFileName}

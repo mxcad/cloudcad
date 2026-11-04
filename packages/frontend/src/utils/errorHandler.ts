@@ -121,6 +121,17 @@ export const getErrorInfo = (
 };
 
 /**
+ * 判断是否为后端「资源不存在」（404 → code `NOT_FOUND`）错误。
+ *
+ * openapi-ts 在 `throwOnError` 下抛的是响应体对象本身（含 `code`，由后端
+ * GlobalExceptionFilter 的 getErrorCode(status) 按状态码映射），故用 `code`
+ * 精确识别 404；与 useCadFileLoader / moveCopyActions / useConversionPolling
+ * 各处的 `code === 'NOT_FOUND'` 判断同一语义，收敛为唯一出口。
+ */
+export const isNotFoundApiError = (error: unknown): boolean =>
+  getErrorInfo(error).code === 'NOT_FOUND';
+
+/**
  * 处理错误并记录日志
  * @param error - 错误对象
  * @param context - 错误上下文

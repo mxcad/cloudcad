@@ -252,6 +252,12 @@
       "skillPath": "skills/engineering/wayfinder/SKILL.md",
       "computedHash": "e0d47e75e0ba6fd16f24566f39f2574d6e3d0ece1f4d317dc992d9d31681a4b0"
     },
+    "web-perf": {
+      "source": "elithrar/dotfiles",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/web-perf/SKILL.md",
+      "computedHash": "c966b3785fb7df2048a3c5bafa359e01f488bd40a729deaf3c32805bcf6c5a74"
+    },
     "wizard": {
       "source": "mattpocock/skills",
       "sourceType": "github",

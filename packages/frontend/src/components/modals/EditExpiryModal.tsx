@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { t } from '@/languages';
+import React, { useState } from "react";
+import { Modal, Button } from "@/components/ui";
+
+import { t } from "@/languages";
 import {
   ExpirationOption,
   detectExpiration,
   computeExpiresAt,
-} from '@/constants/share';
-import { ExpirationPicker } from './ExpirationPicker';
+} from "@/constants/share";
+import { ExpirationPicker } from "./ExpirationPicker";
 
 interface EditExpiryModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export const EditExpiryModal: React.FC<EditExpiryModalProps> = ({
 }) => {
   const detected = detectExpiration(currentExpiresAt);
   const [expiration, setExpiration] = useState<ExpirationOption>(
-    detected.option
+    detected.option,
   );
   const [customDays, setCustomDays] = useState(detected.customDays);
   const [saving, setSaving] = useState(false);
@@ -48,26 +48,26 @@ export const EditExpiryModal: React.FC<EditExpiryModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('修改有效期')} size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("修改有效期")} size="sm">
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          padding: '8px 0',
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          padding: "8px 0",
         }}
       >
         <div>
           <span
             style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-primary)',
+              fontSize: "var(--text-sm)",
+              color: "var(--text-primary)",
               fontWeight: 500,
-              display: 'block',
-              marginBottom: '8px',
+              display: "block",
+              marginBottom: "8px",
             }}
           >
-            {t('有效期')}
+            {t("有效期")}
           </span>
           <ExpirationPicker
             expiration={expiration}
@@ -77,13 +77,13 @@ export const EditExpiryModal: React.FC<EditExpiryModalProps> = ({
           />
         </div>
         <div
-          style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}
+          style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}
         >
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button variant="primary" onClick={handleSave} loading={saving}>
-            {t('保存')}
+            {t("保存")}
           </Button>
         </div>
       </div>

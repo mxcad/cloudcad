@@ -26,6 +26,11 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import type {
+  RuntimeConfigCategory,
+  RuntimeConfigSubgroup,
+  RuntimeConfigChannel,
+} from '@cloudcad/contracts/runtime-config/taxonomy';
+import type {
   ChannelStatus,
   ConfigHistoryEntry,
   ConfigItem,
@@ -39,50 +44,109 @@ import type {
 
 /** 分类元数据：显示名 + 图标。只登记实际有配置项的 10 个任务分类
  *（#498 重划后 mail/sms/wechat/user/system/storage 六个碎分类已并入，不留空壳入口）。
- * 标签必须复用已登记的 i18n 文案：未登记的中文串在非中文 locale 下会原样回落成中文。 */
-export const CATEGORY_META: Record<
-  string,
-  { label: string; icon: LucideIcon }
-> = {
-  brand: { label: t('品牌与客服'), icon: Palette },
-  account: { label: t('账号与登录'), icon: Users },
-  file: { label: t('文件配置'), icon: FileText },
-  billing: { label: t('配额配置'), icon: CreditCard },
-  alert: { label: t('告警配置'), icon: BellRing },
-  security: { label: t('安全策略'), icon: Shield },
-  audit: { label: t('审计配置'), icon: ClipboardList },
-  maintenance: { label: t('自动任务与清理'), icon: Wrench },
-  backup: { label: t('备份配置'), icon: DatabaseBackup },
-  collaboration: { label: t('协同配置'), icon: Share2 },
+ * 标签必须复用已登记的 i18n 文案：未登记的中文串在非中文 locale 下会原样回落成中文。
+ * 键类型 = @cloudcad/contracts 的 RuntimeConfigCategory 词表：后端定义表新增分类而
+ * 本表缺条目 → 编译错误（Record 要求全部键齐备）。 */
+/** 分类图标（静态，无 i18n）。键类型 = @cloudcad/contracts 的 RuntimeConfigCategory
+ * 词表：后端定义表新增分类而本表缺条目 → 编译错误（Record 要求全部键齐备）。 */
+const CATEGORY_ICONS: Record<RuntimeConfigCategory, LucideIcon> = {
+  brand: Palette,
+  account: Users,
+  file: FileText,
+  billing: CreditCard,
+  alert: BellRing,
+  security: Shield,
+  audit: ClipboardList,
+  maintenance: Wrench,
+  backup: DatabaseBackup,
+  collaboration: Share2,
 };
 
-/** 分类展示顺序（按 CATEGORY_META 声明顺序，缺省分类追加在末尾） */
-export const CATEGORY_ORDER: string[] = Object.keys(CATEGORY_META);
+/** 分类展示顺序（按 CATEGORY_ICONS 声明顺序，缺省分类追加在末尾） */
+export const CATEGORY_ORDER: string[] = Object.keys(CATEGORY_ICONS);
 
-/** 后端新增分类未登记时的图标回退（标签回落为分类 slug，见 useRuntimeConfig 的分组装配） */
+/** 后端新增分类未登记时的图标回退（标签回落为分类 slug，见 useConfigList 的分组装配） */
 export const FALLBACK_CATEGORY_META: { icon: LucideIcon } = {
   icon: Shield,
 };
 
-/** 子分组显示名（稳定 slug → i18n 文案；通道三组复用通道状态卡的既有文案） */
-export const SUBGROUP_META: Record<string, { label: string }> = {
-  'mode-mfa': { label: t('模式与双因素') },
-  'password-policy': { label: t('口令策略') },
-  'rate-limit': { label: t('限流') },
-  'account-lock': { label: t('账号锁定') },
-  'login-methods': { label: t('登录方式开关') },
-  registration: { label: t('注册与验证策略') },
-  'storage-trash': { label: t('存储与回收站') },
-  'cache-disk': { label: t('缓存与磁盘') },
-  'data-retention': { label: t('数据与记录留存') },
-  'mail-channel': { label: t('邮件通道') },
-  'sms-channel': { label: t('短信通道') },
-  'webhook-channel': { label: t('Webhook 通道') },
-  'alert-policy': { label: t('告警策略') },
-};
+/** 分类显示名（函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新） */
+export function getCategoryLabel(category: string): string {
+  switch (category) {
+    case 'brand':
+      return t('品牌与客服');
+    case 'account':
+      return t('账号与登录');
+    case 'file':
+      return t('文件配置');
+    case 'billing':
+      return t('配额配置');
+    case 'alert':
+      return t('告警配置');
+    case 'security':
+      return t('安全策略');
+    case 'audit':
+      return t('审计配置');
+    case 'maintenance':
+      return t('自动任务与清理');
+    case 'backup':
+      return t('备份配置');
+    case 'collaboration':
+      return t('协同配置');
+    default:
+      return '';
+  }
+}
 
-/** 分类内子分组的小节顺序（未登记的子分组追加在末尾，按 slug 升序） */
-export const SUBGROUP_ORDER: Record<string, string[]> = {
+/** 分类图标（未登记分类回落兜底图标） */
+export function getCategoryIcon(category: string): LucideIcon {
+  return (
+    CATEGORY_ICONS[category as RuntimeConfigCategory] ??
+    FALLBACK_CATEGORY_META.icon
+  );
+}
+
+/** 子分组显示名（稳定 slug → i18n 文案；通道三组复用通道状态卡的既有文案）。
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新。 */
+export function getSubgroupLabel(slug: string): string {
+  switch (slug) {
+    case 'mode-mfa':
+      return t('模式与双因素');
+    case 'password-policy':
+      return t('口令策略');
+    case 'rate-limit':
+      return t('限流');
+    case 'account-lock':
+      return t('账号锁定');
+    case 'login-methods':
+      return t('登录方式开关');
+    case 'registration':
+      return t('注册与验证策略');
+    case 'storage-trash':
+      return t('存储与回收站');
+    case 'cache-disk':
+      return t('缓存与磁盘');
+    case 'data-retention':
+      return t('数据与记录留存');
+    case 'mail-channel':
+      return t('邮件通道');
+    case 'sms-channel':
+      return t('短信通道');
+    case 'webhook-channel':
+      return t('Webhook 通道');
+    case 'alert-policy':
+      return t('告警策略');
+    default:
+      return '';
+  }
+}
+
+/** 分类内子分组的小节顺序（未登记的子分组追加在末尾，按 slug 升序）。
+ * 键/值类型 = @cloudcad/contracts 词表：拼错分类或子分组即编译错误；
+ * 部分（Partial）因为只有四个多项大类声明了子分组，其余分类不声明是刻意的。 */
+export const SUBGROUP_ORDER: Partial<
+  Record<RuntimeConfigCategory, RuntimeConfigSubgroup[]>
+> = {
   security: ['mode-mfa', 'password-policy', 'rate-limit', 'account-lock'],
   account: ['login-methods', 'registration'],
   maintenance: ['storage-trash', 'cache-disk', 'data-retention'],
@@ -106,38 +170,53 @@ export function buildSubgroupSections(
     list.push(item);
     bySubgroup.set(slug, list);
   }
-  const declared = SUBGROUP_ORDER[category] ?? [];
+  const declared = SUBGROUP_ORDER[category as RuntimeConfigCategory] ?? [];
   const rank = (slug: string) => {
     if (slug === '') return -1;
-    const index = declared.indexOf(slug);
+    const index = declared.indexOf(slug as RuntimeConfigSubgroup);
     return index === -1 ? 1000 : index;
   };
   return [...bySubgroup.keys()]
     .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
     .map((slug) => ({
       subgroup: slug,
-      label: SUBGROUP_META[slug]?.label ?? slug,
+      label: getSubgroupLabel(slug) || slug,
       items: bySubgroup.get(slug)!,
     }));
 }
 
-/** 档位徽标文案 */
-export const TIER_LABEL: Record<ConfigTier, string> = {
-  user: t('基础项'),
-  admin: t('管理项'),
-  advanced: t('高级项'),
-};
+/** 档位徽标文案（函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文） */
+export function getTierLabel(tier: string): string {
+  switch (tier) {
+    case 'user':
+      return t('基础项');
+    case 'admin':
+      return t('管理项');
+    case 'advanced':
+      return t('高级项');
+    default:
+      return tier;
+  }
+}
 
 /**
  * 来源徽标文案：三态即「这一项的值归谁管」，用运营人员能懂的词，不暴露 env /
  * runtime 之类的实现层名词。与独立的「已修改」徽标合并后，颜色语义保持不变
  * （warning=已偏离出厂、info=部署期预置、neutral=出厂状态）。
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文。
  */
-export const SOURCE_LABEL: Record<ConfigSource, string> = {
-  runtime: t('已修改'),
-  env: t('系统预置'),
-  default: t('出厂默认'),
-};
+export function getSourceLabel(source: string): string {
+  switch (source) {
+    case 'runtime':
+      return t('已修改');
+    case 'env':
+      return t('系统预置');
+    case 'default':
+      return t('出厂默认');
+    default:
+      return source;
+  }
+}
 
 /** 归一化配置项列表（SDK 响应 → 视图模型） */
 export function toConfigItems(raw: unknown): ConfigItem[] {
@@ -187,14 +266,23 @@ export function toHistoryEntries(raw: unknown): ConfigHistoryEntry[] {
   });
 }
 
-/** 通道显示名（未登记的通道直接用通道名） */
-export const CHANNEL_LABEL: Record<string, string> = {
-  mail: t('邮件通道'),
-  sms: t('短信通道'),
-  wechat: t('微信通道'),
-  payment: t('支付通道'),
-  webhook: t('Webhook 通道'),
-};
+/** 通道显示名（函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文） */
+export function getChannelLabel(channel: string): string {
+  switch (channel) {
+    case 'mail':
+      return t('邮件通道');
+    case 'sms':
+      return t('短信通道');
+    case 'wechat':
+      return t('微信通道');
+    case 'payment':
+      return t('支付通道');
+    case 'webhook':
+      return t('Webhook 通道');
+    default:
+      return '';
+  }
+}
 
 /**
  * 通道验证元数据（ADR-0082 D4）：后端各通道的验证动作能力不同，
@@ -203,7 +291,7 @@ export const CHANNEL_LABEL: Record<string, string> = {
  *   发送一条（邮件一封 / 短信一条，会产生短信费用）；
  * - wechat / payment：只做无副作用探测（微信 gettoken / 支付签名往返），不接收方；
  * - webhook：向已配置的 URL 发一次 POST，接收方就是 URL。
- * 新增通道时在此登记；未登记的走 FALLBACK_CHANNEL_TEST_META。
+ * 新增通道时在 channelTestMeta 登记；未登记的走兜底元数据。
  */
 export type ChannelTestMeta =
   | {
@@ -223,46 +311,49 @@ export type ChannelTestMeta =
       description: string;
     };
 
-export const CHANNEL_TEST_META: Record<string, ChannelTestMeta> = {
-  mail: {
-    acceptsRecipient: true,
-    recipientLabel: t('收件人（可选）'),
-    recipientPlaceholder: t('留空则只校验连接与认证，不发送邮件'),
-    description: t(
-      '将校验 SMTP 连接与认证；填写收件人则额外发送一封测试邮件。'
-    ),
-  },
-  sms: {
-    acceptsRecipient: true,
-    recipientLabel: t('手机号（可选）'),
-    recipientPlaceholder: t('留空则只探测凭据，不发送短信'),
-    description: t(
-      '将校验短信凭据；填写手机号则额外发送一条测试短信（产生一条短信费用）。'
-    ),
-  },
-  wechat: {
-    acceptsRecipient: false,
-    description: t('验证只调用微信凭据探测接口，不会向任何人发送消息。'),
-  },
-  payment: {
-    acceptsRecipient: false,
-    description: t('验证只做支付网关签名往返验证，不产生订单、不扣费。'),
-  },
-  webhook: {
-    acceptsRecipient: false,
-    description: t('验证将向已配置的 Webhook URL 发送一次 POST 请求。'),
-  },
-};
-
-/** 未登记通道的验证元数据：不猜测接收方语义（不渲染输入框） */
-export const FALLBACK_CHANNEL_TEST_META: ChannelTestMeta = {
-  acceptsRecipient: false,
-  description: t('验证将校验当前通道的配置是否可用。'),
-};
-
-/** 通道验证元数据（未登记通道回落 FALLBACK_CHANNEL_TEST_META） */
+/** 通道验证元数据（未登记通道回落兜底：不猜测接收方语义，不渲染输入框）。
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新。 */
 export function channelTestMeta(channel: string): ChannelTestMeta {
-  return CHANNEL_TEST_META[channel] ?? FALLBACK_CHANNEL_TEST_META;
+  switch (channel) {
+    case 'mail':
+      return {
+        acceptsRecipient: true,
+        recipientLabel: t('收件人（可选）'),
+        recipientPlaceholder: t('留空则只校验连接与认证，不发送邮件'),
+        description: t(
+          '将校验 SMTP 连接与认证；填写收件人则额外发送一封测试邮件。'
+        ),
+      };
+    case 'sms':
+      return {
+        acceptsRecipient: true,
+        recipientLabel: t('手机号（可选）'),
+        recipientPlaceholder: t('留空则只探测凭据，不发送短信'),
+        description: t(
+          '将校验短信凭据；填写手机号则额外发送一条测试短信（产生一条短信费用）。'
+        ),
+      };
+    case 'wechat':
+      return {
+        acceptsRecipient: false,
+        description: t('验证只调用微信凭据探测接口，不会向任何人发送消息。'),
+      };
+    case 'payment':
+      return {
+        acceptsRecipient: false,
+        description: t('验证只做支付网关签名往返验证，不产生订单、不扣费。'),
+      };
+    case 'webhook':
+      return {
+        acceptsRecipient: false,
+        description: t('验证将向已配置的 Webhook URL 发送一次 POST 请求。'),
+      };
+    default:
+      return {
+        acceptsRecipient: false,
+        description: t('验证将校验当前通道的配置是否可用。'),
+      };
+  }
 }
 
 /** 归一化通道状态列表（SDK 响应 → 视图模型，缺失字段给安全默认值） */
@@ -323,8 +414,8 @@ export function missingKeyHints(
     const item = configsByKey.get(key);
     return {
       key,
-      label: item?.description || key,
-      example: item?.input?.placeholder ?? '',
+      label: item?.description ? t(item.description) : key,
+      example: item?.input?.placeholder ? t(item.input.placeholder) : "",
     };
   });
 }

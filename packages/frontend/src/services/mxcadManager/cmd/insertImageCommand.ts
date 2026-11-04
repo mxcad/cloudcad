@@ -91,7 +91,9 @@ export async function processPendingImages(): Promise<void> {
 
   if (failedImages.length > 0) {
     globalShowToast(
-      t(`部分图片上传失败: ${failedImages.join(', ')}，请重新插入并保存`),
+      t('部分图片上传失败: {names}，请重新插入并保存', {
+        names: failedImages.join(', '),
+      }),
       'warning'
     );
     if (failedImages.length < validImages.length) {

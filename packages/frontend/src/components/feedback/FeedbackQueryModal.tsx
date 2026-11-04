@@ -1,7 +1,7 @@
-import React from 'react';
-import { t } from '@/languages';
-import { Modal } from '@/components/ui/Modal';
-import { FeedbackQueryPanel } from '@/components/feedback/FeedbackQueryPanel';
+import React from "react";
+import { t } from "@/languages";
+import { Modal } from "@/components/ui";
+import { FeedbackQueryPanel } from "@/components/feedback/FeedbackQueryPanel";
 
 interface FeedbackQueryModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export const FeedbackQueryModal: React.FC<FeedbackQueryModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('反馈进度查询')}
+      title={t("反馈进度查询")}
       maxWidth="max-w-[460px]"
     >
       {/* key 随开关切换：每次打开重置面板状态并应用 initialCode 预填 */}

@@ -43,13 +43,13 @@ describe('默认值（接口未返回或失败时）', () => {
       brandCopyrightHolder: '',
       brandLegalProductName: '',
       brandLegalProductShortName: '',
-      maxFileSize: 100,
+      maxFileSize: 500,
       allowRegister: true,
       wechatEnabled: false,
       wechatAutoRegister: false,
       userCancelGraceDays: 7,
       conversionGuestWindowHours: 2,
-      conversionGuestLimit: 5,
+      conversionGuestLimit: 50,
       freeExportDownloadEnabled: true,
       collaborationEnabled: true,
       collaborationDomains: '',
@@ -193,7 +193,7 @@ describe('字段解析', () => {
     await vi.waitFor(() => expect(config.value.mailEnabled).toBe(true));
 
     expect(config.value.wechatEnabled).toBe(false);
-    expect(config.value.maxFileSize).toBe(100);
+    expect(config.value.maxFileSize).toBe(500);
     expect(config.value.supportEmail).toBe('');
     expect(config.value.collaborationDomains).toBe('');
     // 非数字的口令策略值回退默认（secure 基线 10/3），不整包失败

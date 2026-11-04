@@ -24,10 +24,10 @@ import React, {
   useLayoutEffect,
   useCallback,
   useState,
-} from 'react';
-import { Select, Tag } from '@/components/ui';
-import styles from './CategoryTabs.module.css';
-import { t } from '@/languages';
+} from "react";
+import { Select, Tag } from "@/components/ui";
+import styles from "./CategoryTabs.module.css";
+import { t } from "@/languages";
 
 /** 分类项 */
 export interface CategoryItem {
@@ -55,12 +55,12 @@ export interface CategoryLevel {
 function getDisplayName(
   categories: CategoryLevel[],
   selectedPath: string[],
-  item: CategoryItem
+  item: CategoryItem,
 ): string {
-  if (item.id === 'all') return item.name;
+  if (item.id === "all") return item.name;
 
   const level = categories.findIndex((c) =>
-    c.items.some((i) => i.id === item.id)
+    c.items.some((i) => i.id === item.id),
   );
   if (level <= 0) return item.name;
 
@@ -68,16 +68,16 @@ function getDisplayName(
   if (!parentLevel) return item.name;
 
   const parentSelectedId = selectedPath[level - 1];
-  if (parentSelectedId !== 'all') return item.name;
+  if (parentSelectedId !== "all") return item.name;
 
   const parentItem = parentLevel.items.find((p) => p.id === item.parentId);
-  if (!parentItem || parentItem.id === 'all') return item.name;
+  if (!parentItem || parentItem.id === "all") return item.name;
 
   const currentLevelItems = categories.find((c) => c.level === level);
   if (!currentLevelItems) return item.name;
 
   const sameNameItems = currentLevelItems.items.filter(
-    (i) => i.name === item.name && i.id !== item.id
+    (i) => i.name === item.name && i.id !== item.id,
   );
   if (sameNameItems.length === 0) return item.name;
 
@@ -113,14 +113,14 @@ const CategoryLevelRow: React.FC<{
     (categoryId: string) => {
       onSelect(categoryId);
     },
-    [onSelect]
+    [onSelect],
   );
 
   if (items.length === 0) return null;
 
   return (
     <div
-      className={`${styles.categoryRow} ${isLastLevel ? styles.lastRow : ''}`}
+      className={`${styles.categoryRow} ${isLastLevel ? styles.lastRow : ""}`}
     >
       <div className={styles.categoryContainer}>
         {items.map((item) => {
@@ -131,7 +131,7 @@ const CategoryLevelRow: React.FC<{
               variant="neutral"
               rounded="sm"
               onClick={() => handleSelect(item.id)}
-              className={item.id === selectedId ? styles.active : ''}
+              className={item.id === selectedId ? styles.active : ""}
             >
               {displayName}
             </Tag>
@@ -198,7 +198,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
 
   // 获取当前选中的分类ID
   const getSelectedId = (level: number): string => {
-    return selectedPath[level] || 'all';
+    return selectedPath[level] || "all";
   };
 
   // 处理选择框变更
@@ -207,8 +207,8 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
     // 如果选择了分类，清除更高层级的选择
     for (let i = level + 1; i <= 2; i++) {
       const current = selectedPath[i];
-      if (current && current !== 'all') {
-        onSelect(i, 'all');
+      if (current && current !== "all") {
+        onSelect(i, "all");
       }
     }
   };
@@ -216,13 +216,13 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   // 判断是否有选中项
   const hasSelection = categories.some((cat) => {
     const selectedId = getSelectedId(cat.level);
-    return selectedId !== 'all';
+    return selectedId !== "all";
   });
 
   // 判断某级别是否只有"全部"（没有实际分类）
   const isOnlyAll = (level: number): boolean => {
     const items = getLevelItems(level);
-    return items.length === 1 && items[0]?.id === 'all';
+    return items.length === 1 && items[0]?.id === "all";
   };
 
   // 所有级别都只有"全部"时，不渲染任何内容（不占空间）
@@ -246,7 +246,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {!isOnlyAll(0) && (
             <div className={styles.categorySelectRow}>
               <span className={styles.categorySelectLabel}>
-                {t('一级分类')}
+                {t("一级分类")}
               </span>
               <Select
                 value={getSelectedId(0)}
@@ -265,7 +265,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {!isOnlyAll(1) && (
             <div className={styles.categorySelectRow}>
               <span className={styles.categorySelectLabel}>
-                {t('二级分类')}
+                {t("二级分类")}
               </span>
               <Select
                 value={getSelectedId(1)}
@@ -284,7 +284,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {!isOnlyAll(2) && (
             <div className={styles.categorySelectRow}>
               <span className={styles.categorySelectLabel}>
-                {t('三级分类')}
+                {t("三级分类")}
               </span>
               <Select
                 value={getSelectedId(2)}
@@ -306,7 +306,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   // 宽屏布局：使用横向滚动标签
   // 检查是否有可见的级别
   const visibleLevels = categories.filter(
-    (c) => !(c.items.length === 1 && c.items[0]?.id === 'all')
+    (c) => !(c.items.length === 1 && c.items[0]?.id === "all"),
   );
   if (!loading && visibleLevels.length === 0) {
     return null;
@@ -325,16 +325,16 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           // 任何级别如果只有"全部"则不显示
           const isHidden =
             categoryLevel.items.length === 1 &&
-            categoryLevel.items[0]?.id === 'all';
+            categoryLevel.items[0]?.id === "all";
           if (isHidden) {
             return null;
           }
 
-          const selectedId = selectedPath[categoryLevel.level] || 'all';
+          const selectedId = selectedPath[categoryLevel.level] || "all";
           // 判断是否是最后一个可见级别
           const isLastLevel = categories
             .slice(index + 1)
-            .every((c) => c.items.length === 1 && c.items[0]?.id === 'all');
+            .every((c) => c.items.length === 1 && c.items[0]?.id === "all");
 
           return (
             <CategoryLevelRow

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Lock,
   CheckCircle,
@@ -6,16 +6,16 @@ import {
   EyeOff,
   ArrowLeft,
   ArrowRight,
-} from 'lucide-react';
-import { t } from '@/languages';
-import { Button } from '@/components/ui/Button';
-import { PasswordStrength } from '@/components/ui/PasswordStrength';
-import { UseFormRegister } from 'react-hook-form';
-import { passwordPlaceholder, usePasswordPolicy } from '@/lib/passwordPolicy';
-import { RegisterFormValues } from './hooks/registerFormSchema';
-import { FieldErrors } from './types';
-import { FieldErrorMessage } from './FieldErrorMessage';
-import styles from './register.module.css';
+} from "lucide-react";
+import { t } from "@/languages";
+import { Button, PasswordStrength } from "@/components/ui";
+
+import { UseFormRegister } from "react-hook-form";
+import { passwordPlaceholder, usePasswordPolicy } from "@/lib/passwordPolicy";
+import { RegisterFormValues } from "./hooks/registerFormSchema";
+import { FieldErrors } from "./types";
+import { FieldErrorMessage } from "./FieldErrorMessage";
+import styles from "./register.module.css";
 
 interface PasswordStepProps {
   register: UseFormRegister<RegisterFormValues>;
@@ -34,15 +34,15 @@ interface PasswordStepProps {
 const inputGroupCls = (
   styles: Record<string, string>,
   focused: boolean,
-  hasError: boolean
+  hasError: boolean,
 ): string => {
-  return `${styles.inputGroup} ${focused ? styles.inputGroupFocused : ''} ${
-    hasError ? styles.inputGroupError : ''
+  return `${styles.inputGroup} ${focused ? styles.inputGroupFocused : ""} ${
+    hasError ? styles.inputGroupError : ""
   }`;
 };
 
 const iconCls = (styles: Record<string, string>, active: boolean): string => {
-  return `${styles.inputIcon} ${active ? styles.inputIconActive : ''}`;
+  return `${styles.inputIcon} ${active ? styles.inputIconActive : ""}`;
 };
 
 export const PasswordStep: React.FC<PasswordStepProps> = ({
@@ -65,31 +65,31 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
       <div
         className={inputGroupCls(
           styles,
-          focusedField === 'password',
-          !!fieldErrors.password
+          focusedField === "password",
+          !!fieldErrors.password,
         )}
       >
         <label htmlFor="password" className={styles.inputLabel}>
-          {t('密码')} <span className={styles.required}>*</span>
+          {t("密码")} <span className={styles.required}>*</span>
         </label>
         <div className={styles.inputWrapper}>
           <Lock
             size={18}
-            className={iconCls(styles, focusedField === 'password')}
+            className={iconCls(styles, focusedField === "password")}
           />
           <input
             id="password"
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
             required
             className={`${styles.inputField} ${styles.inputFieldHasToggle}`}
             placeholder={passwordPlaceholder(policy)}
-            {...register('password')}
+            {...register("password")}
             aria-invalid={!!fieldErrors.password}
             aria-describedby={
-              fieldErrors.password ? 'password-error' : undefined
+              fieldErrors.password ? "password-error" : undefined
             }
-            onFocus={() => setFocusedField('password')}
+            onFocus={() => setFocusedField("password")}
           />
           <Button
             type="button"
@@ -97,7 +97,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             size="xs"
             className="absolute right-4 top-1/2 -translate-y-1/2"
             icon={showPassword ? EyeOff : Eye}
-            tooltip={showPassword ? t('隐藏密码') : t('显示密码')}
+            tooltip={showPassword ? t("隐藏密码") : t("显示密码")}
             onClick={() => setShowPassword(!showPassword)}
             tabIndex={-1}
           />
@@ -116,31 +116,31 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
       <div
         className={inputGroupCls(
           styles,
-          focusedField === 'confirmPassword',
-          !!fieldErrors.confirmPassword
+          focusedField === "confirmPassword",
+          !!fieldErrors.confirmPassword,
         )}
       >
         <label htmlFor="confirmPassword" className={styles.inputLabel}>
-          {t('确认密码')} <span className={styles.required}>*</span>
+          {t("确认密码")} <span className={styles.required}>*</span>
         </label>
         <div className={styles.inputWrapper}>
           <CheckCircle
             size={18}
-            className={iconCls(styles, focusedField === 'confirmPassword')}
+            className={iconCls(styles, focusedField === "confirmPassword")}
           />
           <input
             id="confirmPassword"
-            type={showConfirmPassword ? 'text' : 'password'}
+            type={showConfirmPassword ? "text" : "password"}
             autoComplete="new-password"
             required
             className={`${styles.inputField} ${styles.inputFieldHasToggle}`}
-            placeholder={t('请再次输入新密码')}
-            {...register('confirmPassword')}
+            placeholder={t("请再次输入新密码")}
+            {...register("confirmPassword")}
             aria-invalid={!!fieldErrors.confirmPassword}
             aria-describedby={
-              fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined
+              fieldErrors.confirmPassword ? "confirmPassword-error" : undefined
             }
-            onFocus={() => setFocusedField('confirmPassword')}
+            onFocus={() => setFocusedField("confirmPassword")}
           />
           <Button
             type="button"
@@ -148,7 +148,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             size="xs"
             className="absolute right-4 top-1/2 -translate-y-1/2"
             icon={showConfirmPassword ? EyeOff : Eye}
-            tooltip={showConfirmPassword ? t('隐藏密码') : t('显示密码')}
+            tooltip={showConfirmPassword ? t("隐藏密码") : t("显示密码")}
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             tabIndex={-1}
           />
@@ -170,7 +170,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           icon={ArrowLeft}
           onClick={onBack}
         >
-          {t('返回')}
+          {t("返回")}
         </Button>
         <Button
           type="submit"
@@ -180,7 +180,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           loading={loading}
           icon={ArrowRight}
         >
-          {t('立即注册')}
+          {t("立即注册")}
         </Button>
       </div>
     </div>

@@ -774,7 +774,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'number',
     category: 'file',
     description: '外部参照上传大小限制 (MB)',
-    defaultValue: 100,
+    defaultValue: 500,
     isPublic: false,
     tier: 'admin',
     input: { min: 1, max: 50000, step: 1, unit: 'MB' },

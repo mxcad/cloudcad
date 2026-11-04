@@ -1,15 +1,15 @@
-import React from 'react';
-import { Phone, CheckCircle, AlertCircle } from 'lucide-react';
-import { UserDto } from '@/api-sdk';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui';
-import { t } from '@/languages';
-import styles from './Profile.module.css';
+import React from "react";
+import { Phone, CheckCircle, AlertCircle } from "lucide-react";
+import { UserDto } from "@/api-sdk";
+import { Input } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "./Profile.module.css";
 
 interface ProfilePhoneTabProps {
   user?: UserDto | null;
   phoneForm: { phone: string; code: string };
-  phoneStep: 'verifyOld' | 'inputNew' | 'verifyNew';
+  phoneStep: "verifyOld" | "inputNew" | "verifyNew";
   isEditingPhone: boolean;
   countdown: number;
   sendingCode: boolean;
@@ -59,20 +59,20 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
           <div className={styles.successIcon}>
             <CheckCircle size={48} />
           </div>
-          <h3>{t('手机已绑定')}</h3>
+          <h3>{t("手机已绑定")}</h3>
           <p className={styles.boundPhone}>{phone}</p>
           <div className={styles.benefits}>
             <div className={styles.benefitItem}>
               <CheckCircle size={14} />
-              <span>{t('快捷登录')}</span>
+              <span>{t("快捷登录")}</span>
             </div>
             <div className={styles.benefitItem}>
               <CheckCircle size={14} />
-              <span>{t('安全验证')}</span>
+              <span>{t("安全验证")}</span>
             </div>
             <div className={styles.benefitItem}>
               <CheckCircle size={14} />
-              <span>{t('找回密码')}</span>
+              <span>{t("找回密码")}</span>
             </div>
           </div>
           <div className={styles.buttonGroup}>
@@ -81,10 +81,10 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               icon={Phone}
               onClick={() => onSetEditingPhone(true)}
             >
-              {t('换绑手机号')}
+              {t("换绑手机号")}
             </Button>
             <Button variant="danger" onClick={onUnbindPhone}>
-              {t('解绑手机号')}
+              {t("解绑手机号")}
             </Button>
           </div>
         </div>
@@ -96,20 +96,22 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
 
   return (
     <div className={`${styles.tabContent} animate-fade-in`}>
-      {isRebind && phoneStep === 'verifyOld' ? (
+      {isRebind && phoneStep === "verifyOld" ? (
         <form onSubmit={onVerifyOldPhone} className={styles.phoneForm}>
           <div className={styles.verifyNotice}>
             <AlertCircle size={16} />
             <span>
-              {unbindMode ? t('需要先验证原手机号才能解绑') : t('请先验证原手机号')}
+              {unbindMode
+                ? t("需要先验证原手机号才能解绑")
+                : t("请先验证原手机号")}
             </span>
           </div>
           <div
-            className={`${styles.inputGroup} ${focusedField === 'code' ? styles.inputGroupFocused : ''}`}
+            className={`${styles.inputGroup} ${focusedField === "code" ? styles.inputGroupFocused : ""}`}
           >
             <label className={styles.inputLabel}>
               <CheckCircle size={14} />
-              {t('验证码')}
+              {t("验证码")}
             </label>
             <div
               className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -119,9 +121,9 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 name="code"
                 value={phoneForm.code}
                 onChange={onPhoneChange}
-                onFocus={() => onFocusField('code')}
+                onFocus={() => onFocusField("code")}
                 onBlur={() => onFocusField(null)}
-                placeholder={t('请输入 6 位验证码')}
+                placeholder={t("请输入 6 位验证码")}
                 maxLength={6}
                 required
               />
@@ -133,7 +135,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 loading={sendingCode}
                 onClick={onSendUnbindCode}
               >
-                {countdown > 0 ? `${countdown}s` : t('获取验证码')}
+                {countdown > 0 ? `${countdown}s` : t("获取验证码")}
               </Button>
               <div className={styles.inputGlow} />
             </div>
@@ -145,7 +147,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               className="flex-1"
               onClick={() => onSetEditingPhone(false)}
             >
-              {t('取消')}
+              {t("取消")}
             </Button>
             <Button
               type="submit"
@@ -153,7 +155,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               loading={loading}
               icon={CheckCircle}
             >
-              {loading ? t('验证中...') : t('确认验证')}
+              {loading ? t("验证中...") : t("确认验证")}
             </Button>
           </div>
         </form>
@@ -161,7 +163,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (phoneStep === 'verifyNew') {
+            if (phoneStep === "verifyNew") {
               isRebind ? onRebindPhone(e) : onBindPhone(e);
             } else {
               isRebind ? onSendNewPhoneCode() : onSendPhoneCode();
@@ -171,23 +173,23 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
         >
           {!isRebind && (
             <div className={styles.infoText}>
-              {t('绑定手机号后，可以使用手机号快捷登录')}
+              {t("绑定手机号后，可以使用手机号快捷登录")}
             </div>
           )}
-          {isRebind && phoneStep === 'inputNew' && (
+          {isRebind && phoneStep === "inputNew" && (
             <div className={styles.verifySuccess}>
               <CheckCircle size={16} />
-              <span>{t('原手机号验证成功，请输入新手机号')}</span>
+              <span>{t("原手机号验证成功，请输入新手机号")}</span>
             </div>
           )}
           <div
-            className={`${styles.inputGroup} ${focusedField === 'phone' ? styles.inputGroupFocused : ''}`}
+            className={`${styles.inputGroup} ${focusedField === "phone" ? styles.inputGroupFocused : ""}`}
           >
             <label className={styles.inputLabel}>
               <Phone size={14} />
-              {isRebind && phoneStep === 'verifyNew'
-                ? t('新手机号')
-                : t('手机号')}
+              {isRebind && phoneStep === "verifyNew"
+                ? t("新手机号")
+                : t("手机号")}
             </label>
             <div
               className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -197,13 +199,13 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 name="phone"
                 value={phoneForm.phone}
                 onChange={onPhoneChange}
-                onFocus={() => onFocusField('phone')}
+                onFocus={() => onFocusField("phone")}
                 onBlur={() => onFocusField(null)}
-                placeholder={t('请输入手机号')}
+                placeholder={t("请输入手机号")}
                 maxLength={11}
                 pattern="^1[3-9]\\d{9}$"
-                title={t('请输入正确的手机号')}
-                readOnly={phoneStep === 'verifyNew'}
+                title={t("请输入正确的手机号")}
+                readOnly={phoneStep === "verifyNew"}
                 required
               />
               <Button
@@ -214,18 +216,18 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 loading={sendingCode}
                 onClick={isRebind ? onSendNewPhoneCode : onSendPhoneCode}
               >
-                {countdown > 0 ? `${countdown}s` : t('获取验证码')}
+                {countdown > 0 ? `${countdown}s` : t("获取验证码")}
               </Button>
               <div className={styles.inputGlow} />
             </div>
           </div>
-          {phoneStep === 'verifyNew' && (
+          {phoneStep === "verifyNew" && (
             <div
-              className={`${styles.inputGroup} ${focusedField === 'code' ? styles.inputGroupFocused : ''}`}
+              className={`${styles.inputGroup} ${focusedField === "code" ? styles.inputGroupFocused : ""}`}
             >
               <label className={styles.inputLabel}>
                 <CheckCircle size={14} />
-                {t('验证码')}
+                {t("验证码")}
               </label>
               <div
                 className={`${styles.inputWrapper} ${styles.inputWrapperHasButton}`}
@@ -235,9 +237,9 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                   name="code"
                   value={phoneForm.code}
                   onChange={onPhoneChange}
-                  onFocus={() => onFocusField('code')}
+                  onFocus={() => onFocusField("code")}
                   onBlur={() => onFocusField(null)}
-                  placeholder={t('请输入 6 位验证码')}
+                  placeholder={t("请输入 6 位验证码")}
                   maxLength={6}
                   required
                 />
@@ -253,7 +255,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 className="flex-1"
                 onClick={() => onSetEditingPhone(false)}
               >
-                {t('取消')}
+                {t("取消")}
               </Button>
             ) : (
               <Button
@@ -262,14 +264,14 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 className="flex-1"
                 onClick={() => {
                   onPhoneChange({
-                    target: { name: 'phone', value: '' },
+                    target: { name: "phone", value: "" },
                   } as React.ChangeEvent<HTMLInputElement>);
                 }}
               >
-                {t('返回')}
+                {t("返回")}
               </Button>
             )}
-            {phoneStep === 'verifyNew' && (
+            {phoneStep === "verifyNew" && (
               <Button
                 type="submit"
                 variant="primary"
@@ -278,11 +280,11 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               >
                 {loading
                   ? isRebind
-                    ? t('换绑中...')
-                    : t('绑定中...')
+                    ? t("换绑中...")
+                    : t("绑定中...")
                   : isRebind
-                    ? t('确认换绑')
-                    : t('确认绑定')}
+                    ? t("确认换绑")
+                    : t("确认绑定")}
               </Button>
             )}
           </div>

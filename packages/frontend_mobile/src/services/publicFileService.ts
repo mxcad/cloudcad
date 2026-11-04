@@ -9,8 +9,9 @@ import { publicFileAccessPath } from '../utils/mxwebUrl';
 export interface PublicPreloadingData {
   tz: boolean;
   src_file_md5: string;
-  images: string[];
-  externalReference: string[];
+  /** 与 SDK PreloadingDataDto 一致：PreloadingFileInfoDto[] 对象数组 */
+  images: Array<{ name: string; size: number; type: string }>;
+  externalReference: Array<{ name: string; size: number; type: string }>;
 }
 
 export function isHashLike(id: string): boolean {

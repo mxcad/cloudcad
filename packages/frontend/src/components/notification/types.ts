@@ -1,6 +1,6 @@
-import type { ToastType } from '../ui/Toast';
+import type { ToastType } from "@/components/ui";
 
-export type DialogType = 'danger' | 'warning' | 'info';
+export type DialogType = "danger" | "warning" | "info";
 
 export interface ToastItem {
   id: string;

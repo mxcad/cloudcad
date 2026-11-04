@@ -96,6 +96,54 @@ describe('AsyncConversionService', () => {
       expect(result.fileStatus).toBe('COMPLETED');
       expect(result.taskId).toBeUndefined();
     });
+
+    it('节点 FAILED 时据任务记录取 error + errorCategory（供前端区分文件内容问题 vs 服务异常）', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: { fileSystemNode: { findUnique: jest.Mock } };
+        }
+      ).prisma;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'FAILED',
+        taskId: 'task-1',
+      });
+      const executor = (
+        service as unknown as { executor: { getTaskStatus: jest.Mock } }
+      ).executor;
+      executor.getTaskStatus.mockResolvedValue({
+        status: 'FAILED',
+        error: 'read file error',
+        errorCategory: 'content-error',
+      });
+
+      const result = await service.getNodeConversionStatus('node-1');
+      expect(result.fileStatus).toBe('FAILED');
+      expect(result.error).toBe('read file error');
+      expect(result.errorCategory).toBe('content-error');
+    });
+
+    it('节点 FAILED 但任务记录丢失（getTaskStatus 抛错）：降级为 error/errorCategory 均空，不抛', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: { fileSystemNode: { findUnique: jest.Mock } };
+        }
+      ).prisma;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'FAILED',
+        taskId: 'task-1',
+      });
+      const executor = (
+        service as unknown as { executor: { getTaskStatus: jest.Mock } }
+      ).executor;
+      executor.getTaskStatus.mockRejectedValue(new Error('404 task gone'));
+
+      const result = await service.getNodeConversionStatus('node-1');
+      expect(result.fileStatus).toBe('FAILED');
+      expect(result.error).toBeUndefined();
+      expect(result.errorCategory).toBeUndefined();
+    });
   });
 
   describe('convertNode 去重守卫（重复提交覆盖 taskId 修复）', () => {

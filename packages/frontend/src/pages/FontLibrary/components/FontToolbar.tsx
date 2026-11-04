@@ -1,26 +1,26 @@
-import { X, ChevronDown } from 'lucide-react';
-import { Button, Select } from '@/components/ui';
-import { SearchInput } from '@/components/search/SearchInput';
-import { ViewToggle } from '@/components/common/ViewToggle';
-import { getFontTypes } from '../fontTypeConfig';
-import type { FontFilters } from '../hooks/useFontLibrary';
-import { t } from '@/languages';
+import { X, ChevronDown } from "lucide-react";
+import { Button, Select } from "@/components/ui";
+import { SearchInput } from "@/components/search/SearchInput";
+import { ViewToggle } from "@/components/common/ViewToggle";
+import { getFontTypes } from "../fontTypeConfig";
+import type { FontFilters } from "../hooks/useFontLibrary";
+import { t } from "@/languages";
 
 interface FontToolbarProps {
   filters: FontFilters;
-  viewMode: 'grid' | 'list';
-  sortBy: 'name' | 'size' | 'createdAt';
-  sortOrder: 'asc' | 'desc';
+  viewMode: "grid" | "list";
+  sortBy: "name" | "size" | "createdAt";
+  sortOrder: "asc" | "desc";
   handleFilterChange: (key: string, value: string) => void;
   handleReset: () => void;
-  handleSort: (field: 'name' | 'size' | 'createdAt') => void;
-  setViewMode: (mode: 'grid' | 'list') => void;
+  handleSort: (field: "name" | "size" | "createdAt") => void;
+  setViewMode: (mode: "grid" | "list") => void;
 }
 
 const sortOptions = [
-  { key: 'createdAt', label: () => t('修改时间') },
-  { key: 'name', label: () => t('名称') },
-  { key: 'size', label: () => t('大小') },
+  { key: "createdAt", label: () => t("修改时间") },
+  { key: "name", label: () => t("名称") },
+  { key: "size", label: () => t("大小") },
 ] as const;
 
 export const FontToolbar: React.FC<FontToolbarProps> = ({
@@ -41,16 +41,16 @@ export const FontToolbar: React.FC<FontToolbarProps> = ({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px]">
             <SearchInput
-              placeholder={t('搜索字体名称...')}
+              placeholder={t("搜索字体名称...")}
               value={filters.name}
-              onChange={(e) => handleFilterChange('name', e.target.value)}
+              onChange={(e) => handleFilterChange("name", e.target.value)}
             />
           </div>
 
           <div className="w-36">
             <Select
               value={filters.extension}
-              onChange={(val) => handleFilterChange('extension', val)}
+              onChange={(val) => handleFilterChange("extension", val)}
               options={getFontTypes().map((t) => ({
                 value: t.value,
                 label: t.label,
@@ -60,7 +60,7 @@ export const FontToolbar: React.FC<FontToolbarProps> = ({
 
           {hasActiveFilters && (
             <Button variant="secondary" icon={X} onClick={handleReset}>
-              {t('清除')}
+              {t("清除")}
             </Button>
           )}
 
@@ -73,14 +73,14 @@ export const FontToolbar: React.FC<FontToolbarProps> = ({
                 key={key}
                 onClick={() => handleSort(key)}
                 className={
-                  sortBy === key ? 'text-[var(--primary-500)] font-medium' : ''
+                  sortBy === key ? "text-[var(--primary-500)] font-medium" : ""
                 }
               >
                 {label()}
                 {sortBy === key && (
                   <ChevronDown
                     size={14}
-                    className={`transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
+                    className={`transition-transform ${sortOrder === "asc" ? "rotate-180" : ""}`}
                   />
                 )}
               </Button>

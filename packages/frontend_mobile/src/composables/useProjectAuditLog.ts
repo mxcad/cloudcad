@@ -56,32 +56,53 @@ const LOCATABLE_ACTIONS = new Set([
   'NODE_RESTORE',
 ])
 
-/** 操作短文案（对齐 PC ACTION_NAME_MAP 的项目操作子集） */
-const ACTION_LABELS: Record<string, string> = {
-  FILE_CREATE: t('新增图纸'),
-  FILE_UPDATE: t('保存图纸'),
-  FILE_DELETE: t('删除图纸'),
-  FILE_SHARE: t('分享图纸'),
-  FOLDER_CREATE: t('新建文件夹'),
-  NODE_RENAME: t('重命名'),
-  NODE_MOVE: t('移动'),
-  NODE_COPY: t('复制'),
-  NODE_RESTORE: t('恢复'),
-  ADD_MEMBER: t('添加成员'),
-  UPDATE_MEMBER: t('修改成员角色'),
-  REMOVE_MEMBER: t('移除成员'),
-  TRANSFER_OWNERSHIP: t('转移所有权'),
-  PROJECT_CREATE: t('创建项目'),
-  PROJECT_UPDATE: t('修改项目'),
-  PROJECT_DELETE: t('删除项目'),
-  PROJECT_TRANSFER: t('转移项目'),
-  ROLE_CREATE: t('新建角色'),
-  ROLE_UPDATE: t('修改角色'),
-  ROLE_DELETE: t('删除角色'),
-}
-
+/** 操作短文案（对齐 PC ACTION_NAME_MAP 的项目操作子集）。
+ * 函数式取值：模块级 t() 会在 en-US pack 未就绪时烘焙成中文且切语言后不刷新 */
 export function actionLabel(action: string): string {
-  return ACTION_LABELS[action] ?? action
+  switch (action) {
+    case 'FILE_CREATE':
+      return t('新增图纸')
+    case 'FILE_UPDATE':
+      return t('保存图纸')
+    case 'FILE_DELETE':
+      return t('删除图纸')
+    case 'FILE_SHARE':
+      return t('分享图纸')
+    case 'FOLDER_CREATE':
+      return t('新建文件夹')
+    case 'NODE_RENAME':
+      return t('重命名')
+    case 'NODE_MOVE':
+      return t('移动')
+    case 'NODE_COPY':
+      return t('复制')
+    case 'NODE_RESTORE':
+      return t('恢复')
+    case 'ADD_MEMBER':
+      return t('添加成员')
+    case 'UPDATE_MEMBER':
+      return t('修改成员角色')
+    case 'REMOVE_MEMBER':
+      return t('移除成员')
+    case 'TRANSFER_OWNERSHIP':
+      return t('转移所有权')
+    case 'PROJECT_CREATE':
+      return t('创建项目')
+    case 'PROJECT_UPDATE':
+      return t('修改项目')
+    case 'PROJECT_DELETE':
+      return t('删除项目')
+    case 'PROJECT_TRANSFER':
+      return t('转移项目')
+    case 'ROLE_CREATE':
+      return t('新建角色')
+    case 'ROLE_UPDATE':
+      return t('修改角色')
+    case 'ROLE_DELETE':
+      return t('删除角色')
+    default:
+      return action
+  }
 }
 
 export function isLocatable(log: AuditLogItem): boolean {

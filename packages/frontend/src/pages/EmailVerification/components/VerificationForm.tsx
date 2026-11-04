@@ -1,20 +1,20 @@
-import { getCopyrightLine } from '@/constants/appConfig';
-import React from 'react';
-import { Mail } from 'lucide-react';
-import { AlertCircle } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
-import { RefreshCw } from 'lucide-react';
-import { Cpu } from 'lucide-react';
-import { Boxes } from 'lucide-react';
-import { ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { InteractiveBackground } from '@/components/InteractiveBackground';
-import { t } from '@/languages';
-import styles from '../EmailVerification.module.css';
-import type { PhoneRegisterData } from '../hooks/useEmailVerificationForm';
+import { getCopyrightLine } from "@/constants/appConfig";
+import React from "react";
+import { Mail } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { Cpu } from "lucide-react";
+import { Boxes } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { InteractiveBackground } from "@/components/InteractiveBackground";
+import { t } from "@/languages";
+import styles from "../EmailVerification.module.css";
+import type { PhoneRegisterData } from "../hooks/useEmailVerificationForm";
 
 interface VerificationFormProps {
   appName: string;
@@ -58,12 +58,12 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
   onBack,
 }) => {
   return (
-    <div className={styles.authPage} data-theme={isDark ? 'dark' : 'light'}>
+    <div className={styles.authPage} data-theme={isDark ? "dark" : "light"}>
       <InteractiveBackground />
 
       <div
         className={styles.themeToggleWrapper}
-        style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+        style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
       >
         <LanguageSwitcher />
         <ThemeToggle />
@@ -79,10 +79,10 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
             <h1 className={styles.appTitle}>{appName}</h1>
             <p className={styles.appTagline}>
               {bindMode
-                ? t('绑定您的邮箱地址')
+                ? t("绑定您的邮箱地址")
                 : phoneRegisterData
-                  ? t('验证邮箱完成注册')
-                  : t('验证您的邮箱地址')}
+                  ? t("验证邮箱完成注册")
+                  : t("验证您的邮箱地址")}
             </p>
           </div>
 
@@ -92,21 +92,21 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
             </div>
             {bindMode && !emailSent ? (
               <p className={styles.emailText}>
-                {t('您的账号需要绑定邮箱才能继续使用')}
+                {t("您的账号需要绑定邮箱才能继续使用")}
               </p>
             ) : phoneRegisterData && !email ? (
               <p className={styles.emailText}>
-                {t('请输入您的邮箱地址用于完成注册')}
+                {t("请输入您的邮箱地址用于完成注册")}
               </p>
             ) : email ? (
               <p className={styles.emailText}>
-                {t('我们已向')}{' '}
-                <span className={styles.emailHighlight}>{email}</span>{' '}
-                {t('发送了验证码')}
+                {t("我们已向")}{" "}
+                <span className={styles.emailHighlight}>{email}</span>{" "}
+                {t("发送了验证码")}
               </p>
             ) : (
               <p className={styles.emailText}>
-                {t('请输入您收到的6位数字验证码')}
+                {t("请输入您收到的6位数字验证码")}
               </p>
             )}
           </div>
@@ -114,23 +114,23 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
           {(bindMode || phoneRegisterData) && !emailSent && (
             <div
               className={styles.codeSection}
-              style={{ marginBottom: '1.25rem' }}
+              style={{ marginBottom: "1.25rem" }}
             >
               <label htmlFor="email" className={styles.codeLabel}>
-                {t('邮箱地址')}
+                {t("邮箱地址")}
               </label>
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => onEmailChange(e.target.value)}
-                placeholder={t('请输入邮箱地址')}
+                placeholder={t("请输入邮箱地址")}
                 className={styles.codeInput}
                 style={{
-                  fontSize: '1rem',
+                  fontSize: "1rem",
                   fontWeight: 400,
-                  letterSpacing: 'normal',
-                  textAlign: 'left',
+                  letterSpacing: "normal",
+                  textAlign: "left",
                 }}
                 disabled={loading}
               />
@@ -147,14 +147,14 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
           {resendSuccess && (
             <div className={`${styles.alert} ${styles.alertSuccess}`}>
               <CheckCircle size={18} className={styles.alertIcon} />
-              <span>{t('验证邮件已重新发送，请查收')}</span>
+              <span>{t("验证邮件已重新发送，请查收")}</span>
             </div>
           )}
 
           {email && (
             <div className={styles.codeSection}>
               <label htmlFor="code" className={styles.codeLabel}>
-                {t('验证码')}
+                {t("验证码")}
               </label>
               <input
                 id="code"
@@ -162,12 +162,12 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
                 maxLength={6}
                 value={verificationCode}
                 onChange={(e) => onCodeChange(e.target.value)}
-                placeholder={t('请输入6位数字验证码')}
+                placeholder={t("请输入6位数字验证码")}
                 className={styles.codeInput}
                 disabled={loading}
               />
               <p className={styles.codeHint}>
-                {t('验证码为6位数字，请查看邮件')}
+                {t("验证码为6位数字，请查看邮件")}
               </p>
             </div>
           )}
@@ -181,21 +181,21 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
             className="w-full mb-5"
           >
             {loading ? (
-              <span>{t('验证中...')}</span>
+              <span>{t("验证中...")}</span>
             ) : (
               <>
-                <span>{t('验证')}</span>
+                <span>{t("验证")}</span>
                 <CheckCircle size={18} />
               </>
             )}
           </Button>
 
           <div className={styles.helpSection}>
-            <h4 className={styles.helpTitle}>{t('没有收到邮件？')}</h4>
+            <h4 className={styles.helpTitle}>{t("没有收到邮件？")}</h4>
             <ul className={styles.helpList}>
-              <li>{t('• 检查垃圾邮件文件夹')}</li>
-              <li>{t('• 确认邮箱地址正确')}</li>
-              <li>{t('• 验证码15分钟内有效')}</li>
+              <li>{t("• 检查垃圾邮件文件夹")}</li>
+              <li>{t("• 确认邮箱地址正确")}</li>
+              <li>{t("• 验证码15分钟内有效")}</li>
             </ul>
           </div>
 
@@ -212,7 +212,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
                 <>
                   <RefreshCw size={16} />
                   <span>
-                    {t('{resendCooldown}秒后可重新发送', {
+                    {t("{resendCooldown}秒后可重新发送", {
                       resendCooldown: String(resendCooldown),
                     })}
                   </span>
@@ -222,8 +222,8 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
                   <RefreshCw size={16} />
                   <span>
                     {!emailSent && (bindMode || phoneRegisterData)
-                      ? t('发送验证邮件')
-                      : t('重新发送验证邮件')}
+                      ? t("发送验证邮件")
+                      : t("重新发送验证邮件")}
                   </span>
                 </>
               )}
@@ -231,26 +231,26 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
 
             <Button variant="secondary" size="lg" onClick={onBack}>
               <ArrowLeft size={16} />
-              <span>{t('返回登录')}</span>
+              <span>{t("返回登录")}</span>
             </Button>
           </div>
 
           <div className={styles.featuresBar}>
             <div
               className={styles.featureDot}
-              data-tooltip={t('高性能 CAD 在线预览')}
+              data-tooltip={t("高性能 CAD 在线预览")}
             >
               <Cpu size={14} />
             </div>
             <div
               className={styles.featureDot}
-              data-tooltip={t('多用户实时协同编辑')}
+              data-tooltip={t("多用户实时协同编辑")}
             >
               <Boxes size={14} />
             </div>
             <div
               className={styles.featureDot}
-              data-tooltip={t('企业级数据安全保障')}
+              data-tooltip={t("企业级数据安全保障")}
             >
               <ShieldCheck size={14} />
             </div>

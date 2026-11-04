@@ -124,7 +124,9 @@ export function useProjectDrawingsBatch({
           await libraryOperations.handleBatchMove(nodeIds, targetParentId);
           pushAction({
             type: 'move',
-            description: t(`移动 ${nodeIds.length} 个项目`),
+            description: t('移动 {count} 个项目', {
+              count: String(nodeIds.length),
+            }),
             projectId: undoProjectId,
             execute: async () => {
               await libraryOperations.handleBatchMove(nodeIds, targetParentId);
@@ -148,7 +150,9 @@ export function useProjectDrawingsBatch({
                 sourceNodeIds: nodeIds,
                 targetParentId,
                 createdIds: outcome.createdIds,
-                description: t(`复制 ${nodeIds.length} 个项目`),
+                description: t('复制 {count} 个项目', {
+                  count: String(nodeIds.length),
+                }),
                 projectId: undoProjectId,
                 endpoints: {
                   copyNode: (id, pid) => libraryOperations.copyNode(id, pid),

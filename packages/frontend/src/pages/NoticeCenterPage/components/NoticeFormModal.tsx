@@ -4,24 +4,27 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useLayoutEffect, useState, type ReactNode } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
-import type { NoticeResponseDto } from '@/api-sdk';
-import { t } from '@/languages';
-import { formatDateTime } from '@/utils/dateUtils';
+import { useLayoutEffect, useState, type ReactNode } from "react";
+import {
+  Button,
+  Checkbox,
+  DatePicker,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+} from "@/components/ui";
+
+import type { NoticeResponseDto } from "@/api-sdk";
+import { t } from "@/languages";
+import { formatDateTime } from "@/utils/dateUtils";
 import {
   NOTICE_BODY_MAX,
   NOTICE_LEVELS,
   NOTICE_LEVEL_LABELS,
   NOTICE_TITLE_MAX,
-} from '../constants';
-import type { NoticeFormErrors, NoticeFormValues } from '../types';
+} from "../constants";
+import type { NoticeFormErrors, NoticeFormValues } from "../types";
 
 interface NoticeFormModalProps {
   isOpen: boolean;
@@ -33,11 +36,11 @@ interface NoticeFormModalProps {
 }
 
 const EMPTY_VALUES: NoticeFormValues = {
-  level: 'info',
-  title: '',
-  body: '',
-  startAt: '',
-  endAt: '',
+  level: "info",
+  title: "",
+  body: "",
+  startAt: "",
+  endAt: "",
   autoExpire: false,
 };
 
@@ -57,10 +60,10 @@ function FieldLabel({
     <div className="flex items-center justify-between gap-2 mb-1.5">
       <label
         className="text-sm font-medium"
-        style={{ color: 'var(--text-secondary)' }}
+        style={{ color: "var(--text-secondary)" }}
       >
         {text}
-        {required && <span style={{ color: 'var(--error)' }}> *</span>}
+        {required && <span style={{ color: "var(--error)" }}> *</span>}
       </label>
       {aside}
     </div>
@@ -70,7 +73,7 @@ function FieldLabel({
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>
+    <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
       {message}
     </p>
   );
@@ -79,7 +82,7 @@ function FieldError({ message }: { message?: string }) {
 function FieldHint({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+    <p className="mt-1 text-xs" style={{ color: "var(--text-tertiary)" }}>
       {message}
     </p>
   );
@@ -87,7 +90,7 @@ function FieldHint({ message }: { message?: string }) {
 
 function Counter({ count, max }: { count: number; max: number }) {
   return (
-    <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+    <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
       {count}/{max}
     </span>
   );
@@ -117,13 +120,13 @@ export function NoticeFormModal({
     if (notice) {
       setValues({
         level:
-          notice.level === 'warning' || notice.level === 'danger'
+          notice.level === "warning" || notice.level === "danger"
             ? notice.level
-            : 'info',
+            : "info",
         title: notice.title,
         body: notice.body,
-        startAt: '',
-        endAt: '',
+        startAt: "",
+        endAt: "",
         autoExpire: false,
       });
     } else {
@@ -140,13 +143,13 @@ export function NoticeFormModal({
 
   const setValue = <K extends keyof NoticeFormValues>(
     key: K,
-    value: NoticeFormValues[K]
+    value: NoticeFormValues[K],
   ) => {
     setValues((prev) => ({ ...prev, [key]: value }));
     // 改动后立即清掉该字段的旧报错
-    if (key === 'title') setErrors((prev) => ({ ...prev, title: undefined }));
-    if (key === 'body') setErrors((prev) => ({ ...prev, body: undefined }));
-    if (key === 'endAt') setErrors((prev) => ({ ...prev, endAt: undefined }));
+    if (key === "title") setErrors((prev) => ({ ...prev, title: undefined }));
+    if (key === "body") setErrors((prev) => ({ ...prev, body: undefined }));
+    if (key === "endAt") setErrors((prev) => ({ ...prev, endAt: undefined }));
   };
 
   const handleClose = () => {
@@ -160,32 +163,35 @@ export function NoticeFormModal({
     const body = values.body.trim();
 
     if (!title) {
-      next.title = t('请输入标题');
+      next.title = t("请输入标题");
     } else if (title.length > NOTICE_TITLE_MAX) {
-      next.title = t('标题不能超过 {count} 字', {
+      next.title = t("标题不能超过 {count} 字", {
         count: String(NOTICE_TITLE_MAX),
       });
     }
 
     if (!body) {
-      next.body = t('请输入正文');
+      next.body = t("请输入正文");
     } else if (body.length > NOTICE_BODY_MAX) {
-      next.body = t('正文不能超过 {count} 字', {
+      next.body = t("正文不能超过 {count} 字", {
         count: String(NOTICE_BODY_MAX),
       });
     }
 
     if (!isEdit) {
       if (values.autoExpire && !values.endAt) {
-        next.endAt = t('启用自动过期必须填写失效时间');
-      } else if (values.endAt && new Date(values.endAt).getTime() <= Date.now()) {
-        next.endAt = t('失效时间必须晚于当前时间');
+        next.endAt = t("启用自动过期必须填写失效时间");
+      } else if (
+        values.endAt &&
+        new Date(values.endAt).getTime() <= Date.now()
+      ) {
+        next.endAt = t("失效时间必须晚于当前时间");
       } else if (
         values.startAt &&
         values.endAt &&
         new Date(values.endAt).getTime() <= new Date(values.startAt).getTime()
       ) {
-        next.endAt = t('失效时间必须晚于生效开始时间');
+        next.endAt = t("失效时间必须晚于生效开始时间");
       }
     }
 
@@ -207,17 +213,17 @@ export function NoticeFormModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={isEdit ? t('编辑公告') : t('发布公告')}
+      title={isEdit ? t("编辑公告") : t("发布公告")}
       size="lg"
       closeOnOverlayClick={!saving}
     >
       <div className="space-y-4">
         <div>
-          <FieldLabel text={t('级别')} />
+          <FieldLabel text={t("级别")} />
           <Select
             value={values.level}
             onChange={(value) =>
-              setValue('level', value as NoticeFormValues['level'])
+              setValue("level", value as NoticeFormValues["level"])
             }
             disabled={saving}
             options={NOTICE_LEVELS.map((level) => ({
@@ -230,7 +236,7 @@ export function NoticeFormModal({
 
         <div>
           <FieldLabel
-            text={t('标题')}
+            text={t("标题")}
             required
             aside={
               <Counter count={values.title.length} max={NOTICE_TITLE_MAX} />
@@ -238,9 +244,9 @@ export function NoticeFormModal({
           />
           <Input
             value={values.title}
-            onChange={(event) => setValue('title', event.target.value)}
-            placeholder={t('如：系统将于 30 分钟后停机维护')}
-            variant={errors.title ? 'error' : 'default'}
+            onChange={(event) => setValue("title", event.target.value)}
+            placeholder={t("如：系统将于 30 分钟后停机维护")}
+            variant={errors.title ? "error" : "default"}
             size="lg"
             maxLength={NOTICE_TITLE_MAX}
             disabled={saving}
@@ -250,15 +256,15 @@ export function NoticeFormModal({
 
         <div>
           <FieldLabel
-            text={t('正文')}
+            text={t("正文")}
             required
             aside={<Counter count={values.body.length} max={NOTICE_BODY_MAX} />}
           />
           <Textarea
             value={values.body}
-            onChange={(event) => setValue('body', event.target.value)}
-            placeholder={t('公告正文，支持换行')}
-            variant={errors.body ? 'error' : 'default'}
+            onChange={(event) => setValue("body", event.target.value)}
+            placeholder={t("公告正文，支持换行")}
+            variant={errors.body ? "error" : "default"}
             size="lg"
             maxLength={NOTICE_BODY_MAX}
             resize="vertical"
@@ -272,48 +278,48 @@ export function NoticeFormModal({
           <div
             className="rounded-md p-3 text-xs space-y-1.5"
             style={{
-              background: 'var(--bg-tertiary)',
-              color: 'var(--text-secondary)',
+              background: "var(--bg-tertiary)",
+              color: "var(--text-secondary)",
             }}
           >
             <div>
-              {t('生效开始')}：
+              {t("生效开始")}：
               {notice?.startAt
                 ? formatDateTime(notice.startAt)
-                : t('发布即生效')}
+                : t("发布即生效")}
             </div>
             <div>
-              {t('失效时间')}：
-              {notice?.endAt ? formatDateTime(notice.endAt) : t('不自动失效')}
+              {t("失效时间")}：
+              {notice?.endAt ? formatDateTime(notice.endAt) : t("不自动失效")}
             </div>
             <div>
-              {t('自动过期')}：{notice?.autoExpire ? t('开启') : t('关闭')}
+              {t("自动过期")}：{notice?.autoExpire ? t("开启") : t("关闭")}
             </div>
-            <p style={{ color: 'var(--text-tertiary)' }}>
-              {t('需要调整时间窗，请下线后重新发布。')}
+            <p style={{ color: "var(--text-tertiary)" }}>
+              {t("需要调整时间窗，请下线后重新发布。")}
             </p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <FieldLabel text={t('生效开始')} />
+                <FieldLabel text={t("生效开始")} />
                 <DatePicker
                   value={values.startAt || undefined}
-                  onChange={(value) => setValue('startAt', value ?? '')}
+                  onChange={(value) => setValue("startAt", value ?? "")}
                   withTime
-                  placeholder={t('发布即生效')}
+                  placeholder={t("发布即生效")}
                   size="lg"
                   minDate={new Date().toISOString()}
                 />
               </div>
               <div>
-                <FieldLabel text={t('失效时间')} />
+                <FieldLabel text={t("失效时间")} />
                 <DatePicker
                   value={values.endAt || undefined}
-                  onChange={(value) => setValue('endAt', value ?? '')}
+                  onChange={(value) => setValue("endAt", value ?? "")}
                   withTime
-                  placeholder={t('不自动失效')}
+                  placeholder={t("不自动失效")}
                   size="lg"
                   minDate={new Date().toISOString()}
                 />
@@ -325,18 +331,18 @@ export function NoticeFormModal({
               <Checkbox
                 checked={values.autoExpire}
                 onChange={(event) =>
-                  setValue('autoExpire', event.target.checked)
+                  setValue("autoExpire", event.target.checked)
                 }
-                label={t('到期自动下线（需填写失效时间）')}
+                label={t("到期自动下线（需填写失效时间）")}
                 disabled={saving}
               />
               <FieldHint
                 message={
                   isScheduled
                     ? t(
-                        '已设置为未来时间：到点后由定时任务推送，不会立即弹出。'
+                        "已设置为未来时间：到点后由定时任务推送，不会立即弹出。",
                       )
-                    : t('不填写生效开始时间则发布后立刻推送给所有用户。')
+                    : t("不填写生效开始时间则发布后立刻推送给所有用户。")
                 }
               />
             </div>
@@ -346,10 +352,10 @@ export function NoticeFormModal({
 
       <div className="flex justify-end gap-2 mt-6">
         <Button variant="outline" onClick={handleClose} disabled={saving}>
-          {t('取消')}
+          {t("取消")}
         </Button>
         <Button onClick={handleSubmit} loading={saving}>
-          {isEdit ? t('保存修改') : t('立即发布')}
+          {isEdit ? t("保存修改") : t("立即发布")}
         </Button>
       </div>
     </Modal>

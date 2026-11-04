@@ -3,11 +3,11 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { ChevronRight, X } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import styles from './ResourceList.module.css';
+import React, { useMemo, useRef, useEffect, useState } from "react";
+import { ChevronRight, X } from "lucide-react";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "./ResourceList.module.css";
 
 /** 分类选项 */
 export interface CategoryOption {
@@ -96,18 +96,18 @@ export const CascadeCategorySelector: React.FC<
 
       // 如果下方空间不足，向上弹出
       setShouldOpenUp(
-        spaceBelow < estimatedPanelHeight && rect.top > estimatedPanelHeight
+        spaceBelow < estimatedPanelHeight && rect.top > estimatedPanelHeight,
       );
     };
 
     checkPosition();
     // 监听滚动和窗口大小变化
-    window.addEventListener('scroll', checkPosition, true);
-    window.addEventListener('resize', checkPosition);
+    window.addEventListener("scroll", checkPosition, true);
+    window.addEventListener("resize", checkPosition);
 
     return () => {
-      window.removeEventListener('scroll', checkPosition, true);
-      window.removeEventListener('resize', checkPosition);
+      window.removeEventListener("scroll", checkPosition, true);
+      window.removeEventListener("resize", checkPosition);
     };
   }, [isOpen, isCompactLayout]);
 
@@ -121,8 +121,8 @@ export const CascadeCategorySelector: React.FC<
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // 获取当前选中的分类路径
@@ -141,7 +141,7 @@ export const CascadeCategorySelector: React.FC<
 
             if (selectedThirdCategory && subCat.children) {
               const thirdCat = subCat.children.find(
-                (c) => c.id === selectedThirdCategory
+                (c) => c.id === selectedThirdCategory,
               );
               if (thirdCat) {
                 path.push(thirdCat.name);
@@ -205,7 +205,7 @@ export const CascadeCategorySelector: React.FC<
         <div className={styles.cascadeSelectGroup}>
           {/* 一级分类选择框 */}
           <select
-            value={selectedCategory || ''}
+            value={selectedCategory || ""}
             onChange={(e) => {
               const val = e.target.value;
               onCategoryChange(val || null);
@@ -214,7 +214,7 @@ export const CascadeCategorySelector: React.FC<
             }}
             className={styles.cascadeSelect}
           >
-            <option value="">{t('一级分类')}</option>
+            <option value="">{t("一级分类")}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
@@ -224,7 +224,7 @@ export const CascadeCategorySelector: React.FC<
 
           {/* 二级分类选择框 */}
           <select
-            value={selectedSubCategory || ''}
+            value={selectedSubCategory || ""}
             onChange={(e) => {
               const val = e.target.value;
               onSubCategoryChange(val || null);
@@ -233,7 +233,7 @@ export const CascadeCategorySelector: React.FC<
             className={styles.cascadeSelect}
             disabled={!selectedCategory || subCategories.length === 0}
           >
-            <option value="">{t('二级分类')}</option>
+            <option value="">{t("二级分类")}</option>
             {subCategories.length > 0 ? (
               subCategories.map((subCat) => (
                 <option key={subCat.id} value={subCat.id}>
@@ -242,7 +242,7 @@ export const CascadeCategorySelector: React.FC<
               ))
             ) : (
               <option value="" disabled>
-                {t('暂无分类')}
+                {t("暂无分类")}
               </option>
             )}
           </select>
@@ -250,14 +250,14 @@ export const CascadeCategorySelector: React.FC<
           {/* 三级分类选择框 - 仅在有数据时显示 */}
           {thirdCategories.length > 0 && (
             <select
-              value={selectedThirdCategory || ''}
+              value={selectedThirdCategory || ""}
               onChange={(e) => {
                 const val = e.target.value;
                 onThirdCategoryChange(val || null);
               }}
               className={styles.cascadeSelect}
             >
-              <option value="">{t('三级分类')}</option>
+              <option value="">{t("三级分类")}</option>
               {thirdCategories.map((thirdCat) => (
                 <option key={thirdCat.id} value={thirdCat.id}>
                   {thirdCat.name}
@@ -272,13 +272,13 @@ export const CascadeCategorySelector: React.FC<
           {/* 选择按钮 */}
           <Button
             variant="secondary"
-            className={`${styles.cascadeButton} ${isOpen ? styles.open : ''} ${selectedPath.length > 0 ? styles.active : ''}`}
+            className={`${styles.cascadeButton} ${isOpen ? styles.open : ""} ${selectedPath.length > 0 ? styles.active : ""}`}
             onClick={() => setIsOpen(!isOpen)}
           >
             <span className={styles.cascadeButtonText}>
               {selectedPath.length > 0
-                ? selectedPath.join(' > ')
-                : t('选择分类')}
+                ? selectedPath.join(" > ")
+                : t("选择分类")}
             </span>
             {selectedPath.length > 0 ? (
               <span
@@ -299,26 +299,26 @@ export const CascadeCategorySelector: React.FC<
           {isOpen && (
             <div
               ref={panelRef}
-              className={`${styles.cascadePanel} ${shouldOpenUp ? styles.openUp : ''}`}
+              className={`${styles.cascadePanel} ${shouldOpenUp ? styles.openUp : ""}`}
             >
               {/* 一级分类 */}
               <div className={styles.cascadeColumn}>
-                <div className={styles.cascadeColumnTitle}>{t('一级分类')}</div>
+                <div className={styles.cascadeColumnTitle}>{t("一级分类")}</div>
                 <div className={styles.cascadeColumnContent}>
                   <div
-                    className={`${styles.cascadeItem} ${!selectedCategory ? styles.selected : ''}`}
+                    className={`${styles.cascadeItem} ${!selectedCategory ? styles.selected : ""}`}
                     onClick={() => {
                       onCategoryChange(null);
                       onSubCategoryChange(null);
                       onThirdCategoryChange(null);
                     }}
                   >
-                    {t('全部分类')}
+                    {t("全部分类")}
                   </div>
                   {categories.map((cat) => (
                     <div
                       key={cat.id}
-                      className={`${styles.cascadeItem} ${selectedCategory === cat.id ? styles.selected : ''} ${cat.children && cat.children.length > 0 ? styles.hasChildren : ''}`}
+                      className={`${styles.cascadeItem} ${selectedCategory === cat.id ? styles.selected : ""} ${cat.children && cat.children.length > 0 ? styles.hasChildren : ""}`}
                       onClick={() => {
                         onCategoryChange(cat.id);
                         onSubCategoryChange(null);
@@ -338,22 +338,22 @@ export const CascadeCategorySelector: React.FC<
               {selectedCategory && subCategories.length > 0 && (
                 <div className={styles.cascadeColumn}>
                   <div className={styles.cascadeColumnTitle}>
-                    {t('二级分类')}
+                    {t("二级分类")}
                   </div>
                   <div className={styles.cascadeColumnContent}>
                     <div
-                      className={`${styles.cascadeItem} ${!selectedSubCategory ? styles.selected : ''}`}
+                      className={`${styles.cascadeItem} ${!selectedSubCategory ? styles.selected : ""}`}
                       onClick={() => {
                         onSubCategoryChange(null);
                         onThirdCategoryChange(null);
                       }}
                     >
-                      {t('全部')}
+                      {t("全部")}
                     </div>
                     {subCategories.map((subCat) => (
                       <div
                         key={subCat.id}
-                        className={`${styles.cascadeItem} ${selectedSubCategory === subCat.id ? styles.selected : ''} ${subCat.children && subCat.children.length > 0 ? styles.hasChildren : ''}`}
+                        className={`${styles.cascadeItem} ${selectedSubCategory === subCat.id ? styles.selected : ""} ${subCat.children && subCat.children.length > 0 ? styles.hasChildren : ""}`}
                         onClick={() => {
                           onSubCategoryChange(subCat.id);
                           onThirdCategoryChange(null);
@@ -376,19 +376,19 @@ export const CascadeCategorySelector: React.FC<
               {selectedSubCategory && thirdCategories.length > 0 && (
                 <div className={styles.cascadeColumn}>
                   <div className={styles.cascadeColumnTitle}>
-                    {t('三级分类')}
+                    {t("三级分类")}
                   </div>
                   <div className={styles.cascadeColumnContent}>
                     <div
-                      className={`${styles.cascadeItem} ${!selectedThirdCategory ? styles.selected : ''}`}
+                      className={`${styles.cascadeItem} ${!selectedThirdCategory ? styles.selected : ""}`}
                       onClick={() => onThirdCategoryChange(null)}
                     >
-                      {t('全部')}
+                      {t("全部")}
                     </div>
                     {thirdCategories.map((thirdCat) => (
                       <div
                         key={thirdCat.id}
-                        className={`${styles.cascadeItem} ${selectedThirdCategory === thirdCat.id ? styles.selected : ''}`}
+                        className={`${styles.cascadeItem} ${selectedThirdCategory === thirdCat.id ? styles.selected : ""}`}
                         onClick={() => onThirdCategoryChange(thirdCat.id)}
                       >
                         {thirdCat.name}

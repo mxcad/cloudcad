@@ -10,43 +10,43 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { deviceAuthControllerAuthorizeDevice } from '@/api-sdk';
-import { useAuth } from '../contexts/AuthContext';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useTheme } from '../contexts/ThemeContext';
-import { InteractiveBackground } from '../components/InteractiveBackground';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
-import { CheckCircle, AlertCircle, Smartphone, Loader2 } from 'lucide-react';
-import type { PageState } from './DeviceAuthorize.types';
-import { write, erase } from '@/lib/browserStorage';
-import styles from './DeviceAuthorize.module.css';
+import { getAppBrandConfig, getCopyrightLine } from "@/constants/appConfig";
+import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { deviceAuthControllerAuthorizeDevice } from "@/api-sdk";
+import { useAuth } from "../contexts/AuthContext";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useTheme } from "../contexts/ThemeContext";
+import { InteractiveBackground } from "../components/InteractiveBackground";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { CheckCircle, AlertCircle, Smartphone, Loader2 } from "lucide-react";
+import type { PageState } from "./DeviceAuthorize.types";
+import { write, erase } from "@/lib/browserStorage";
+import styles from "./DeviceAuthorize.module.css";
 
 const CLIENT_DISPLAY: Record<string, { title: string; tagline: string }> = {
   mx_cad_viewer: {
-    title: import.meta.env.VITE_APP_CADVIEW_TITLE || 'CAD梦想看图',
+    title: import.meta.env.VITE_APP_CADVIEW_TITLE || "CAD梦想看图",
     tagline:
-      import.meta.env.VITE_APP_CADVIEW_TAGLINE || '专业的 CAD 图纸查看工具',
+      import.meta.env.VITE_APP_CADVIEW_TAGLINE || "专业的 CAD 图纸查看工具",
   },
   mx_cad_editor: {
-    title: import.meta.env.VITE_APP_MXCADWEB_TITLE || 'CAD梦想画图',
-    tagline: import.meta.env.VITE_APP_MXCADWEB_TAGLINE || '专业 CAD 图纸编辑器',
+    title: import.meta.env.VITE_APP_MXCADWEB_TITLE || "CAD梦想画图",
+    tagline: import.meta.env.VITE_APP_MXCADWEB_TAGLINE || "专业 CAD 图纸编辑器",
   },
 };
 
 export const DeviceAuthorize: React.FC = () => {
-  useDocumentTitle(t('设备授权'));
+  useDocumentTitle(t("设备授权"));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const userCode = searchParams.get('user_code');
-  const clientId = searchParams.get('client_id') || '';
-  const forceLogin = searchParams.get('force_login') === '1';
+  const userCode = searchParams.get("user_code");
+  const clientId = searchParams.get("client_id") || "";
+  const forceLogin = searchParams.get("force_login") === "1";
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isDark } = useTheme();
   // 品牌标题/Logo 走唯一出口：运行时单项键（brandTitle/brandLogo）/ 整块 /
@@ -55,7 +55,7 @@ export const DeviceAuthorize: React.FC = () => {
 
   const productInfo = CLIENT_DISPLAY[clientId] || {
     title: appBrand.title,
-    tagline: '',
+    tagline: "",
   };
   const appName = productInfo.title;
   const appTagline = productInfo.tagline;
@@ -65,19 +65,19 @@ export const DeviceAuthorize: React.FC = () => {
   // 兼容两种形式：相对路径（/member-center）与完整 URL（https://app.mxdraw.com/member-center）。
   // 只取路径部分作为跳转目标——EXE 配置的域名可能与浏览器实际访问的
   // origin 不一致（生产域名 vs 本地联调），但页面是同一套前端，跳路径安全且不开放重定向。
-  const rawRedirect = searchParams.get('redirect') || '';
-  let redirectTarget = '';
+  const rawRedirect = searchParams.get("redirect") || "";
+  let redirectTarget = "";
   if (rawRedirect) {
     try {
       const url = new URL(rawRedirect, window.location.origin);
       redirectTarget = url.pathname + url.search + url.hash;
     } catch {
-      redirectTarget = '';
+      redirectTarget = "";
     }
   }
 
-  const [pageState, setPageState] = useState<PageState>('missing_code');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [pageState, setPageState] = useState<PageState>("missing_code");
+  const [errorMessage, setErrorMessage] = useState("");
   // 授权流程是否已开始（进页面即自动触发确认授权）。
   // 一旦开始，authLoading/isAuthenticated 抖动不得再重置页面状态，
   // 否则授权失败后会陷入 ready → 自动授权 → 失败 → 重置 的无限循环
@@ -85,42 +85,42 @@ export const DeviceAuthorize: React.FC = () => {
 
   useEffect(() => {
     if (!userCode) {
-      setPageState('missing_code');
+      setPageState("missing_code");
       return;
     }
     if (authLoading) {
       return;
     }
     if (!isAuthenticated) {
-      write('device_auth_user_code', userCode, 'session');
-      if (clientId) write('device_auth_client_id', clientId, 'session');
+      write("device_auth_user_code", userCode, "session");
+      if (clientId) write("device_auth_client_id", clientId, "session");
       if (redirectTarget)
-        write('device_auth_redirect', redirectTarget, 'session');
-      window.location.href = '/login';
+        write("device_auth_redirect", redirectTarget, "session");
+      window.location.href = "/login";
       return;
     }
     if (forceLogin) {
-      write('device_auth_user_code', userCode, 'session');
-      if (clientId) write('device_auth_client_id', clientId, 'session');
+      write("device_auth_user_code", userCode, "session");
+      if (clientId) write("device_auth_client_id", clientId, "session");
       if (redirectTarget)
-        write('device_auth_redirect', redirectTarget, 'session');
-      erase('accessToken');
-      erase('refreshToken');
-      erase('user');
-      window.location.href = '/login';
+        write("device_auth_redirect", redirectTarget, "session");
+      erase("accessToken");
+      erase("refreshToken");
+      erase("user");
+      window.location.href = "/login";
       return;
     }
     if (authorizationAttempted.current) {
       return;
     }
-    setPageState('ready');
+    setPageState("ready");
   }, [userCode, clientId, forceLogin, isAuthenticated, authLoading, navigate]);
 
   // 进入 ready 即自动确认授权，不再等倒计时。
   // authorizationAttempted 挡住重复触发（StrictMode 双调用/竞态）：
   // 同一 user_code 二次授权会拿到 "not in PENDING state" 误判为授权码过期
   useEffect(() => {
-    if (pageState !== 'ready' || authorizationAttempted.current) {
+    if (pageState !== "ready" || authorizationAttempted.current) {
       return;
     }
     handleAuthorize();
@@ -129,7 +129,7 @@ export const DeviceAuthorize: React.FC = () => {
   const handleAuthorize = async () => {
     if (!userCode) return;
     authorizationAttempted.current = true;
-    setPageState('authorizing');
+    setPageState("authorizing");
     try {
       const result = await deviceAuthControllerAuthorizeDevice({
         throwOnError: true,
@@ -142,32 +142,32 @@ export const DeviceAuthorize: React.FC = () => {
           window.location.href = redirectTarget;
           return;
         }
-        setPageState('success');
+        setPageState("success");
       } else {
-        setErrorMessage(t('授权失败，请重试'));
-        setPageState('error');
+        setErrorMessage(t("授权失败，请重试"));
+        setPageState("error");
       }
     } catch (err: unknown) {
       // 登录态已失效（token 无效/过期）→ 保存授权待办并跳转登录页，
       // 避免停留在失败页反复刷新重试
       if ((err as { status?: number })?.status === 401) {
-        write('device_auth_user_code', userCode, 'session');
-        if (clientId) write('device_auth_client_id', clientId, 'session');
+        write("device_auth_user_code", userCode, "session");
+        if (clientId) write("device_auth_client_id", clientId, "session");
         if (redirectTarget)
-          write('device_auth_redirect', redirectTarget, 'session');
-        window.location.href = '/login';
+          write("device_auth_redirect", redirectTarget, "session");
+        window.location.href = "/login";
         return;
       }
-      const message = getErrorMessage(err) || t('授权请求失败');
+      const message = getErrorMessage(err) || t("授权请求失败");
       if (
-        message.includes('not in PENDING state') ||
-        message.includes('Invalid or expired')
+        message.includes("not in PENDING state") ||
+        message.includes("Invalid or expired")
       ) {
-        setErrorMessage(t('授权码已过期或无效'));
+        setErrorMessage(t("授权码已过期或无效"));
       } else {
         setErrorMessage(message);
       }
-      setPageState('error');
+      setPageState("error");
     }
   };
 
@@ -184,9 +184,9 @@ export const DeviceAuthorize: React.FC = () => {
         <div className={`${styles.supportIcon} ${styles.supportIconBg}`}>
           <AlertCircle size={28} />
         </div>
-        <h2 className={styles.supportTitle}>{t('缺少授权码')}</h2>
+        <h2 className={styles.supportTitle}>{t("缺少授权码")}</h2>
         <p className={styles.supportSubtitle}>
-          {t('请从桌面端应用获取授权码后重试')}
+          {t("请从桌面端应用获取授权码后重试")}
         </p>
       </div>
     </div>
@@ -208,7 +208,7 @@ export const DeviceAuthorize: React.FC = () => {
         </div>
         <h2 className={styles.deviceTitle}>{appName}</h2>
         <p className={styles.deviceSubtitle}>
-          {t('请在下方确认授权码，允许桌面端应用登录您的账号')}
+          {t("请在下方确认授权码，允许桌面端应用登录您的账号")}
         </p>
 
         <div className={styles.codeDisplay}>
@@ -220,18 +220,18 @@ export const DeviceAuthorize: React.FC = () => {
             variant="primary"
             size="lg"
             className="w-full"
-            loading={pageState === 'authorizing'}
+            loading={pageState === "authorizing"}
             onClick={handleAuthorize}
           >
-            {t('确认授权')}
+            {t("确认授权")}
           </Button>
           <Button
             variant="secondary"
             size="lg"
             className="w-full"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
           >
-            {t('取消')}
+            {t("取消")}
           </Button>
         </div>
       </div>
@@ -251,9 +251,9 @@ export const DeviceAuthorize: React.FC = () => {
         <div className={`${styles.successIcon} ${styles.successIconBg}`}>
           <CheckCircle size={32} />
         </div>
-        <h2 className={styles.successTitle}>{t('授权成功')}</h2>
+        <h2 className={styles.successTitle}>{t("授权成功")}</h2>
         <p className={styles.successSubtitle}>
-          {t('桌面端应用已成功获取登录权限，您可以关闭此页面')}
+          {t("桌面端应用已成功获取登录权限，您可以关闭此页面")}
         </p>
       </div>
     </div>
@@ -272,7 +272,7 @@ export const DeviceAuthorize: React.FC = () => {
         <div className={`${styles.supportIcon} ${styles.errorIconBg}`}>
           <AlertCircle size={28} />
         </div>
-        <h2 className={styles.supportTitle}>{t('授权失败')}</h2>
+        <h2 className={styles.supportTitle}>{t("授权失败")}</h2>
         <p className={styles.supportSubtitle}>{errorMessage}</p>
       </div>
     </div>
@@ -291,23 +291,23 @@ export const DeviceAuthorize: React.FC = () => {
         <div className={styles.deviceIconWrap}>
           <Loader2 size={32} className={styles.spinIcon} />
         </div>
-        <h2 className={styles.deviceTitle}>{t('授权中...')}</h2>
-        <p className={styles.deviceSubtitle}>{t('正在处理您的授权请求')}</p>
+        <h2 className={styles.deviceTitle}>{t("授权中...")}</h2>
+        <p className={styles.deviceSubtitle}>{t("正在处理您的授权请求")}</p>
       </div>
     </div>
   );
 
   const renderPage = () => {
     switch (pageState) {
-      case 'missing_code':
+      case "missing_code":
         return renderMissingCode();
-      case 'ready':
+      case "ready":
         return renderReady();
-      case 'authorizing':
+      case "authorizing":
         return renderAuthorizing();
-      case 'success':
+      case "success":
         return renderSuccess();
-      case 'error':
+      case "error":
         return renderError();
       default:
         return renderMissingCode();
@@ -315,11 +315,11 @@ export const DeviceAuthorize: React.FC = () => {
   };
 
   return (
-    <div className={styles.authPage} data-theme={isDark ? 'dark' : 'light'}>
+    <div className={styles.authPage} data-theme={isDark ? "dark" : "light"}>
       <InteractiveBackground />
       <div
         className={styles.themeToggleWrapper}
-        style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+        style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
       >
         <LanguageSwitcher />
         <ThemeToggle />

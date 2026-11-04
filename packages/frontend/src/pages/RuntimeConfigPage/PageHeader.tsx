@@ -13,7 +13,7 @@
  * 管理员若只看列表会误判「模式没管住任何东西」。
  */
 
-import React from 'react';
+import React from "react";
 import {
   Settings,
   Shield,
@@ -21,18 +21,18 @@ import {
   ShieldAlert,
   Info,
   SlidersHorizontal,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import styles from './RuntimeConfigPage.module.css';
-import type { RuntimeConfigStats } from './hooks/useRuntimeConfig';
-import { t } from '@/languages';
+} from "lucide-react";
+import { Button } from "@/components/ui";
+import styles from "./RuntimeConfigPage.module.css";
+import type { RuntimeConfigStats } from "./hooks/useRuntimeConfig";
+import { t } from "@/languages";
 
 interface PageHeaderProps {
   stats: RuntimeConfigStats;
   canManageConfig: boolean;
   /** 当前安全模式（来自公开配置） */
-  currentMode: 'secure' | 'normal';
-  onModeSwitch: (target: 'secure' | 'normal') => void;
+  currentMode: "secure" | "normal";
+  onModeSwitch: (target: "secure" | "normal") => void;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -41,8 +41,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   currentMode,
   onModeSwitch,
 }) => {
-  const isSecure = currentMode === 'secure';
-  const modeLabel = isSecure ? t('安全模式') : t('普通模式');
+  const isSecure = currentMode === "secure";
+  const modeLabel = isSecure ? t("安全模式") : t("普通模式");
 
   return (
     <>
@@ -52,9 +52,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <Settings size={28} />
           </div>
           <div className={styles.titleContent}>
-            <h1 className={styles.pageTitle}>{t('运行时配置')}</h1>
+            <h1 className={styles.pageTitle}>{t("运行时配置")}</h1>
             <p className={styles.pageSubtitle}>
-              {t('在这里修改并保存即可；这里保存的值优先于系统预置值。')}
+              {t("在这里修改并保存即可；这里保存的值优先于系统预置值。")}
             </p>
           </div>
         </div>
@@ -62,33 +62,33 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <div className={styles.statsBar} data-testid="rc-stats">
             <div className={styles.statItem}>
               <span className={styles.statValue}>{stats.total}</span>
-              <span className={styles.statLabel}>{t('配置项')}</span>
+              <span className={styles.statLabel}>{t("配置项")}</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem}>
               <span className={`${styles.statValue} ${styles.modified}`}>
                 {stats.modified}
               </span>
-              <span className={styles.statLabel}>{t('已修改')}</span>
+              <span className={styles.statLabel}>{t("已修改")}</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem}>
               <span
-                className={`${styles.statValue} ${stats.pendingSave > 0 ? styles.pending : ''}`}
+                className={`${styles.statValue} ${stats.pendingSave > 0 ? styles.pending : ""}`}
               >
                 {stats.pendingSave}
               </span>
-              <span className={styles.statLabel}>{t('待保存')}</span>
+              <span className={styles.statLabel}>{t("待保存")}</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem}>
               <span className={styles.statValue}>{stats.envDriven}</span>
-              <span className={styles.statLabel}>{t('系统预置')}</span>
+              <span className={styles.statLabel}>{t("系统预置")}</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem} data-testid="rc-mode-managed">
               <span className={styles.statValue}>{stats.modeManaged}</span>
-              <span className={styles.statLabel}>{t('模式受管项')}</span>
+              <span className={styles.statLabel}>{t("模式受管项")}</span>
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       {!canManageConfig && (
         <div className={styles.infoBanner} data-testid="rc-readonly-banner">
           <Shield size={18} />
-          <span>{t('您当前处于只读模式，需要系统管理权限才能修改配置')}</span>
+          <span>{t("您当前处于只读模式，需要系统管理权限才能修改配置")}</span>
         </div>
       )}
 
@@ -112,7 +112,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         </span>
         <div className={styles.modeBannerContent}>
           <div className={styles.modeBannerTitle}>
-            <span>{t('当前处于{mode}', { mode: modeLabel })}</span>
+            <span>{t("当前处于{mode}", { mode: modeLabel })}</span>
             <span
               className={`${styles.modeBadge} ${isSecure ? styles.modeBadgeSecure : styles.modeBadgeNormal}`}
             >
@@ -121,9 +121,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           </div>
           <div className={styles.modeBannerDesc}>
             {isSecure
-              ? t('等保三级收紧：限流、口令、注册与导出限制按安全基线执行。')
-              : t('便利优先：限制宽松，适合本地与测试环境。')}
-            {t('当前模式管理 {n} 项配置。', { n: String(stats.modeManaged) })}
+              ? t("等保三级收紧：限流、口令、注册与导出限制按安全基线执行。")
+              : t("便利优先：限制宽松，适合本地与测试环境。")}
+            {t("当前模式管理 {n} 项配置。", { n: String(stats.modeManaged) })}
           </div>
         </div>
         {canManageConfig && (
@@ -131,10 +131,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             variant="secondary"
             size="sm"
             icon={SlidersHorizontal}
-            onClick={() => onModeSwitch(isSecure ? 'normal' : 'secure')}
+            onClick={() => onModeSwitch(isSecure ? "normal" : "secure")}
             data-testid="rc-mode-switch"
           >
-            {t('切换模式')}
+            {t("切换模式")}
           </Button>
         )}
       </div>
@@ -144,10 +144,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <Info size={18} />
           <span>
             {t(
-              '共 {n} 项配置由系统预置。在这里保存会覆盖预置值；恢复出厂会退回预置值，而不是出厂默认值。',
+              "共 {n} 项配置由系统预置。在这里保存会覆盖预置值；恢复出厂会退回预置值，而不是出厂默认值。",
               {
                 n: String(stats.envDriven),
-              }
+              },
             )}
           </span>
         </div>

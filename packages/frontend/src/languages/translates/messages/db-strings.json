@@ -490,5 +490,11 @@
         "en-US": "All Rewards",
         "ko-KR": "모든 보상",
         "$id": 1000372
+    },
+    "CAD 协同平台": {
+        "zh-TW": "CAD協同平臺",
+        "en-US": "CAD Collaborative Platform",
+        "ko-KR": "CAD 공동 작업 플랫폼",
+        "$id": 1000500
     }
 }

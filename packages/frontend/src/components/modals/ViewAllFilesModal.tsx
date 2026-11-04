@@ -1,14 +1,14 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Modal } from '@/components/ui/Modal';
-import { FileItem } from '@/components/FileItem';
-import { toFileSystemNode } from '@/types/filesystem';
-import { nodeControllerGetChildren } from '@/api-sdk';
-import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
-import { FileText, AlertCircle } from 'lucide-react';
-import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Modal } from "@/components/ui";
+import { FileItem } from "@/components/FileItem";
+import { toFileSystemNode } from "@/types/filesystem";
+import { nodeControllerGetChildren } from "@/api-sdk";
+import { usePersonalSpaceQuery } from "@/hooks/usePersonalSpaceQuery";
+import { FileText, AlertCircle } from "lucide-react";
+import { t } from "@/languages";
+import { getErrorMessage } from "@/utils/errorHandler";
 
 interface ViewAllFilesModalProps {
   isOpen: boolean;
@@ -24,12 +24,12 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
   const personalSpaceId = personalSpaceQuery.data?.id;
 
   const filesQuery = useQuery({
-    queryKey: ['viewAllFiles', personalSpaceId],
+    queryKey: ["viewAllFiles", personalSpaceId],
     queryFn: async () => {
       const result = await nodeControllerGetChildren({
         throwOnError: true,
         path: { nodeId: personalSpaceId! },
-        query: { limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' },
+        query: { limit: 50, sortBy: "updatedAt", sortOrder: "desc" },
       });
       return result.data?.nodes ?? [];
     },
@@ -40,19 +40,19 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
   const loading = filesQuery.isLoading;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('最近文件')} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("最近文件")} size="lg">
       {filesQuery.error ? (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'var(--error-light)', color: 'var(--error)' }}
+          style={{ background: "var(--error-light)", color: "var(--error)" }}
         >
           <AlertCircle
             size={32}
             className="mx-auto mb-2"
-            style={{ color: 'var(--error)' }}
+            style={{ color: "var(--error)" }}
           />
           <p className="text-sm">
-            {getErrorMessage(filesQuery.error) || t('加载失败')}
+            {getErrorMessage(filesQuery.error) || t("加载失败")}
           </p>
         </div>
       ) : loading ? null : files.length > 0 ? (
@@ -69,7 +69,7 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
                 } else {
                   window.open(
                     `/cad-editor/${node.id}?back=${encodeURIComponent(window.location.pathname + window.location.search)}`,
-                    '_blank'
+                    "_blank",
                   );
                 }
               }}
@@ -79,15 +79,15 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
       ) : (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'var(--bg-tertiary)' }}
+          style={{ background: "var(--bg-tertiary)" }}
         >
           <FileText
             size={32}
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: "var(--text-muted)" }}
             className="mx-auto mb-2"
           />
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {t('暂无文件')}
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("暂无文件")}
           </p>
         </div>
       )}

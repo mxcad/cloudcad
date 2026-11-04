@@ -1,27 +1,33 @@
 const DB_NAME = 'emscripten_filesystem';
 const DB_VERSION = 1;
 const STORE_NAME = 'FILES';
-const CACHE_PREFIX = 'local';
 
+/**
+ * 缓存键 = 引擎 fetch 的完整 URL（与 openMxWeb 传入完全一致，如
+ * `/api/v1/mxcad/filesData/...?t=<ts>`）。引擎的 emscripten_start_fetch 以 URL
+ * 字符串为 emscripten_filesystem/FILES 的 IDB 键读取（raa），键**不带** local/
+ * 前缀才能命中——此前 local/<path>?t=<ts> 是移动端自定命名空间，引擎读不到，
+ * 只得走 blob URL 打开，而 blob URL 会破坏引擎对文件内 xref/自引用的相对解析
+ * （解析成 blob:origin/<name>，该 blob 不存在 → ERR_FILE_NOT_FOUND，打开失败）。
+ * 现键直接取引擎将要 fetch 的 URL，引擎按 URL 键读 IDB 即命中缓存。
+ */
 function getCacheKey(path: string): string {
-  const cleanPath = path.replace(/^\/+/, '');
-  return `${CACHE_PREFIX}/${cleanPath}`;
+  return path;
 }
 
 /**
- * 缓存键的「文件路径基」：`local/<path>?t=<ts>` → `local/<path>`。
- * 入参是调用方经 buildCacheKey 拼好的完整键（未经 local/ 前缀处理）。
+ * 缓存键的「文件路径基」：`<url>?t=<ts>` → `<url>`（丢弃全部查询段）。
+ * 入参是调用方传入的完整引擎 fetch URL。
  */
 export function cacheKeyBase(cacheKey: string): string {
-  const key = getCacheKey(cacheKey);
-  const queryIndex = key.indexOf('?');
-  return queryIndex === -1 ? key : key.slice(0, queryIndex);
+  const queryIndex = cacheKey.indexOf('?');
+  return queryIndex === -1 ? cacheKey : cacheKey.slice(0, queryIndex);
 }
 
-/** 该键是否属于 base 指向的同一份文件：裸键或任意 `?t=` 版本 */
+/** 该键是否属于 base 指向的同一份文件：裸键或任意查询版本（?t= / ?v= / ?shareToken=） */
 export function isCacheKeyOf(key: IDBValidKey, base: string): boolean {
   if (typeof key !== 'string') return false;
-  return key === base || key.startsWith(base + '?t=');
+  return key === base || key.startsWith(base + '?');
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -91,20 +97,4 @@ export async function clearMxwebCache(cacheKey: string): Promise<void> {
     });
   } catch {
   }
-}
-
-/**
- * 构建缓存 key。
- * @param filePath 文件路径
- * @param versionOrTimestamp 版本号或 updatedAt 时间戳（毫秒）
- *   - 传入数字：作为 updatedAt 时间戳 → `{path}?t={ts}`
- *   - 传入字符串（数字格式）：同上
- *   - undefined：最新版本 → `{path}?t=latest`
- */
-export function buildCacheKey(filePath: string, versionOrTimestamp?: number | string): string {
-  const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  if (versionOrTimestamp === undefined) {
-    return `${cleanPath}?t=latest`;
-  }
-  return `${cleanPath}?t=${versionOrTimestamp}`;
 }

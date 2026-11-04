@@ -105,6 +105,9 @@ export const RichtextEditor = forwardRef<RichtextEditorHandle, RichtextEditorPro
   ref
 ) {
   const editorRef = useRef<HTMLDivElement>(null);
+  /** 编辑器内最后一次有效选区：弹层/文件对话框夺走焦点后，insertHTML 据此
+   *  恢复原光标位置（否则 focus() 会把 caret 放到编辑器开头） */
+  const savedRangeRef = useRef<Range | null>(null);
 
   /** 恢复/保存 caret 并在光标处执行命令 */
   const exec = useCallback((command: string, value?: string) => {
@@ -124,22 +127,35 @@ export const RichtextEditor = forwardRef<RichtextEditorHandle, RichtextEditorPro
       // 临时恢复可编辑态以完成插入；同步执行完毕，React 下次渲染按 disabled 重置。
       const wasEditable = el.contentEditable === 'true';
       if (!wasEditable) el.contentEditable = 'true';
-      el.focus();
       // caret 兜底：插入按钮（上传图片/图纸/引用）点击后焦点已离开编辑器，
-      // 无有效选区时 execCommand 会插入到文档当前选区（可能在编辑器外）或失败，
-      // 故把 caret 移到内容末尾再插入。
+      // 无有效选区时 execCommand 会插入到文档当前选区（可能在编辑器外）或失败。
+      // 必须在 focus() 之前检查当前选区（focus 会把 caret 放到编辑器开头，
+      // 使检查恒为 true、插入落到开头）：优先恢复最后一次编辑器内选区
+      // （即点击按钮前的光标位置）；保存选区节点已被移除（如 clear 后）
+      // 则退到内容末尾。
       const sel = window.getSelection();
       const rangeInEditor =
         sel &&
         sel.rangeCount > 0 &&
         el.contains(sel.getRangeAt(0).commonAncestorContainer);
       if (!rangeInEditor) {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
+        const saved = savedRangeRef.current;
+        const savedValid =
+          saved !== null &&
+          el.contains(saved.startContainer) &&
+          el.contains(saved.endContainer);
+        const range = savedValid
+          ? saved
+          : (() => {
+              const r = document.createRange();
+              r.selectNodeContents(el);
+              r.collapse(false);
+              return r;
+            })();
         sel?.removeAllRanges();
         sel?.addRange(range);
       }
+      el.focus();
       document.execCommand('insertHTML', false, html);
       onChange?.(el.innerHTML);
     },
@@ -252,6 +268,23 @@ export const RichtextEditor = forwardRef<RichtextEditorHandle, RichtextEditorPro
   const handleInput = useCallback(() => {
     onChange?.(editorRef.current?.innerHTML ?? '');
   }, [onChange]);
+
+  // 记录编辑器内最后一次有效选区：焦点被弹层/文件对话框夺走后，
+  // insertHTML 据此恢复到原光标位置（见 savedRangeRef 注释）
+  useEffect(() => {
+    const onSelectionChange = () => {
+      const el = editorRef.current;
+      if (!el) return;
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if (el.contains(range.commonAncestorContainer)) {
+        savedRangeRef.current = range.cloneRange();
+      }
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => document.removeEventListener('selectionchange', onSelectionChange);
+  }, []);
 
   // 同步 tool 按钮激活态
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { t } from '@/languages';
+import { describeConversionError } from '@/lib/conversionError';
 import { isQuotaExceededError } from '@/utils/quotaUpgradeGuide';
 import { mxcadUploadControllerCheckFileExist } from '@/api-sdk';
 import { projectControllerGetPersonalSpace } from '@/api-sdk';
@@ -168,15 +169,23 @@ const PUBLIC_CONVERSION_WAIT_TIMEOUT_MS = 5 * 60 * 1000;
  */
 function waitPublicFileConverted(
   hash: string
-): Promise<{ status: 'COMPLETED' | 'FAILED' }> {
+): Promise<{
+  status: 'COMPLETED' | 'FAILED';
+  /** 失败原因 + 性质分类（仅 FAILED 有意义，后端 SSE 透传），供前端区分提示 */
+  error?: string;
+  errorCategory?: string;
+}> {
   return new Promise((resolve) => {
     let settled = false;
     let handle: EventStreamHandle | null = null;
-    const finish = (status: 'COMPLETED' | 'FAILED'): void => {
+    const finish = (
+      status: 'COMPLETED' | 'FAILED',
+      failure?: { error?: string; errorCategory?: string }
+    ): void => {
       if (settled) return;
       settled = true;
       handle?.close();
-      resolve({ status });
+      resolve({ status, ...(failure ?? {}) });
     };
     handle = openEventStream({
       path: '/v1/mxcad/conversion/file-stream',
@@ -184,9 +193,18 @@ function waitPublicFileConverted(
       timeoutMs: PUBLIC_CONVERSION_WAIT_TIMEOUT_MS,
       closeOnError: false,
       onFrame: (data) => {
-        const payload = data as { status?: string };
-        if (payload.status === 'COMPLETED' || payload.status === 'FAILED') {
-          finish(payload.status);
+        const payload = data as {
+          status?: string;
+          error?: string;
+          errorCategory?: string;
+        };
+        if (payload.status === 'COMPLETED') {
+          finish('COMPLETED');
+        } else if (payload.status === 'FAILED') {
+          finish('FAILED', {
+            error: payload.error,
+            errorCategory: payload.errorCategory,
+          });
         }
         // PROCESSING（建连当前状态）→ 继续等待完成事件
       },
@@ -278,14 +296,17 @@ export async function handlePublicUpload(
     // 转换等待期不再锁编辑器（转换面板提供进度反馈）：全局 loading 只覆盖
     // 哈希计算与上传，打开时由 openDrawing(public-hash) 重新 show
     hideGlobalLoading();
-    const { status } = await waitPublicFileConverted(hash);
+    const { status, error, errorCategory } = await waitPublicFileConverted(hash);
     if (status === 'FAILED') {
+      // 按后端 errorCategory 区分「文件内容问题」vs「引擎/服务异常」，不再统一报
+      // 「检查文件内容」（游客无 nodeId，原因只能靠无节点 SSE 透传）
+      const info = describeConversionError(errorCategory, error);
       if (hash === currentPublicOpenHash) {
         // 用户正在等的文件失败：提示（loading 已在上传完成后清除）
-        globalShowToast(t('该文件转换失败，请检查文件内容'), 'error');
+        globalShowToast(info.message, 'error');
       }
       updateTaskStatus(localTaskId, 'failed', {
-        error: t('该文件转换失败，请检查文件内容'),
+        error: info.message,
       });
       return;
     }

@@ -3,17 +3,17 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React from 'react';
-import { RefreshCw } from 'lucide-react';
-import { ResourceList, ResourceItem } from '@/components/common';
-import { CategoryTabs, CategoryLevel } from '@/components/CategoryTabs';
-import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
-import { Button } from '@/components/ui/Button';
-import { t } from '@/languages';
-import styles from '@/components/sidebar/sidebar.module.css';
-import type { ViewMode } from '@/components/common';
+import React from "react";
+import { RefreshCw } from "lucide-react";
+import { ResourceList, ResourceItem } from "@/components/common";
+import { CategoryTabs, CategoryLevel } from "@/components/CategoryTabs";
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { Button } from "@/components/ui";
+import { t } from "@/languages";
+import styles from "@/components/sidebar/sidebar.module.css";
+import type { ViewMode } from "@/components/common";
 
-import type { BreadcrumbItem } from '@/lib/ancestorPath';
+import type { BreadcrumbItem } from "@/lib/ancestorPath";
 
 interface ProjectPanelViewProps {
   isLibraryMode: boolean;
@@ -31,7 +31,7 @@ interface ProjectPanelViewProps {
   total: number;
   totalPages: number;
   currentPage: number;
-  onPageChange: (page: number, direction: 'prev' | 'next' | 'jump') => void;
+  onPageChange: (page: number, direction: "prev" | "next" | "jump") => void;
   pageSize: number;
   onPageSizeChange: (pageSize: number) => void;
   renderItem: (item: ResourceItem, viewMode: ViewMode) => React.ReactNode;
@@ -137,6 +137,8 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
                 variant="panel"
                 breadcrumbs={breadcrumb.map((b, i) => ({
                   ...b,
+                  // 个人空间根名后端存固定中文「个人空间」（数据），显示层按当前语言翻译
+                  name: isPersonalSpace && i === 0 ? t("个人空间") : b.name,
                   // 首项为空间根（个人空间/项目根，渲染房屋图标，与 /personal-space、/projects 页一致）
                   isRoot: i === 0,
                   isFolder: true,
@@ -160,7 +162,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
                 icon={RefreshCw}
                 onClick={onRefresh}
                 loading={loading}
-                tooltip={t('刷新')}
+                tooltip={t("刷新")}
               />
             </div>
           ) : (
@@ -170,7 +172,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
                   variant="secondary"
                   size="sm"
                   onClick={onPasteClick}
-                  tooltip={t('粘贴')}
+                  tooltip={t("粘贴")}
                   className="text-primary border border-primary-dim mr-1"
                 >
                   <svg
@@ -192,7 +194,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
                 icon={RefreshCw}
                 onClick={onRefresh}
                 loading={loading}
-                tooltip={t('刷新')}
+                tooltip={t("刷新")}
               />
             </div>
           )

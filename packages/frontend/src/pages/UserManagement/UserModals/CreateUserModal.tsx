@@ -1,22 +1,21 @@
-import React from 'react';
-import { t } from '@/languages';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Loader2, Lock } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { getRoleDisplayName } from '@/constants/permissions';
+import React from "react";
+import { t } from "@/languages";
+import { Button, Modal, Input, Select } from "@/components/ui";
+
+import { Loader2, Lock } from "lucide-react";
+
+import { getRoleDisplayName } from "@/constants/permissions";
 import {
   passwordComplexityMessage,
   passwordPlaceholder,
   usePasswordPolicy,
-} from '@/lib/passwordPolicy';
-import styles from '../UserManagement.module.css';
+} from "@/lib/passwordPolicy";
+import styles from "../UserManagement.module.css";
 
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateUserModalProps['formData']) => void;
+  onSubmit: (data: CreateUserModalProps["formData"]) => void;
   roles: Array<{ id: string; name: string; isSystem?: boolean }>;
   /** 邮箱验证开关：开启时创建用户邮箱必填（与后端 create 校验一致） */
   requireEmailVerification: boolean;
@@ -64,12 +63,12 @@ export function CreateUserModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('添加新用户')}
+      title={t("添加新用户")}
       className="max-w-lg"
       footer={
         <div className={styles.modalFooter}>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -79,10 +78,10 @@ export function CreateUserModal({
             {loading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                {t('处理中...')}
+                {t("处理中...")}
               </>
             ) : (
-              t('创建用户')
+              t("创建用户")
             )}
           </Button>
         </div>
@@ -96,26 +95,26 @@ export function CreateUserModal({
         )}
         <div className={styles.formRow}>
           <div
-            className={`${styles.formGroup} ${formErrors.username ? styles.hasError : ''}`}
+            className={`${styles.formGroup} ${formErrors.username ? styles.hasError : ""}`}
           >
             <label className={styles.formLabel}>
-              {t('用户名')} <span className={styles.required}>*</span>
+              {t("用户名")} <span className={styles.required}>*</span>
             </label>
             <Input
               type="text"
               value={formData.username}
-              onChange={(e) => onFormChange('username', e.target.value)}
-              placeholder={t('3-20个字符，只能包含字母、数字和下划线')}
+              onChange={(e) => onFormChange("username", e.target.value)}
+              placeholder={t("3-20个字符，只能包含字母、数字和下划线")}
             />
             {formErrors.username && (
               <span className={styles.errorText}>{formErrors.username}</span>
             )}
           </div>
           <div
-            className={`${styles.formGroup} ${formErrors.email ? styles.hasError : ''}`}
+            className={`${styles.formGroup} ${formErrors.email ? styles.hasError : ""}`}
           >
             <label className={styles.formLabel}>
-              {t('邮箱')}{' '}
+              {t("邮箱")}{" "}
               {requireEmailVerification && (
                 <span className={styles.required}>*</span>
               )}
@@ -123,11 +122,11 @@ export function CreateUserModal({
             <Input
               type="email"
               value={formData.email}
-              onChange={(e) => onFormChange('email', e.target.value)}
+              onChange={(e) => onFormChange("email", e.target.value)}
               placeholder={
                 requireEmailVerification
-                  ? t('请输入邮箱地址')
-                  : t('可选，用于接收通知')
+                  ? t("请输入邮箱地址")
+                  : t("可选，用于接收通知")
               }
             />
             {formErrors.email && (
@@ -137,17 +136,17 @@ export function CreateUserModal({
         </div>
         <div className={styles.formRow}>
           <div
-            className={`${styles.formGroup} ${formErrors.password ? styles.hasError : ''}`}
+            className={`${styles.formGroup} ${formErrors.password ? styles.hasError : ""}`}
           >
             <label className={styles.formLabel}>
               <Lock size={14} />
-              {t('密码')} <span className={styles.required}>*</span>
+              {t("密码")} <span className={styles.required}>*</span>
             </label>
             <Input
               type="password"
               autoComplete="new-password"
               value={formData.password}
-              onChange={(e) => onFormChange('password', e.target.value)}
+              onChange={(e) => onFormChange("password", e.target.value)}
               placeholder={passwordPlaceholder(policy)}
               showPasswordToggle
             />
@@ -161,14 +160,14 @@ export function CreateUserModal({
             )}
           </div>
           <div
-            className={`${styles.formGroup} ${formErrors.nickname ? styles.hasError : ''}`}
+            className={`${styles.formGroup} ${formErrors.nickname ? styles.hasError : ""}`}
           >
-            <label className={styles.formLabel}>{t('昵称')}</label>
+            <label className={styles.formLabel}>{t("昵称")}</label>
             <Input
               type="text"
               value={formData.nickname}
-              onChange={(e) => onFormChange('nickname', e.target.value)}
-              placeholder={t('请输入昵称')}
+              onChange={(e) => onFormChange("nickname", e.target.value)}
+              placeholder={t("请输入昵称")}
             />
             {formErrors.nickname && (
               <span className={styles.errorText}>{formErrors.nickname}</span>
@@ -177,14 +176,14 @@ export function CreateUserModal({
         </div>
         <div className={styles.formRow}>
           <div
-            className={`${styles.formGroup} ${formErrors.phone ? styles.hasError : ''}`}
+            className={`${styles.formGroup} ${formErrors.phone ? styles.hasError : ""}`}
           >
-            <label className={styles.formLabel}>{t('手机号')}</label>
+            <label className={styles.formLabel}>{t("手机号")}</label>
             <Input
               type="text"
               value={formData.phone}
-              onChange={(e) => onFormChange('phone', e.target.value)}
-              placeholder={t('请输入手机号')}
+              onChange={(e) => onFormChange("phone", e.target.value)}
+              placeholder={t("请输入手机号")}
             />
             {formErrors.phone && (
               <span className={styles.errorText}>{formErrors.phone}</span>
@@ -193,16 +192,16 @@ export function CreateUserModal({
         </div>
         <div className={styles.formGroup}>
           <label className={styles.formLabel}>
-            {t('角色')} <span className={styles.required}>*</span>
+            {t("角色")} <span className={styles.required}>*</span>
           </label>
           <Select
             value={formData.roleId}
-            onChange={(value) => onFormChange('roleId', value)}
+            onChange={(value) => onFormChange("roleId", value)}
             options={roles.map((role) => ({
               value: role.id,
               label: getRoleDisplayName(role.name, role.isSystem ?? false),
             }))}
-            placeholder={t('请选择角色')}
+            placeholder={t("请选择角色")}
           />
         </div>
       </form>
